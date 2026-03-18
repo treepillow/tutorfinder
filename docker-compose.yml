@@ -1,0 +1,166 @@
+version: "3.9"
+
+# ─── Shared network ──────────────────────────────────────────
+networks:
+  tutorfinder_net:
+    driver: bridge
+
+# ─── Named volumes ───────────────────────────────────────────
+volumes:
+  mysql_data:
+  rabbitmq_data:
+
+# ─── Services ────────────────────────────────────────────────
+services:
+
+  # ── MySQL ────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_HOST: "%"
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - tutorfinder_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── RabbitMQ ─────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # Management UI  →  http://localhost:15672
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - tutorfinder_net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── Profile Service ───────────────────────────────────────
+  profile-service:
+    build: ./profile-service
+    container_name: profile-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: mysql+pymysql://root:rootpassword@mysql:3306/profile_db
+      JWT_SECRET: esd-jwt-secret-2024
+      MATCH_SERVICE_URL: http://match-service:5002
+      AVAILABILITY_SERVICE_URL: http://availability-service:5003
+    ports:
+      - "5001:5001"
+    networks:
+      - tutorfinder_net
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  # ── Match Service ─────────────────────────────────────────
+  match-service:
+    build: ./match-service
+    container_name: match-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: mysql+pymysql://root:rootpassword@mysql:3306/match_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      PROFILE_SERVICE_URL: http://profile-service:5001
+    ports:
+      - "5002:5002"
+    networks:
+      - tutorfinder_net
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  # ── Availability Service ──────────────────────────────────
+  availability-service:
+    build: ./availability-service
+    container_name: availability-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: mysql+pymysql://root:rootpassword@mysql:3306/availability_db
+    ports:
+      - "5003:5003"
+    networks:
+      - tutorfinder_net
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  # ── Booking Service ───────────────────────────────────────
+  booking-service:
+    build: ./booking-service
+    container_name: booking-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: mysql+pymysql://root:rootpassword@mysql:3306/booking_db
+    ports:
+      - "5004:5004"
+    networks:
+      - tutorfinder_net
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  # ── Payment Service (Java / Spring Boot) ──────────────────
+  payment-service:
+    build: ./payment-service
+    container_name: payment-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: jdbc:mysql://mysql:3306/payment_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      DB_USER: root
+      DB_PASSWORD: rootpassword
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+    ports:
+      - "8080:8080"
+    networks:
+      - tutorfinder_net
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  # ── Notification Service ──────────────────────────────────
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: mysql+pymysql://root:rootpassword@mysql:3306/notification_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
+    ports:
+      - "5007:5007"
+    networks:
+      - tutorfinder_net
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
