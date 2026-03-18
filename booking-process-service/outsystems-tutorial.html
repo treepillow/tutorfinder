@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OutSystems Booking Process — Tutorial</title>
+  <style>
+    :root {
+      --red:    #e8173a;
+      --dark:   #1a1a2e;
+      --card:   #ffffff;
+      --bg:     #f4f6fb;
+      --border: #e0e4ef;
+      --text:   #2d2d2d;
+      --muted:  #6b7280;
+      --code-bg:#f0f2f8;
+      --green:  #10b981;
+      --yellow: #f59e0b;
+      --blue:   #3b82f6;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--dark);
+      color: #fff;
+      padding: 40px 48px;
+      border-bottom: 4px solid var(--red);
+    }
+    header .badge {
+      display: inline-block;
+      background: var(--red);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin-bottom: 14px;
+    }
+    header h1 { font-size: 2rem; font-weight: 700; }
+    header p  { color: #a0aec0; margin-top: 8px; font-size: 0.95rem; }
+
+    /* ── Layout ── */
+    .layout {
+      display: flex;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 24px;
+      gap: 28px;
+      align-items: flex-start;
+    }
+
+    /* ── Sidebar TOC ── */
+    nav.toc {
+      width: 240px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 24px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+    nav.toc h3 {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    nav.toc a {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text);
+      text-decoration: none;
+      padding: 5px 8px;
+      border-radius: 5px;
+      margin-bottom: 2px;
+      transition: background 0.15s;
+    }
+    nav.toc a:hover { background: var(--bg); color: var(--red); }
+    nav.toc .toc-part {
+      font-weight: 700;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 10px;
+      margin-bottom: 3px;
+      padding-left: 8px;
+    }
+
+    /* ── Main content ── */
+    main { flex: 1; min-width: 0; }
+
+    /* ── Part headers ── */
+    .part {
+      background: var(--dark);
+      color: #fff;
+      border-radius: 10px;
+      padding: 18px 24px;
+      margin-bottom: 20px;
+      margin-top: 36px;
+    }
+    .part:first-child { margin-top: 0; }
+    .part h2 { font-size: 1.1rem; font-weight: 700; }
+    .part p  { color: #a0aec0; font-size: 0.85rem; margin-top: 4px; }
+
+    /* ── Step cards ── */
+    .step {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px 28px;
+      margin-bottom: 16px;
+    }
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .step-num {
+      background: var(--red);
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.85rem;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .step h3 { font-size: 1rem; font-weight: 700; }
+
+    /* ── Substeps ── */
+    ol.substeps { padding-left: 20px; }
+    ol.substeps li { margin-bottom: 6px; font-size: 0.92rem; }
+    ul.bullets   { padding-left: 20px; }
+    ul.bullets li { margin-bottom: 6px; font-size: 0.92rem; }
+
+    /* ── Tables ── */
+    .table-wrap { overflow-x: auto; margin: 14px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
+    th {
+      background: var(--dark);
+      color: #fff;
+      padding: 9px 14px;
+      text-align: left;
+      font-weight: 600;
+    }
+    td { padding: 8px 14px; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    tr:nth-child(even) td { background: var(--bg); }
+
+    /* ── Code blocks ── */
+    pre {
+      background: #1e2235;
+      color: #c9d1e8;
+      border-radius: 8px;
+      padding: 18px 20px;
+      overflow-x: auto;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      margin: 14px 0;
+    }
+    code {
+      background: var(--code-bg);
+      color: var(--red);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-family: "SF Mono", "Fira Code", monospace;
+    }
+    pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+
+    /* ── Flow diagram ── */
+    .flow {
+      background: #1e2235;
+      color: #c9d1e8;
+      border-radius: 8px;
+      padding: 18px 20px;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.8rem;
+      line-height: 1.8;
+      overflow-x: auto;
+      margin: 14px 0;
+    }
+    .flow .comment { color: #6b7c9e; }
+    .flow .action  { color: #7dd3fc; }
+    .flow .entity  { color: #86efac; }
+    .flow .assign  { color: #fcd34d; }
+    .flow .cond    { color: #f9a8d4; }
+
+    /* ── Callout boxes ── */
+    .callout {
+      border-left: 4px solid;
+      padding: 12px 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 14px 0;
+      font-size: 0.9rem;
+    }
+    .callout.tip    { border-color: var(--green);  background: #ecfdf5; }
+    .callout.warn   { border-color: var(--yellow); background: #fffbeb; }
+    .callout.info   { border-color: var(--blue);   background: #eff6ff; }
+    .callout strong { display: block; margin-bottom: 4px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .callout.tip  strong { color: var(--green);  }
+    .callout.warn strong { color: var(--yellow); }
+    .callout.info strong { color: var(--blue);   }
+
+    /* ── Mistake table ── */
+    .mistake-row td:first-child { color: #dc2626; font-weight: 600; }
+    .mistake-row td:last-child  { color: #15803d; }
+
+    /* ── Inline badge ── */
+    .badge-inline {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .badge-post   { background: #dbeafe; color: #1d4ed8; }
+    .badge-put    { background: #fef3c7; color: #92400e; }
+    .badge-get    { background: #dcfce7; color: #166534; }
+    .badge-delete { background: #fee2e2; color: #991b1b; }
+
+    /* ── Step connector ── */
+    .step + .step { border-top: none; }
+
+    /* ── Param tag ── */
+    .param {
+      display: inline-block;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 0.78rem;
+      padding: 1px 7px;
+      font-family: "SF Mono", "Fira Code", monospace;
+      margin: 2px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="badge">TutorFinder ESD Project</div>
+  <h1>OutSystems Booking Process Service</h1>
+  <p>Step-by-step tutorial to build the composite orchestrator in OutSystems Service Studio</p>
+</header>
+
+<div class="layout">
+
+  <!-- ── Sidebar ── -->
+  <nav class="toc">
+    <h3>Contents</h3>
+    <div class="toc-part">Part 1 — Setup</div>
+    <a href="#step1">Step 1 — Get Access</a>
+    <a href="#step2">Step 2 — Create App</a>
+    <div class="toc-part">Part 2 — Database</div>
+    <a href="#step3">Step 3 — Entity</a>
+    <div class="toc-part">Part 3 — REST APIs</div>
+    <a href="#step4">Step 4 — Integrations</a>
+    <div class="toc-part">Part 4 — Logic</div>
+    <a href="#step5">Step 5 — Initiate</a>
+    <a href="#step6">Step 6 — Confirm</a>
+    <a href="#step7">Step 7 — Reject</a>
+    <a href="#step8">Step 8 — Payment</a>
+    <a href="#step9">Step 9 — Complete</a>
+    <a href="#step10">Step 10 — Cancel</a>
+    <div class="toc-part">Part 5 — Expose API</div>
+    <a href="#step11">Step 11 — REST API</a>
+    <div class="toc-part">Part 6 — Timers</div>
+    <a href="#step12">Step 12 — Expire Confirmations</a>
+    <a href="#step13">Step 13 — Expire Payments</a>
+    <div class="toc-part">Part 7 — Deploy</div>
+    <a href="#step14">Step 14 — Publish</a>
+    <a href="#step15">Step 15 — Test</a>
+    <a href="#step16">Step 16 — Site Properties</a>
+    <div class="toc-part">Reference</div>
+    <a href="#mistakes">Common Mistakes</a>
+  </nav>
+
+  <!-- ── Main ── -->
+  <main>
+
+    <!-- PART 1 -->
+    <div class="part" id="part1">
+      <h2>Part 1 — Setup</h2>
+      <p>Get OutSystems running and create your application</p>
+    </div>
+
+    <div class="step" id="step1">
+      <div class="step-header">
+        <div class="step-num">1</div>
+        <h3>Get OutSystems Access</h3>
+      </div>
+      <ol class="substeps">
+        <li>Go to <strong>outsystems.com/free</strong> and sign up for a free Personal Environment</li>
+        <li>Download and install <strong>Service Studio</strong> from the developer portal</li>
+        <li>Open Service Studio → click <strong>Connect</strong> → enter your environment URL<br>
+          <code>https://yourname.outsystemscloud.com</code>
+        </li>
+        <li>Sign in with your OutSystems account credentials</li>
+      </ol>
+    </div>
+
+    <div class="step" id="step2">
+      <div class="step-header">
+        <div class="step-num">2</div>
+        <h3>Create the Application</h3>
+      </div>
+      <ol class="substeps">
+        <li>In Service Studio, click <strong>New Application</strong></li>
+        <li>Choose <strong>Service</strong> (not Reactive Web — this is backend-only)</li>
+        <li>Name it: <code>TutorFinder_BookingProcess</code></li>
+        <li>Click <strong>Create App</strong> → then <strong>Create Module</strong></li>
+        <li>Name the module: <code>BookingProcessLogic</code></li>
+      </ol>
+      <div class="callout info">
+        <strong>Why Service type?</strong>
+        A Service module exposes REST APIs and runs Timers without a UI layer. It's the correct type for a backend orchestrator.
+      </div>
+    </div>
+
+    <!-- PART 2 -->
+    <div class="part" id="part2">
+      <h2>Part 2 — Database Entities</h2>
+      <p>Define the data model to track booking process state</p>
+    </div>
+
+    <div class="step" id="step3">
+      <div class="step-header">
+        <div class="step-num">3</div>
+        <h3>Create the BookingProcess Entity</h3>
+      </div>
+      <ol class="substeps">
+        <li>Click the <strong>Data</strong> tab in the left sidebar</li>
+        <li>Right-click <strong>Database</strong> → <strong>Add Entity</strong></li>
+        <li>Name it <code>BookingProcess</code></li>
+        <li>Right-click the entity → <strong>Add Attribute</strong> for each row below</li>
+      </ol>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Attribute Name</th><th>Data Type</th><th>Default Value</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>BookingId</code></td><td>Integer</td><td>—</td><td>FK → Booking Service</td></tr>
+            <tr><td><code>TuteeId</code></td><td>Integer</td><td>—</td><td></td></tr>
+            <tr><td><code>TutorId</code></td><td>Integer</td><td>—</td><td></td></tr>
+            <tr><td><code>AvailabilityId</code></td><td>Integer</td><td>—</td><td></td></tr>
+            <tr><td><code>Amount</code></td><td>Text</td><td>—</td><td>e.g. "50.00"</td></tr>
+            <tr><td><code>PaymentId</code></td><td>Long Integer</td><td>—</td><td>FK → Payment Service</td></tr>
+            <tr><td><code>StripeIntentId</code></td><td>Text</td><td>—</td><td>Stripe PaymentIntent ID</td></tr>
+            <tr><td><code>ClientSecret</code></td><td>Text</td><td>—</td><td>Returned to frontend</td></tr>
+            <tr><td><code>ProcessStatus</code></td><td>Text</td><td><code>"AwaitingConfirmation"</code></td><td></td></tr>
+            <tr><td><code>CreatedOn</code></td><td>Date Time</td><td><code>CurrDateTime()</code></td><td></td></tr>
+            <tr><td><code>LastUpdatedOn</code></td><td>Date Time</td><td><code>CurrDateTime()</code></td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout tip">
+        <strong>Tip</strong>
+        The <code>Id</code> auto-number primary key is created automatically by OutSystems — do not add it manually.
+      </div>
+    </div>
+
+    <!-- PART 3 -->
+    <div class="part" id="part3">
+      <h2>Part 3 — Consume External REST APIs</h2>
+      <p>Connect to each microservice so your actions can call them</p>
+    </div>
+
+    <div class="step" id="step4">
+      <div class="step-header">
+        <div class="step-num">4</div>
+        <h3>Add REST API Integrations</h3>
+      </div>
+      <p style="margin-bottom:12px">For each integration below, follow this base procedure:</p>
+      <ol class="substeps">
+        <li>Click the <strong>Logic</strong> tab → expand <strong>Integrations</strong></li>
+        <li>Right-click <strong>REST</strong> → <strong>Consume REST API</strong></li>
+        <li>Choose <strong>Add Single Method</strong></li>
+        <li>Fill in the method name, HTTP verb, and URL from the tables below</li>
+        <li>Add URL path parameters, query parameters, and request body fields as indicated</li>
+        <li>Click <strong>Finish</strong> — repeat for each method</li>
+      </ol>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+
+      <h4 style="margin-bottom:8px">4a — Availability Service</h4>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:10px">Integration name: <code>AvailabilityService</code></p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Method Name</th><th>HTTP</th><th>URL</th><th>Parameters</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>UpdateSlot</code></td>
+              <td><span class="badge-inline badge-put">PUT</span></td>
+              <td><code>http://availability-service:5003/availability/{availability_id}</code></td>
+              <td>Path: <span class="param">availability_id</span> (Integer)<br>Body: <span class="param">status</span> (Text)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4 style="margin-bottom:8px;margin-top:20px">4b — Booking Service</h4>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:10px">Integration name: <code>BookingService</code></p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Method Name</th><th>HTTP</th><th>URL</th><th>Parameters</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>CreateBooking</code></td>
+              <td><span class="badge-inline badge-post">POST</span></td>
+              <td><code>.../booking</code></td>
+              <td>Body: <span class="param">tutor_id</span> <span class="param">tutee_id</span> <span class="param">availability_id</span> <span class="param">lesson_date</span> <span class="param">start_time</span> <span class="param">end_time</span></td>
+            </tr>
+            <tr>
+              <td><code>ConfirmBooking</code></td>
+              <td><span class="badge-inline badge-put">PUT</span></td>
+              <td><code>.../booking/{booking_id}/confirm</code></td>
+              <td>Path: <span class="param">booking_id</span> (Integer)</td>
+            </tr>
+            <tr>
+              <td><code>RejectBooking</code></td>
+              <td><span class="badge-inline badge-put">PUT</span></td>
+              <td><code>.../booking/{booking_id}/reject</code></td>
+              <td>Path: <span class="param">booking_id</span> (Integer)</td>
+            </tr>
+            <tr>
+              <td><code>CancelBooking</code></td>
+              <td><span class="badge-inline badge-put">PUT</span></td>
+              <td><code>.../booking/{booking_id}/cancel</code></td>
+              <td>Path: <span class="param">booking_id</span> (Integer)</td>
+            </tr>
+            <tr>
+              <td><code>CompleteBooking</code></td>
+              <td><span class="badge-inline badge-put">PUT</span></td>
+              <td><code>.../booking/{booking_id}/complete</code></td>
+              <td>Path: <span class="param">booking_id</span> (Integer)</td>
+            </tr>
+            <tr>
+              <td><code>UpdateBookingStatus</code></td>
+              <td><span class="badge-inline badge-put">PUT</span></td>
+              <td><code>.../booking/{booking_id}/status</code></td>
+              <td>Path: <span class="param">booking_id</span> Body: <span class="param">status</span></td>
+            </tr>
+            <tr>
+              <td><code>GetExpiredBookings</code></td>
+              <td><span class="badge-inline badge-get">GET</span></td>
+              <td><code>.../booking/expired</code></td>
+              <td>Query: <span class="param">type</span> (Text)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4 style="margin-bottom:8px;margin-top:20px">4c — Payment Service</h4>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:10px">Integration name: <code>PaymentService</code></p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Method Name</th><th>HTTP</th><th>URL</th><th>Parameters</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>CreatePaymentIntent</code></td>
+              <td><span class="badge-inline badge-post">POST</span></td>
+              <td><code>.../payment/create-intent</code></td>
+              <td>Body: <span class="param">booking_id</span> <span class="param">tutee_id</span> <span class="param">tutor_id</span> <span class="param">amount</span> <span class="param">currency</span></td>
+            </tr>
+            <tr>
+              <td><code>CapturePayment</code></td>
+              <td><span class="badge-inline badge-post">POST</span></td>
+              <td><code>.../payment/capture</code></td>
+              <td>Body: <span class="param">stripe_payment_intent_id</span> <span class="param">tutee_phone</span></td>
+            </tr>
+            <tr>
+              <td><code>ReleasePayment</code></td>
+              <td><span class="badge-inline badge-post">POST</span></td>
+              <td><code>.../payment/{payment_id}/release</code></td>
+              <td>Path: <span class="param">payment_id</span> (Long Integer)</td>
+            </tr>
+            <tr>
+              <td><code>RefundPayment</code></td>
+              <td><span class="badge-inline badge-post">POST</span></td>
+              <td><code>.../payment/{payment_id}/refund</code></td>
+              <td>Path: <span class="param">payment_id</span> (Long Integer)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4 style="margin-bottom:8px;margin-top:20px">4d — Notification Service</h4>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:10px">Integration name: <code>NotificationService</code></p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Method Name</th><th>HTTP</th><th>URL</th><th>Parameters</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>SendNotification</code></td>
+              <td><span class="badge-inline badge-post">POST</span></td>
+              <td><code>http://notification-service:5007/notify/send</code></td>
+              <td>Body: <span class="param">user_id</span> <span class="param">type</span> <span class="param">message</span> <span class="param">phone_number</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4 style="margin-bottom:8px;margin-top:20px">4e — Profile Service</h4>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:10px">Integration name: <code>ProfileService</code></p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Method Name</th><th>HTTP</th><th>URL</th><th>Parameters</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>GetProfileInternal</code></td>
+              <td><span class="badge-inline badge-get">GET</span></td>
+              <td><code>http://profile-service:5001/profile/internal/{user_id}</code></td>
+              <td>Path: <span class="param">user_id</span> (Integer)<br>Response: <span class="param">name</span> <span class="param">phone</span> <span class="param">role</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PART 4 -->
+    <div class="part" id="part4">
+      <h2>Part 4 — Server Actions (Business Logic)</h2>
+      <p>Build each orchestration flow in the Logic tab</p>
+    </div>
+
+    <div class="callout info" style="margin-bottom:16px">
+      <strong>How to create a Server Action</strong>
+      Logic tab → right-click <strong>Server Actions</strong> → <strong>Add Server Action</strong> → name it → add Input/Output Parameters in the right panel → drag flow nodes from the toolbar on the left.
+    </div>
+
+    <!-- Step 5 -->
+    <div class="step" id="step5">
+      <div class="step-header">
+        <div class="step-num">5</div>
+        <h3>InitiateBooking — Tutee selects a slot</h3>
+      </div>
+
+      <h4 style="margin-bottom:6px">Input Parameters</h4>
+      <p>
+        <span class="param">TuteeId</span> Integer &nbsp;
+        <span class="param">TutorId</span> Integer &nbsp;
+        <span class="param">AvailabilityId</span> Integer &nbsp;
+        <span class="param">LessonDate</span> Text &nbsp;
+        <span class="param">StartTime</span> Text &nbsp;
+        <span class="param">EndTime</span> Text &nbsp;
+        <span class="param">Amount</span> Text
+      </p>
+
+      <h4 style="margin-bottom:6px;margin-top:12px">Output Parameters</h4>
+      <p>
+        <span class="param">BookingProcessId</span> Integer &nbsp;
+        <span class="param">BookingId</span> Integer &nbsp;
+        <span class="param">Success</span> Boolean &nbsp;
+        <span class="param">ErrorMessage</span> Text
+      </p>
+
+      <h4 style="margin-bottom:6px;margin-top:14px">Flow</h4>
+      <div class="flow">
+<span class="comment">Start</span>
+  │
+  ▼
+<span class="cond">[Try]</span> ─────────────────────────────────────────────────── <span class="cond">[Catch]</span>
+  │                                                             │
+  ▼                                                             ▼
+<span class="action">UpdateSlot</span> (AvailabilityService)                        <span class="assign">[Assign]</span>
+  availability_id = AvailabilityId                          Success = False
+  status = "Reserved"                                       ErrorMessage = AllExceptions.Message
+  │
+  ▼
+<span class="action">CreateBooking</span> (BookingService)
+  tutor_id, tutee_id, availability_id,
+  lesson_date, start_time, end_time
+  │
+  ▼
+<span class="action">GetProfileInternal</span> (ProfileService)
+  user_id = TutorId
+  │
+  ▼
+<span class="action">SendNotification</span> (NotificationService)
+  user_id     = TutorId
+  type        = "Booking"
+  phone_number = GetProfileInternal.phone
+  message     = "New booking request on " + LessonDate + " at "
+                + StartTime + ". Please confirm or reject in the app."
+  │
+  ▼
+<span class="entity">[CreateBookingProcess]</span>  ← drag from Data tab
+  BookingId      = CreateBooking.booking_id
+  TuteeId        = TuteeId
+  TutorId        = TutorId
+  AvailabilityId = AvailabilityId
+  Amount         = Amount
+  ProcessStatus  = "AwaitingConfirmation"
+  │
+  ▼
+<span class="assign">[Assign]</span>
+  BookingProcessId = CreateBookingProcess.Id
+  BookingId        = CreateBooking.booking_id
+  Success          = True
+  │
+  ▼
+<span class="comment">End</span>
+      </div>
+      <div class="callout tip">
+        <strong>Tip — Entity Actions</strong>
+        To get <code>CreateBookingProcess</code>, go to the <strong>Data</strong> tab → open the entity → drag <strong>Create&lt;Entity&gt;</strong> into your flow canvas.
+      </div>
+    </div>
+
+    <!-- Step 6 -->
+    <div class="step" id="step6">
+      <div class="step-header">
+        <div class="step-num">6</div>
+        <h3>ConfirmBooking — Tutor accepts the request</h3>
+      </div>
+
+      <h4 style="margin-bottom:6px">Input Parameters</h4>
+      <p><span class="param">BookingId</span> Integer</p>
+
+      <h4 style="margin-bottom:6px;margin-top:12px">Output Parameters</h4>
+      <p>
+        <span class="param">ClientSecret</span> Text &nbsp;
+        <span class="param">Success</span> Boolean &nbsp;
+        <span class="param">ErrorMessage</span> Text
+      </p>
+
+      <h4 style="margin-bottom:6px;margin-top:14px">Flow</h4>
+      <div class="flow">
+<span class="action">ConfirmBooking</span> (BookingService)
+  booking_id = BookingId
+  │
+  ▼
+<span class="entity">[GetBookingProcessByBookingId]</span>
+  <span class="comment">← Aggregate: filter BookingProcess where BookingId = BookingId</span>
+  │
+  ▼
+<span class="action">GetProfileInternal</span> (ProfileService)
+  user_id = GetBookingProcess.TuteeId
+  │
+  ▼
+<span class="action">CreatePaymentIntent</span> (PaymentService)
+  booking_id = BookingId
+  tutee_id   = GetBookingProcess.TuteeId
+  tutor_id   = GetBookingProcess.TutorId
+  amount     = GetBookingProcess.Amount
+  currency   = "sgd"
+  │
+  ▼
+<span class="action">SendNotification</span> (NotificationService)
+  user_id      = GetBookingProcess.TuteeId
+  type         = "Booking"
+  phone_number = GetProfileInternal.phone
+  message      = "Booking confirmed! Please pay your deposit within 24 hours."
+  │
+  ▼
+<span class="entity">[UpdateBookingProcess]</span>
+  Id             = GetBookingProcess.Id
+  ProcessStatus  = "AwaitingPayment"
+  StripeIntentId = CreatePaymentIntent.stripe_payment_intent_id
+  ClientSecret   = CreatePaymentIntent.client_secret
+  LastUpdatedOn  = CurrDateTime()
+  │
+  ▼
+<span class="assign">[Assign]</span>
+  ClientSecret = CreatePaymentIntent.client_secret
+  Success      = True
+      </div>
+      <div class="callout tip">
+        <strong>How to create an Aggregate</strong>
+        Drag an <strong>Aggregate</strong> node into your flow → double-click it → drag your entity into the Sources panel → add a filter condition.
+      </div>
+    </div>
+
+    <!-- Step 7 -->
+    <div class="step" id="step7">
+      <div class="step-header">
+        <div class="step-num">7</div>
+        <h3>RejectBooking — Tutor declines the request</h3>
+      </div>
+
+      <h4 style="margin-bottom:6px">Input Parameters</h4>
+      <p><span class="param">BookingId</span> Integer</p>
+
+      <div class="flow">
+<span class="action">RejectBooking</span> (BookingService)
+  booking_id = BookingId
+  │
+  ▼
+<span class="entity">[GetBookingProcessByBookingId]</span>  ← Aggregate
+  │
+  ▼
+<span class="action">UpdateSlot</span> (AvailabilityService)
+  availability_id = GetBookingProcess.AvailabilityId
+  status          = "Available"
+  │
+  ▼
+<span class="action">GetProfileInternal</span> (ProfileService)
+  user_id = GetBookingProcess.TuteeId
+  │
+  ▼
+<span class="action">SendNotification</span>
+  user_id      = GetBookingProcess.TuteeId
+  type         = "Booking"
+  phone_number = GetProfileInternal.phone
+  message      = "Your booking was rejected by the tutor. Please select another slot."
+  │
+  ▼
+<span class="entity">[UpdateBookingProcess]</span>
+  ProcessStatus = "Cancelled"
+  LastUpdatedOn = CurrDateTime()
+      </div>
+    </div>
+
+    <!-- Step 8 -->
+    <div class="step" id="step8">
+      <div class="step-header">
+        <div class="step-num">8</div>
+        <h3>PaymentCaptured — Tutee has paid</h3>
+      </div>
+
+      <h4 style="margin-bottom:6px">Input Parameters</h4>
+      <p>
+        <span class="param">BookingId</span> Integer &nbsp;
+        <span class="param">StripePaymentIntentId</span> Text
+      </p>
+
+      <div class="flow">
+<span class="entity">[GetBookingProcessByBookingId]</span>  ← Aggregate
+  │
+  ▼
+<span class="action">CapturePayment</span> (PaymentService)
+  stripe_payment_intent_id = StripePaymentIntentId
+  │
+  ▼
+<span class="action">UpdateBookingStatus</span> (BookingService)
+  booking_id = BookingId
+  status     = "Confirmed"
+  │
+  ▼
+<span class="action">UpdateSlot</span> (AvailabilityService)
+  availability_id = GetBookingProcess.AvailabilityId
+  status          = "Unavailable"
+  │
+  ▼
+<span class="action">GetProfileInternal</span> (ProfileService)
+  user_id = GetBookingProcess.TuteeId
+  │
+  ▼
+<span class="action">SendNotification</span>
+  message = "Payment received! Your lesson is confirmed."
+  │
+  ▼
+<span class="entity">[UpdateBookingProcess]</span>
+  ProcessStatus = "Confirmed"
+  PaymentId     = CapturePayment.payment_id
+  LastUpdatedOn = CurrDateTime()
+      </div>
+    </div>
+
+    <!-- Step 9 -->
+    <div class="step" id="step9">
+      <div class="step-header">
+        <div class="step-num">9</div>
+        <h3>CompleteBooking — Lesson finished, release deposit</h3>
+      </div>
+
+      <h4 style="margin-bottom:6px">Input Parameters</h4>
+      <p><span class="param">BookingId</span> Integer</p>
+
+      <div class="flow">
+<span class="action">CompleteBooking</span> (BookingService)
+  booking_id = BookingId
+  │
+  ▼
+<span class="entity">[GetBookingProcessByBookingId]</span>  ← Aggregate
+  │
+  ▼
+<span class="action">GetProfileInternal</span> (ProfileService)
+  user_id = GetBookingProcess.TutorId
+  │
+  ▼
+<span class="action">ReleasePayment</span> (PaymentService)
+  payment_id    = GetBookingProcess.PaymentId
+  tutor_phone   = GetProfileInternal.phone
+  │
+  ▼
+<span class="entity">[UpdateBookingProcess]</span>
+  ProcessStatus = "Completed"
+  LastUpdatedOn = CurrDateTime()
+      </div>
+    </div>
+
+    <!-- Step 10 -->
+    <div class="step" id="step10">
+      <div class="step-header">
+        <div class="step-num">10</div>
+        <h3>CancelBooking — Cancel with optional refund</h3>
+      </div>
+
+      <h4 style="margin-bottom:6px">Input Parameters</h4>
+      <p>
+        <span class="param">BookingId</span> Integer &nbsp;
+        <span class="param">InitiatedBy</span> Text (e.g. "tutee" or "tutor")
+      </p>
+
+      <div class="flow">
+<span class="entity">[GetBookingProcessByBookingId]</span>  ← Aggregate
+  │
+  ▼
+<span class="action">CancelBooking</span> (BookingService)
+  │
+  ▼
+<span class="action">UpdateSlot</span> (AvailabilityService)
+  status = "Available"
+  │
+  ▼
+<span class="cond">[If]</span> GetBookingProcess.PaymentId &lt;&gt; 0
+  │                    │
+  True                 False
+  │                    │
+  ▼                    │
+<span class="action">RefundPayment</span>         │
+(PaymentService)       │
+  payment_id =         │
+  GetBookingProcess     │
+  .PaymentId           │
+  └──────────────► ────┘
+                   │
+                   ▼
+<span class="action">GetProfileInternal</span>  → tutee phone
+<span class="action">SendNotification</span>   → tutee: "A booking has been cancelled."
+  │
+  ▼
+<span class="action">GetProfileInternal</span>  → tutor phone
+<span class="action">SendNotification</span>   → tutor: "A booking has been cancelled."
+  │
+  ▼
+<span class="entity">[UpdateBookingProcess]</span>
+  ProcessStatus = "Cancelled"
+  LastUpdatedOn = CurrDateTime()
+      </div>
+    </div>
+
+    <!-- PART 5 -->
+    <div class="part" id="part5">
+      <h2>Part 5 — Expose REST API</h2>
+      <p>Make the orchestrator callable from the frontend and other services</p>
+    </div>
+
+    <div class="step" id="step11">
+      <div class="step-header">
+        <div class="step-num">11</div>
+        <h3>Create the Exposed REST API</h3>
+      </div>
+      <ol class="substeps">
+        <li>Logic tab → right-click <strong>Expose REST API</strong> → <strong>Add REST API</strong></li>
+        <li>Name it <code>BookingProcessAPI</code></li>
+        <li>Set <strong>Base URL</strong> to <code>/booking-process</code></li>
+        <li>For each endpoint below: right-click the API → <strong>Add REST API Method</strong></li>
+        <li>Set the HTTP method, path, and point <strong>Source</strong> to the matching Server Action</li>
+      </ol>
+
+      <div class="table-wrap" style="margin-top:14px">
+        <table>
+          <thead><tr><th>Method Name</th><th>HTTP</th><th>Path</th><th>Server Action</th></tr></thead>
+          <tbody>
+            <tr><td><code>Initiate</code></td><td><span class="badge-inline badge-post">POST</span></td><td><code>/initiate</code></td><td><code>InitiateBooking</code></td></tr>
+            <tr><td><code>Confirm</code></td><td><span class="badge-inline badge-post">POST</span></td><td><code>/confirm</code></td><td><code>ConfirmBooking</code></td></tr>
+            <tr><td><code>Reject</code></td><td><span class="badge-inline badge-post">POST</span></td><td><code>/reject</code></td><td><code>RejectBooking</code></td></tr>
+            <tr><td><code>PaymentCaptured</code></td><td><span class="badge-inline badge-post">POST</span></td><td><code>/payment-captured</code></td><td><code>PaymentCaptured</code></td></tr>
+            <tr><td><code>Complete</code></td><td><span class="badge-inline badge-post">POST</span></td><td><code>/complete</code></td><td><code>CompleteBooking</code></td></tr>
+            <tr><td><code>Cancel</code></td><td><span class="badge-inline badge-post">POST</span></td><td><code>/cancel</code></td><td><code>CancelBooking</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout info" style="margin-top:14px">
+        <strong>Your final API base URL</strong>
+        <code>https://yourname.outsystemscloud.com/BookingProcessLogic/rest/BookingProcessAPI/</code>
+      </div>
+    </div>
+
+    <!-- PART 6 -->
+    <div class="part" id="part6">
+      <h2>Part 6 — Timers (Scheduled Tasks)</h2>
+      <p>Automatically cancel bookings that exceed the 24-hour timeout</p>
+    </div>
+
+    <div class="step" id="step12">
+      <div class="step-header">
+        <div class="step-num">12</div>
+        <h3>Timer: ExpireUnconfirmedBookings</h3>
+      </div>
+      <ol class="substeps">
+        <li>Click the <strong>Processes</strong> tab → right-click <strong>Timers</strong> → <strong>Add Timer</strong></li>
+        <li>Name it <code>ExpireUnconfirmedBookings</code></li>
+        <li>Set <strong>Schedule</strong> to <code>0 * * * *</code> (every hour)</li>
+        <li>Under <strong>Action</strong>, create a new Server Action: <code>HandleExpiredConfirmations</code></li>
+      </ol>
+
+      <h4 style="margin-top:14px;margin-bottom:6px">Flow inside HandleExpiredConfirmations</h4>
+      <div class="flow">
+<span class="action">GetExpiredBookings</span> (BookingService)
+  type = "confirmation"
+  │
+  ▼
+<span class="cond">[For Each]</span> booking in GetExpiredBookings.bookings
+  │
+  ├── <span class="action">CancelBooking</span> (BookingService)
+  │     booking_id = booking.booking_id
+  │
+  ├── <span class="entity">[GetBookingProcessByBookingId]</span>  ← Aggregate
+  │
+  ├── <span class="action">UpdateSlot</span> (AvailabilityService)
+  │     status = "Available"
+  │
+  ├── <span class="action">GetProfileInternal</span>  → tutee phone
+  │
+  ├── <span class="action">SendNotification</span>
+  │     message = "Booking cancelled: tutor did not confirm within 24 hours."
+  │
+  └── <span class="entity">[UpdateBookingProcess]</span>
+        ProcessStatus = "Cancelled"
+      </div>
+    </div>
+
+    <div class="step" id="step13">
+      <div class="step-header">
+        <div class="step-num">13</div>
+        <h3>Timer: ExpireUnpaidBookings</h3>
+      </div>
+      <p>Same setup as Step 12 with these differences:</p>
+      <ul class="bullets" style="margin-top:10px">
+        <li>Timer name: <code>ExpireUnpaidBookings</code></li>
+        <li>Action name: <code>HandleExpiredPayments</code></li>
+        <li>Call <code>GetExpiredBookings</code> with <code>type = "payment"</code></li>
+        <li>Notification message: <code>"Booking cancelled: payment not received within 24 hours."</code></li>
+      </ul>
+      <div class="callout tip" style="margin-top:14px">
+        <strong>Timer Retries</strong>
+        OutSystems automatically retries failed Timers on the next scheduled run — you don't need to write retry logic yourself.
+      </div>
+    </div>
+
+    <!-- PART 7 -->
+    <div class="part" id="part7">
+      <h2>Part 7 — Deploy &amp; Connect</h2>
+      <p>Publish your module and verify everything works</p>
+    </div>
+
+    <div class="step" id="step14">
+      <div class="step-header">
+        <div class="step-num">14</div>
+        <h3>Publish</h3>
+      </div>
+      <ol class="substeps">
+        <li>Press <strong>F5</strong> or click the green <strong>Publish</strong> button (top-left toolbar)</li>
+        <li>Wait for the build — errors appear in the <strong>TrueChange</strong> panel at the bottom</li>
+        <li>Fix any red errors (yellow warnings are OK to publish with)</li>
+        <li>Once published, your service is live on your Personal Environment</li>
+      </ol>
+    </div>
+
+    <div class="step" id="step15">
+      <div class="step-header">
+        <div class="step-num">15</div>
+        <h3>Test with Postman</h3>
+      </div>
+      <p style="margin-bottom:10px">Send a POST to initiate a booking:</p>
+      <pre><code>POST https://yourname.outsystemscloud.com/BookingProcessLogic/rest/BookingProcessAPI/initiate
+Content-Type: application/json
+
+{
+  "TuteeId": 2,
+  "TutorId": 1,
+  "AvailabilityId": 5,
+  "LessonDate": "2025-05-01",
+  "StartTime": "10:00:00",
+  "EndTime": "11:00:00",
+  "Amount": "50.00"
+}</code></pre>
+      <p style="margin-top:10px">Expected response:</p>
+      <pre><code>{
+  "BookingProcessId": 1,
+  "BookingId": 10,
+  "Success": true,
+  "ErrorMessage": ""
+}</code></pre>
+    </div>
+
+    <div class="step" id="step16">
+      <div class="step-header">
+        <div class="step-num">16</div>
+        <h3>Update Site Properties (Base URLs)</h3>
+      </div>
+      <p style="margin-bottom:10px">OutSystems runs outside your Docker network, so container hostnames won't resolve. Replace them with your machine's LAN IP.</p>
+      <ol class="substeps">
+        <li>Go to <strong>Service Center</strong>: <code>https://yourname.outsystemscloud.com/ServiceCenter</code></li>
+        <li>Factory → Modules → <strong>BookingProcessLogic</strong> → <strong>Site Properties</strong></li>
+        <li>Update each URL to use your machine's IP (e.g. <code>192.168.1.x</code>) instead of service names</li>
+      </ol>
+      <div class="table-wrap" style="margin-top:14px">
+        <table>
+          <thead><tr><th>Property</th><th>Local Docker Value</th></tr></thead>
+          <tbody>
+            <tr><td><code>AvailabilityServiceBaseURL</code></td><td><code>http://192.168.1.x:5003</code></td></tr>
+            <tr><td><code>BookingServiceBaseURL</code></td><td><code>http://192.168.1.x:5004</code></td></tr>
+            <tr><td><code>PaymentServiceBaseURL</code></td><td><code>http://192.168.1.x:8080</code></td></tr>
+            <tr><td><code>NotificationServiceBaseURL</code></td><td><code>http://192.168.1.x:5007</code></td></tr>
+            <tr><td><code>ProfileServiceBaseURL</code></td><td><code>http://192.168.1.x:5001</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warn" style="margin-top:14px">
+        <strong>Find your LAN IP</strong>
+        Run <code>ipconfig getifaddr en0</code> in Terminal (Mac) to find your local IP address.
+      </div>
+    </div>
+
+    <!-- MISTAKES -->
+    <div class="part" id="mistakes">
+      <h2>Common Mistakes to Avoid</h2>
+    </div>
+
+    <div class="step">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Mistake</th><th>Fix</th></tr></thead>
+          <tbody class="mistake-row">
+            <tr class="mistake-row"><td>Not handling REST errors</td><td>Wrap every REST call in a <strong>Try/Catch</strong> block — unhandled exceptions will crash the entire flow</td></tr>
+            <tr class="mistake-row"><td>Notification failure breaking the booking</td><td>Put <code>SendNotification</code> calls in their own separate Try block so SMS failure doesn't roll back the booking</td></tr>
+            <tr class="mistake-row"><td>Timer not running</td><td>Check Service Center → Monitoring → Timers — make sure the timer shows as <strong>Active</strong></td></tr>
+            <tr class="mistake-row"><td>JSON field names wrong</td><td>OutSystems uses PascalCase by default but your APIs use snake_case — check the <strong>Name</strong> field in each REST parameter and change it to snake_case</td></tr>
+            <tr class="mistake-row"><td>Can't reach Docker containers</td><td>Use your machine's LAN IP (not <code>localhost</code> or container names) in Site Properties — OutSystems cloud can't resolve Docker internal DNS</td></tr>
+            <tr class="mistake-row"><td>Aggregate returns no rows</td><td>Add a null check after every Aggregate — if <code>Count = 0</code>, raise an exception with a clear message</td></tr>
+            <tr class="mistake-row"><td>Long Integer vs Integer mismatch</td><td><code>PaymentId</code> is Long Integer in OutSystems but the REST API returns a number — make sure the types match or you'll get a conversion error</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>
