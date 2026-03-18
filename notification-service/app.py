@@ -1,0 +1,201 @@
+import os
+import json
+import pika
+import threading
+import time
+from datetime import datetime
+from flask import Flask, request, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)
+
+RABBITMQ_URL       = os.environ.get('RABBITMQ_URL', 'amqp://guest:guest@rabbitmq:5672/')
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
+TWILIO_AUTH_TOKEN  = os.environ.get('TWILIO_AUTH_TOKEN', '')
+TWILIO_FROM_NUMBER = os.environ.get('TWILIO_FROM_NUMBER', '')
+
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+    'DATABASE_URL', 'mysql+pymysql://root:rootpassword@mysql:3306/notification_db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+
+    notify_id    = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id      = db.Column(db.Integer, nullable=True)
+    type         = db.Column(db.Enum('Match', 'Booking', 'Payment'), nullable=False)
+    message      = db.Column(db.Text, nullable=False)
+    phone_number = db.Column(db.String(20), nullable=False)
+    status       = db.Column(db.String(20), default='Pending')
+    routing_key  = db.Column(db.String(100), nullable=True)
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'notify_id':    self.notify_id,
+            'user_id':      self.user_id,
+            'type':         self.type,
+            'message':      self.message,
+            'phone_number': self.phone_number,
+            'status':       self.status,
+            'routing_key':  self.routing_key,
+            'created_at':   self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+def send_sms(to_phone, message_text):
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_FROM_NUMBER:
+        print(f'[SMS MOCK] To: {to_phone} | {message_text}')
+        return True
+    try:
+        from twilio.rest import Client
+        Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN).messages.create(
+            body=message_text, from_=TWILIO_FROM_NUMBER, to=to_phone)
+        return True
+    except Exception as e:
+        print(f'SMS error: {e}')
+        return False
+
+
+def save_and_notify(user_id, notify_type, phone, message, routing_key):
+    if not phone:
+        return
+    status = 'Sent' if send_sms(phone, message) else 'Failed'
+    try:
+        with app.app_context():
+            notif = Notification(
+                user_id=user_id, type=notify_type, message=message,
+                phone_number=phone, status=status, routing_key=routing_key)
+            db.session.add(notif)
+            db.session.commit()
+    except Exception as e:
+        print(f'Save notification error: {e}')
+
+
+def handle_message(ch, method, properties, body):
+    try:
+        data = json.loads(body)
+        rk   = method.routing_key
+        print(f'[NOTIFICATION] {rk}: {data}')
+
+        if rk == 'match.created':
+            save_and_notify(data.get('user_a_id'), 'Match', data.get('user_a_phone'),
+                            f"Hi {data.get('user_a_name', 'there')}! You have a new match on TutorFinder!", rk)
+            save_and_notify(data.get('user_b_id'), 'Match', data.get('user_b_phone'),
+                            f"Hi {data.get('user_b_name', 'there')}! You have a new match on TutorFinder!", rk)
+
+        elif rk == 'booking.created':
+            save_and_notify(data.get('tutor_id'), 'Booking', data.get('tutor_phone'),
+                            f"New booking request on {data.get('lesson_date')} at "
+                            f"{data.get('start_time')}. Please confirm or reject in the app.", rk)
+
+        elif rk == 'booking.confirmed':
+            save_and_notify(data.get('tutee_id'), 'Booking', data.get('tutee_phone'),
+                            f"Your booking on {data.get('lesson_date')} is confirmed! "
+                            f"Please pay your deposit within 24 hours.", rk)
+
+        elif rk == 'booking.rejected':
+            save_and_notify(data.get('tutee_id'), 'Booking', data.get('tutee_phone'),
+                            "Your booking was rejected by the tutor. Please select another slot.", rk)
+
+        elif rk == 'booking.expired':
+            save_and_notify(data.get('tutee_id'), 'Booking', data.get('tutee_phone'),
+                            f"Booking cancelled. Reason: {data.get('reason', 'Expired')}", rk)
+
+        elif rk == 'booking.cancelled':
+            save_and_notify(data.get('tutee_id'), 'Booking', data.get('tutee_phone'),
+                            "A booking has been cancelled.", rk)
+            save_and_notify(data.get('tutor_id'), 'Booking', data.get('tutor_phone'),
+                            "A booking has been cancelled.", rk)
+
+        elif rk == 'payment.success':
+            save_and_notify(data.get('tutee_id'), 'Payment', data.get('tutee_phone'),
+                            f"Payment of SGD {data.get('amount')} received! Your lesson is confirmed.", rk)
+
+        elif rk == 'payment.failed':
+            save_and_notify(data.get('tutee_id'), 'Payment', data.get('tutee_phone'),
+                            "Payment failed. Please try again in the app.", rk)
+
+        elif rk == 'deposit.released':
+            save_and_notify(data.get('tutor_id'), 'Payment', data.get('tutor_phone'),
+                            "Your lesson deposit has been released to your account!", rk)
+
+        elif rk == 'deposit.refunded':
+            save_and_notify(data.get('tutee_id'), 'Payment', data.get('tutee_phone'),
+                            "Your deposit has been refunded. Allow 3-5 business days.", rk)
+
+        else:
+            print(f'[NOTIFICATION] Unhandled routing key: {rk}')
+
+    except Exception as e:
+        print(f'[NOTIFICATION] Message handling error: {e}')
+
+
+def start_consumer():
+    def consume():
+        while True:
+            try:
+                params = pika.URLParameters(RABBITMQ_URL)
+                conn = pika.BlockingConnection(params)
+                ch = conn.channel()
+                ch.exchange_declare(exchange='esd_exchange', exchange_type='topic', durable=True)
+                ch.queue_declare(queue='notification_queue', durable=True)
+                ch.queue_bind(exchange='esd_exchange',
+                              queue='notification_queue', routing_key='#')
+                ch.basic_qos(prefetch_count=1)
+                ch.basic_consume(queue='notification_queue',
+                                 on_message_callback=handle_message, auto_ack=True)
+                print('[NOTIFICATION] Consumer ready, waiting for messages...')
+                ch.start_consuming()
+            except Exception as e:
+                print(f'[NOTIFICATION] Consumer error: {e}. Retrying in 5s...')
+                time.sleep(5)
+
+    threading.Thread(target=consume, daemon=True).start()
+
+
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({'status': 'healthy', 'service': 'notification-service'}), 200
+
+
+@app.route('/notify/send', methods=['POST'])
+def send_notification():
+    data = request.get_json(force=True) or {}
+    for field in ['user_id', 'type', 'message', 'phone_number']:
+        if not data.get(field):
+            return jsonify({'error': f'Missing required field: {field}'}), 400
+    if data['type'] not in ['Match', 'Booking', 'Payment']:
+        return jsonify({'error': "type must be Match, Booking, or Payment"}), 400
+
+    phone  = data['phone_number']
+    msg    = data['message']
+    status = 'Sent' if send_sms(phone, msg) else 'Failed'
+
+    notif = Notification(
+        user_id=data['user_id'], type=data['type'],
+        message=msg, phone_number=phone,
+        status=status, routing_key='direct')
+    db.session.add(notif)
+    db.session.commit()
+    return jsonify({'success': True, 'notify_id': notif.notify_id, 'status': status}), 201
+
+
+@app.route('/notify/user/<int:user_id>', methods=['GET'])
+def get_notifications(user_id):
+    notifs = Notification.query.filter_by(user_id=user_id).order_by(
+        Notification.created_at.desc()).all()
+    return jsonify({'notifications': [n.to_dict() for n in notifs],
+                    'count': len(notifs)}), 200
+
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    start_consumer()
+    app.run(host='0.0.0.0', port=5007, debug=False)
