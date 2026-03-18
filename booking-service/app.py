@@ -1,0 +1,197 @@
+import os
+from datetime import datetime, timedelta
+from flask import Flask, request, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+    'DATABASE_URL', 'mysql+pymysql://root:rootpassword@mysql:3306/booking_db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+VALID_STATUSES = [
+    'AwaitingConfirmation', 'AwaitingPayment', 'Confirmed',
+    'Completed', 'Cancelled', 'Disputed'
+]
+
+
+class Booking(db.Model):
+    __tablename__ = 'bookings'
+
+    booking_id      = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    tutor_id        = db.Column(db.Integer, nullable=False)
+    tutee_id        = db.Column(db.Integer, nullable=False)
+    availability_id = db.Column(db.Integer, nullable=False)
+    lesson_date     = db.Column(db.Date, nullable=False)
+    start_time      = db.Column(db.Time, nullable=False)
+    end_time        = db.Column(db.Time, nullable=False)
+    status          = db.Column(
+        db.Enum(*VALID_STATUSES),
+        default='AwaitingConfirmation', nullable=False)
+    created_at      = db.Column(db.DateTime, default=datetime.utcnow)
+    confirmed_at    = db.Column(db.DateTime, nullable=True)
+
+    def to_dict(self):
+        return {
+            'booking_id':      self.booking_id,
+            'tutor_id':        self.tutor_id,
+            'tutee_id':        self.tutee_id,
+            'availability_id': self.availability_id,
+            'lesson_date':     self.lesson_date.isoformat() if self.lesson_date else None,
+            'start_time':      str(self.start_time),
+            'end_time':        str(self.end_time),
+            'status':          self.status,
+            'created_at':      self.created_at.isoformat() if self.created_at else None,
+            'confirmed_at':    self.confirmed_at.isoformat() if self.confirmed_at else None,
+        }
+
+
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({'status': 'healthy', 'service': 'booking-service'}), 200
+
+
+@app.route('/booking', methods=['POST'])
+def create_booking():
+    data = request.get_json(force=True) or {}
+    for field in ['tutor_id', 'tutee_id', 'availability_id', 'lesson_date', 'start_time', 'end_time']:
+        if data.get(field) is None:
+            return jsonify({'error': f'Missing required field: {field}'}), 400
+    try:
+        booking = Booking(
+            tutor_id=int(data['tutor_id']),
+            tutee_id=int(data['tutee_id']),
+            availability_id=int(data['availability_id']),
+            lesson_date=datetime.strptime(data['lesson_date'], '%Y-%m-%d').date(),
+            start_time=datetime.strptime(data['start_time'], '%H:%M:%S').time(),
+            end_time=datetime.strptime(data['end_time'], '%H:%M:%S').time(),
+        )
+        db.session.add(booking)
+        db.session.commit()
+        return jsonify(booking.to_dict()), 201
+    except ValueError as e:
+        return jsonify({'error': f'Invalid date/time format: {e}'}), 400
+
+
+@app.route('/booking/<int:booking_id>', methods=['GET'])
+def get_booking(booking_id):
+    booking = Booking.query.get(booking_id)
+    if not booking:
+        return jsonify({'error': 'Booking not found'}), 404
+    return jsonify(booking.to_dict()), 200
+
+
+@app.route('/booking/user/<int:user_id>', methods=['GET'])
+def get_bookings_by_user(user_id):
+    status_filter = request.args.get('status')
+    query = Booking.query.filter(
+        (Booking.tutor_id == user_id) | (Booking.tutee_id == user_id))
+    if status_filter:
+        query = query.filter(Booking.status == status_filter)
+    bookings = query.order_by(Booking.created_at.desc()).all()
+    return jsonify({'bookings': [b.to_dict() for b in bookings], 'count': len(bookings)}), 200
+
+
+@app.route('/booking/<int:booking_id>/confirm', methods=['PUT'])
+def confirm_booking(booking_id):
+    booking = Booking.query.get(booking_id)
+    if not booking:
+        return jsonify({'error': 'Booking not found'}), 404
+    if booking.status != 'AwaitingConfirmation':
+        return jsonify({'error': f'Cannot confirm booking with status: {booking.status}'}), 400
+    booking.status = 'AwaitingPayment'
+    booking.confirmed_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify(booking.to_dict()), 200
+
+
+@app.route('/booking/<int:booking_id>/reject', methods=['PUT'])
+def reject_booking(booking_id):
+    booking = Booking.query.get(booking_id)
+    if not booking:
+        return jsonify({'error': 'Booking not found'}), 404
+    if booking.status != 'AwaitingConfirmation':
+        return jsonify({'error': f'Cannot reject booking with status: {booking.status}'}), 400
+    booking.status = 'Cancelled'
+    db.session.commit()
+    return jsonify(booking.to_dict()), 200
+
+
+@app.route('/booking/<int:booking_id>/cancel', methods=['PUT'])
+def cancel_booking(booking_id):
+    booking = Booking.query.get(booking_id)
+    if not booking:
+        return jsonify({'error': 'Booking not found'}), 404
+    if booking.status in ['Cancelled', 'Completed']:
+        return jsonify({'error': f'Cannot cancel booking with status: {booking.status}'}), 400
+    booking.status = 'Cancelled'
+    db.session.commit()
+    return jsonify(booking.to_dict()), 200
+
+
+@app.route('/booking/<int:booking_id>/complete', methods=['PUT'])
+def complete_booking(booking_id):
+    booking = Booking.query.get(booking_id)
+    if not booking:
+        return jsonify({'error': 'Booking not found'}), 404
+    if booking.status != 'Confirmed':
+        return jsonify({'error': f'Cannot complete booking with status: {booking.status}'}), 400
+    booking.status = 'Completed'
+    db.session.commit()
+    return jsonify(booking.to_dict()), 200
+
+
+@app.route('/booking/<int:booking_id>/dispute', methods=['PUT'])
+def dispute_booking(booking_id):
+    booking = Booking.query.get(booking_id)
+    if not booking:
+        return jsonify({'error': 'Booking not found'}), 404
+    if booking.status not in ['Confirmed', 'Completed']:
+        return jsonify({'error': f'Cannot dispute booking with status: {booking.status}'}), 400
+    booking.status = 'Disputed'
+    db.session.commit()
+    return jsonify(booking.to_dict()), 200
+
+
+@app.route('/booking/<int:booking_id>/status', methods=['PUT'])
+def update_status(booking_id):
+    booking = Booking.query.get(booking_id)
+    if not booking:
+        return jsonify({'error': 'Booking not found'}), 404
+    data = request.get_json(force=True) or {}
+    new_status = data.get('status')
+    if new_status not in VALID_STATUSES:
+        return jsonify({'error': f'Invalid status. Must be one of: {VALID_STATUSES}'}), 400
+    booking.status = new_status
+    db.session.commit()
+    return jsonify(booking.to_dict()), 200
+
+
+@app.route('/booking/expired', methods=['GET'])
+def get_expired_bookings():
+    expire_type = request.args.get('type', 'confirmation')
+    cutoff = datetime.utcnow() - timedelta(hours=24)
+
+    if expire_type == 'confirmation':
+        bookings = Booking.query.filter(
+            Booking.status == 'AwaitingConfirmation',
+            Booking.created_at < cutoff).all()
+    elif expire_type == 'payment':
+        bookings = Booking.query.filter(
+            Booking.status == 'AwaitingPayment',
+            Booking.confirmed_at.isnot(None),
+            Booking.confirmed_at < cutoff).all()
+    else:
+        return jsonify({'error': 'type must be confirmation or payment'}), 400
+
+    return jsonify({'bookings': [b.to_dict() for b in bookings]}), 200
+
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    app.run(host='0.0.0.0', port=5004, debug=False)
