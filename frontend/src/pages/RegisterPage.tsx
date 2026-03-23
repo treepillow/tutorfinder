@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
+
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:5001';
 import { 
   Mail, 
   Lock, 
@@ -36,6 +38,7 @@ export function RegisterPage({ onNavigate }: RegisterPageProps) {
   const [step, setStep] = useState(1);
   const [role, setRole] = useState<'tutor' | 'tutee'>('tutee');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   
   // Form data
   const [formData, setFormData] = useState({
@@ -117,10 +120,35 @@ export function RegisterPage({ onNavigate }: RegisterPageProps) {
 
   const handleNext = async () => {
     if (step === 2) {
+      setError('');
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setIsLoading(false);
-      onNavigate('dashboard');
+      try {
+        const payload = {
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          phone: formData.contact,
+          role: role === 'tutor' ? 'Tutor' : 'Student',
+          subject: formData.selectedSubjects.join(', ') || undefined,
+          price_rate: formData.price ? parseFloat(formData.price) : undefined,
+          bio: formData.blurb || undefined,
+        };
+        const res = await fetch(`${API_BASE}/profile/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.error || 'Registration failed');
+        } else {
+          onNavigate('login');
+        }
+      } catch {
+        setError('Could not connect to server. Is the backend running?');
+      } finally {
+        setIsLoading(false);
+      }
     } else {
       setStep(2);
     }
@@ -404,6 +432,8 @@ export function RegisterPage({ onNavigate }: RegisterPageProps) {
                   ))}
                 </div>
               </div>
+
+              {error && <div className="register-error">{error}</div>}
 
               <div className="step-actions">
                 <button className="btn btn-secondary step-btn" onClick={handleBack}>
@@ -778,6 +808,16 @@ export function RegisterPage({ onNavigate }: RegisterPageProps) {
 
         @keyframes spin {
           to { transform: rotate(360deg); }
+        }
+
+        .register-error {
+          background: rgba(239, 68, 68, 0.08);
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          color: #dc2626;
+          border-radius: var(--radius-lg);
+          padding: var(--space-3) var(--space-4);
+          font-size: 0.875rem;
+          margin-top: var(--space-4);
         }
 
         .register-footer {
