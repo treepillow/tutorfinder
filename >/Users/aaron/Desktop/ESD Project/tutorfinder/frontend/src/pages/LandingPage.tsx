@@ -1,38 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import lottie from 'lottie-web';
-
-function LottiePlayer({ animationData, loop, style }: { animationData: object; loop: boolean; style?: React.CSSProperties }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const anim = lottie.loadAnimation({
-      container: containerRef.current,
-      animationData,
-      loop,
-      autoplay: true,
-      renderer: 'svg',
-    });
-    return () => anim.destroy();
-  }, [animationData, loop]);
-  return <div ref={containerRef} style={style} />;
-}
+import Lottie from 'lottie-react';
 import { 
   Star, 
   ArrowRight,
   ArrowLeft,
   BookOpen,
   Users,
-  Award,
-  Search,
-  Calendar,
-  MessageCircle
+  Award
 } from 'lucide-react';
-
-import calendarAnimation from '../assets/schedule.json';
-import educationAnimation from '../assets/Education edit.json';
-import teacherAnimation from '../assets/Teacher.json';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -40,11 +17,48 @@ interface LandingPageProps {
   onNavigate: (page: string) => void;
 }
 
+// Lottie animation URLs from LottieFiles
+const LOTTIE_ANIMATIONS = {
+  search: 'https://lottie.host/4b880241-01cd-4c6a-b56c-05c0f7f2c2c2/2Y1234567890.json',
+  calendar: 'https://lottie.host/5c990352-12de-5d7b-c67d-16d1g3g3d3d3/3Z2345678901.json',
+  message: 'https://lottie.host/6d110463-23ef-6e8c-d78e-27e2h4h4e4e4/4A3456789012.json'
+};
+
 export function LandingPage({ onNavigate }: LandingPageProps) {
   const heroRef = useRef<HTMLDivElement>(null);
   const howItWorksRef = useRef<HTMLDivElement>(null);
   const reviewsRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(3);
+  const [animations, setAnimations] = useState<{[key: string]: any}>({});
+
+  // Fetch Lottie animations
+  useEffect(() => {
+    const fetchAnimations = async () => {
+      try {
+        const [searchRes, calendarRes, messageRes] = await Promise.all([
+          fetch('https://assets2.lottiefiles.com/packages/lf20_5w2k2x3x.json'),
+          fetch('https://assets2.lottiefiles.com/packages/lf20_3jmvq04g.json'),
+          fetch('https://assets2.lottiefiles.com/packages/lf20_u25cckyh.json')
+        ]);
+        
+        const [searchData, calendarData, messageData] = await Promise.all([
+          searchRes.json(),
+          calendarRes.json(),
+          messageRes.json()
+        ]);
+        
+        setAnimations({
+          search: searchData,
+          calendar: calendarData,
+          message: messageData
+        });
+      } catch (error) {
+        console.error('Failed to load Lottie animations:', error);
+      }
+    };
+    
+    fetchAnimations();
+  }, []);
 
   const profiles = [
     { id: 1, name: 'John D.', role: 'Tutor', subject: 'Mathematics', rating: 4.9, color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', initials: 'JD', description: 'Expert math tutor with 10+ years experience' },
@@ -137,6 +151,12 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
     return () => ctx.revert();
   }, []);
 
+  const lottieOptions = {
+    loop: true,
+    autoplay: true,
+    style: { width: '60px', height: '60px' }
+  };
+
   return (
     <div className="landing-page">
       <section ref={heroRef} className="hero-section minimal">
@@ -152,6 +172,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
 
           <div className="hero-visual">
             <div className="carousel-wrapper">
+              {/* Left Arrow */}
               <button 
                 className="carousel-nav prev" 
                 onClick={prevCard}
@@ -165,6 +186,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
                   const offset = index - activeIndex;
                   const absOffset = Math.abs(offset);
                   
+                  // Calculate styles based on position
                   const x = offset * 200;
                   const y = offset === 0 ? -80 : absOffset * 15;
                   const scale = offset === 0 ? 1.05 : Math.max(0.85 - absOffset * 0.08, 0.5);
@@ -211,6 +233,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
                 })}
               </div>
 
+              {/* Right Arrow */}
               <button 
                 className="carousel-nav next" 
                 onClick={nextCard}
@@ -219,6 +242,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
                 <ArrowRight size={28} />
               </button>
 
+              {/* Dots indicator */}
               <div className="carousel-dots">
                 {profiles.map((_, index) => (
                   <button
@@ -234,7 +258,10 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
         
         <div className="hero-wave">
           <svg viewBox="0 0 1440 100" preserveAspectRatio="none">
-            <path d="M0,50 C360,100 720,0 1080,50 C1260,75 1380,60 1440,50 L1440,100 L0,100 Z" fill="white" />
+            <path 
+              d="M0,50 C360,100 720,0 1080,50 C1260,75 1380,60 1440,50 L1440,100 L0,100 Z" 
+              fill="white"
+            />
           </svg>
         </div>
       </section>
@@ -251,8 +278,12 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
 
           <div className="how-cards">
             <div className="how-card">
-              <div className="how-card-icon">
-                <Search size={32} />
+              <div className="how-card-icon lottie-icon">
+                {animations.search ? (
+                  <Lottie animationData={animations.search} {...lottieOptions} />
+                ) : (
+                  <div className="loading-placeholder">Loading...</div>
+                )}
               </div>
               <div className="how-card-number">01</div>
               <h3 className="how-card-title">Find Your Tutor</h3>
@@ -263,7 +294,11 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
 
             <div className="how-card">
               <div className="how-card-icon lottie-icon">
-                <LottiePlayer animationData={calendarAnimation} loop={true} style={{ width: 48, height: 48 }} />
+                {animations.calendar ? (
+                  <Lottie animationData={animations.calendar} {...lottieOptions} />
+                ) : (
+                  <div className="loading-placeholder">Loading...</div>
+                )}
               </div>
               <div className="how-card-number">02</div>
               <h3 className="how-card-title">Schedule Sessions</h3>
@@ -274,7 +309,11 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
 
             <div className="how-card">
               <div className="how-card-icon lottie-icon">
-                <LottiePlayer animationData={educationAnimation} loop={true} style={{ width: 48, height: 48 }} />
+                {animations.message ? (
+                  <Lottie animationData={animations.message} {...lottieOptions} />
+                ) : (
+                  <div className="loading-placeholder">Loading...</div>
+                )}
               </div>
               <div className="how-card-number">03</div>
               <h3 className="how-card-title">Start Learning</h3>
@@ -328,8 +367,16 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
             </div>
             
             <div className="feature-visual">
-              <div className="feature-graphic lottie-feature">
-                <LottiePlayer animationData={teacherAnimation} loop={true} style={{ width: '100%', height: '100%' }} />
+              <div className="feature-graphic">
+                <div className="feature-floating feature-floating-1">
+                  <BookOpen size={32} />
+                </div>
+                <div className="feature-floating feature-floating-2">
+                  <Star size={28} />
+                </div>
+                <div className="feature-floating feature-floating-3">
+                  <Users size={24} />
+                </div>
               </div>
             </div>
           </div>
@@ -358,7 +405,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               </p>
               <div className="review-author">
                 <div className="review-avatar" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-                  <span>SK</span>
+                <span>SK</span>
                 </div>
                 <div>
                   <div className="review-name">Sarah K.</div>
@@ -427,82 +474,510 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       </section>
 
       <style>{`
-        .landing-page { padding-top: 80px; }
-        .hero-section.minimal { position: relative; padding: var(--space-12) 0 var(--space-20); background: linear-gradient(135deg, #fafafa 0%, #f0f4ff 50%, #faf5ff 100%); overflow: hidden; min-height: 600px; }
-        .hero-header { text-align: center; margin-bottom: var(--space-8); }
-        .hero-title { font-size: 3rem; font-weight: 800; margin-bottom: var(--space-2); line-height: 1.1; }
-        .hero-subtitle { font-size: 1.125rem; color: var(--text-light); margin: 0; }
-        .gradient-text { background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .hero-visual { position: relative; height: 420px; display: flex; align-items: center; justify-content: center; perspective: 1200px; }
-        .carousel-wrapper { position: relative; width: 100%; max-width: 900px; height: 100%; display: flex; align-items: center; justify-content: center; }
-        .carousel-track { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; }
-        .carousel-card { position: absolute; width: 260px; background: white; border-radius: var(--radius-2xl); padding: var(--space-6); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15); cursor: pointer; transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), filter 0.5s cubic-bezier(0.4, 0, 0.2, 1); will-change: transform, opacity, filter; }
-        .carousel-card.active { box-shadow: 0 35px 90px rgba(0, 0, 0, 0.25); }
-        .carousel-card:hover:not(.active) { filter: brightness(1.1); }
-        .carousel-card-inner { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-4); }
-        .profile-avatar-large { width: 85px; height: 85px; border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.75rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); }
-        .profile-details { display: flex; flex-direction: column; gap: var(--space-2); }
-        .profile-name-large { font-weight: 800; color: var(--text-dark); font-size: 1.25rem; }
-        .profile-role-badge-large { font-size: 0.7rem; font-weight: 700; padding: 4px 12px; border-radius: var(--radius-full); display: inline-block; align-self: center; }
-        .profile-role-badge-large[data-role="tutor"] { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
-        .profile-role-badge-large[data-role="student"] { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-        .profile-subject-large { font-size: 0.9rem; color: var(--text-light); }
-        .profile-rating-large { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 0.9rem; font-weight: 600; color: var(--warning); }
-        .profile-description { font-size: 0.8rem; color: var(--text-light); margin-top: var(--space-2); line-height: 1.5; max-width: 200px; }
-        .carousel-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 50px; height: 50px; background: white; border: none; border-radius: var(--radius-full); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--primary); transition: all 0.2s; z-index: 20; }
-        .carousel-nav:hover:not(:disabled) { transform: translateY(-50%) scale(1.1); background: var(--primary); color: white; box-shadow: 0 6px 25px rgba(99, 102, 241, 0.3); }
-        .carousel-nav:disabled { opacity: 0.3; cursor: not-allowed; }
+        .landing-page {
+          padding-top: 80px;
+        }
+
+        .hero-section.minimal {
+          position: relative;
+          padding: var(--space-12) 0 var(--space-20);
+          background: linear-gradient(135deg, #fafafa 0%, #f0f4ff 50%, #faf5ff 100%);
+          overflow: hidden;
+          min-height: 600px;
+        }
+
+        .hero-header {
+          text-align: center;
+          margin-bottom: var(--space-8);
+        }
+
+        .hero-title {
+          font-size: 3rem;
+          font-weight: 800;
+          margin-bottom: var(--space-2);
+          line-height: 1.1;
+        }
+
+        .hero-subtitle {
+          font-size: 1.125rem;
+          color: var(--text-light);
+          margin: 0;
+        }
+
+        .gradient-text {
+          background: var(--primary-gradient);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .hero-visual {
+          position: relative;
+          height: 420px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          perspective: 1200px;
+        }
+
+        .carousel-wrapper {
+          position: relative;
+          width: 100%;
+          max-width: 900px;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .carousel-track {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transform-style: preserve-3d;
+        }
+
+        .carousel-card {
+          position: absolute;
+          width: 260px;
+          background: white;
+          border-radius: var(--radius-2xl);
+          padding: var(--space-6);
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+          cursor: pointer;
+          transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), 
+                      opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                      filter 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+          will-change: transform, opacity, filter;
+        }
+
+        .carousel-card.active {
+          box-shadow: 0 35px 90px rgba(0, 0, 0, 0.25);
+        }
+
+        .carousel-card:hover:not(.active) {
+          filter: brightness(1.1);
+        }
+
+        .carousel-card-inner {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          gap: var(--space-4);
+        }
+
+        .profile-avatar-large {
+          width: 85px;
+          height: 85px;
+          border-radius: var(--radius-full);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: 700;
+          font-size: 1.75rem;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        }
+
+        .profile-details {
+          display: flex;
+          flex-direction: column;
+          gap: var(--space-2);
+        }
+
+        .profile-name-large {
+          font-weight: 800;
+          color: var(--text-dark);
+          font-size: 1.25rem;
+        }
+
+        .profile-role-badge-large {
+          font-size: 0.7rem;
+          font-weight: 700;
+          padding: 4px 12px;
+          border-radius: var(--radius-full);
+          display: inline-block;
+          align-self: center;
+        }
+
+        .profile-role-badge-large[data-role="tutor"] {
+          background: rgba(99, 102, 241, 0.1);
+          color: var(--primary);
+        }
+
+        .profile-role-badge-large[data-role="student"] {
+          background: rgba(16, 185, 129, 0.1);
+          color: var(--success);
+        }
+
+        .profile-subject-large {
+          font-size: 0.9rem;
+          color: var(--text-light);
+        }
+
+        .profile-rating-large {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: var(--warning);
+        }
+
+        .profile-description {
+          font-size: 0.8rem;
+          color: var(--text-light);
+          margin-top: var(--space-2);
+          line-height: 1.5;
+          max-width: 200px;
+        }
+
+        .carousel-nav {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 50px;
+          height: 50px;
+          background: white;
+          border: none;
+          border-radius: var(--radius-full);
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--primary);
+          transition: all 0.2s;
+          z-index: 20;
+        }
+
+        .carousel-nav:hover:not(:disabled) {
+          transform: translateY(-50%) scale(1.1);
+          background: var(--primary);
+          color: white;
+          box-shadow: 0 6px 25px rgba(99, 102, 241, 0.3);
+        }
+
+        .carousel-nav:disabled {
+          opacity: 0.3;
+          cursor: not-allowed;
+        }
+
         .carousel-nav.prev { left: 0; }
         .carousel-nav.next { right: 0; }
-        .carousel-dots { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); display: flex; gap: var(--space-2); z-index: 20; }
-        .dot { width: 10px; height: 10px; border-radius: var(--radius-full); background: rgba(99, 102, 241, 0.3); border: none; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .dot:hover { background: rgba(99, 102, 241, 0.5); }
-        .dot.active { background: var(--primary); width: 30px; }
-        .hero-wave { position: absolute; bottom: 0; left: 0; right: 0; height: 100px; }
-        .hero-wave svg { width: 100%; height: 100%; }
-        .how-it-works-section { padding: var(--space-20) 0; background: white; }
-        .section-badge { display: inline-block; padding: var(--space-2) var(--space-4); background: rgba(99, 102, 241, 0.1); color: var(--primary); font-size: 0.875rem; font-weight: 600; border-radius: var(--radius-full); margin-bottom: var(--space-4); }
-        .how-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-8); margin-top: var(--space-12); }
-        .how-card { text-align: center; padding: var(--space-8); background: var(--bg); border-radius: var(--radius-2xl); transition: all var(--transition); position: relative; overflow: hidden; }
-        .how-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); }
-        .how-card:hover .how-card-icon { transform: scale(1.1) rotate(5deg); }
-        .how-card-icon { width: 80px; height: 80px; background: var(--primary-gradient); border-radius: var(--radius-xl); display: flex; align-items: center; justify-content: center; color: white; margin: 0 auto var(--space-6); transition: transform 0.3s ease; animation: iconFloat 3s ease-in-out infinite; }
-        .how-card-icon.lottie-icon { background: white; padding: var(--space-2); }
-        .how-card:nth-child(1) .how-card-icon { animation-delay: 0s; }
-        .how-card:nth-child(2) .how-card-icon { animation-delay: 0.5s; }
-        .how-card:nth-child(3) .how-card-icon { animation-delay: 1s; }
-        @keyframes iconFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-        .how-card-number { position: absolute; top: var(--space-4); right: var(--space-4); font-size: 4rem; font-weight: 800; color: var(--primary); opacity: 0.1; }
-        .how-card-title { font-size: 1.5rem; margin-bottom: var(--space-4); }
-        .how-card-desc { color: var(--text-light); line-height: 1.7; }
-        .features-section { padding: var(--space-20) 0; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); }
-        .features-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-16); align-items: center; }
-        .feature-list { margin-top: var(--space-8); display: flex; flex-direction: column; gap: var(--space-6); }
-        .feature-item { display: flex; align-items: flex-start; gap: var(--space-4); }
-        .feature-icon { width: 48px; height: 48px; background: white; border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; color: var(--primary); box-shadow: var(--shadow); }
-        .feature-visual { position: relative; height: 400px; }
-        .feature-graphic { position: relative; width: 100%; height: 100%; background: var(--primary-gradient); border-radius: var(--radius-2xl); overflow: hidden; }
-        .feature-graphic.lottie-feature { background: white; display: flex; align-items: center; justify-content: center; }
-        .feature-floating { position: absolute; background: white; border-radius: var(--radius-lg); padding: var(--space-4); box-shadow: var(--shadow-lg); color: var(--primary); }
+
+        .carousel-dots {
+          position: absolute;
+          bottom: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          gap: var(--space-2);
+          z-index: 20;
+        }
+
+        .dot {
+          width: 10px;
+          height: 10px;
+          border-radius: var(--radius-full);
+          background: rgba(99, 102, 241, 0.3);
+          border: none;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .dot:hover {
+          background: rgba(99, 102, 241, 0.5);
+        }
+
+        .dot.active {
+          background: var(--primary);
+          width: 30px;
+        }
+
+        .hero-wave {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 100px;
+        }
+
+        .hero-wave svg {
+          width: 100%;
+          height: 100%;
+        }
+
+        .how-it-works-section {
+          padding: var(--space-20) 0;
+          background: white;
+        }
+
+        .section-badge {
+          display: inline-block;
+          padding: var(--space-2) var(--space-4);
+          background: rgba(99, 102, 241, 0.1);
+          color: var(--primary);
+          font-size: 0.875rem;
+          font-weight: 600;
+          border-radius: var(--radius-full);
+          margin-bottom: var(--space-4);
+        }
+
+        .how-cards {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: var(--space-8);
+          margin-top: var(--space-12);
+        }
+
+        .how-card {
+          text-align: center;
+          padding: var(--space-8);
+          background: var(--bg);
+          border-radius: var(--radius-2xl);
+          transition: all var(--transition);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .how-card:hover {
+          transform: translateY(-8px);
+          box-shadow: var(--shadow-lg);
+        }
+
+        .how-card-icon {
+          width: 80px;
+          height: 80px;
+          background: var(--primary-gradient);
+          border-radius: var(--radius-xl);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          margin: 0 auto var(--space-6);
+        }
+
+        .how-card-icon.lottie-icon {
+          background: var(--primary-gradient);
+          padding: 10px;
+        }
+
+        .loading-placeholder {
+          width: 60px;
+          height: 60px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.75rem;
+          color: rgba(255, 255, 255, 0.8);
+        }
+
+        .how-card-number {
+          position: absolute;
+          top: var(--space-4);
+          right: var(--space-4);
+          font-size: 4rem;
+          font-weight: 800;
+          color: var(--primary);
+          opacity: 0.1;
+        }
+
+        .how-card-title {
+          font-size: 1.5rem;
+          margin-bottom: var(--space-4);
+        }
+
+        .how-card-desc {
+          color: var(--text-light);
+          line-height: 1.7;
+        }
+
+        .features-section {
+          padding: var(--space-20) 0;
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+
+        .features-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: var(--space-16);
+          align-items: center;
+        }
+
+        .feature-list {
+          margin-top: var(--space-8);
+          display: flex;
+          flex-direction: column;
+          gap: var(--space-6);
+        }
+
+        .feature-item {
+          display: flex;
+          align-items: flex-start;
+          gap: var(--space-4);
+        }
+
+        .feature-icon {
+          width: 48px;
+          height: 48px;
+          background: white;
+          border-radius: var(--radius-lg);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--primary);
+          box-shadow: var(--shadow);
+        }
+
+        .feature-visual {
+          position: relative;
+          height: 400px;
+        }
+
+        .feature-graphic {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          background: var(--primary-gradient);
+          border-radius: var(--radius-2xl);
+          overflow: hidden;
+        }
+
+        .feature-floating {
+          position: absolute;
+          background: white;
+          border-radius: var(--radius-lg);
+          padding: var(--space-4);
+          box-shadow: var(--shadow-lg);
+          color: var(--primary);
+        }
+
         .feature-floating-1 { top: 20%; left: 15%; }
         .feature-floating-2 { top: 40%; right: 20%; }
         .feature-floating-3 { bottom: 25%; left: 30%; }
-        .reviews-section { padding: var(--space-20) 0; background: white; }
-        .reviews-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-8); margin-top: var(--space-12); }
-        .review-card { background: var(--bg); padding: var(--space-8); border-radius: var(--radius-2xl); transition: all var(--transition); }
-        .review-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
-        .review-stars { display: flex; gap: var(--space-1); margin-bottom: var(--space-4); }
-        .review-text { font-size: 1rem; line-height: 1.7; margin-bottom: var(--space-6); color: var(--text); }
-        .review-author { display: flex; align-items: center; gap: var(--space-3); }
-        .review-avatar { width: 48px; height: 48px; border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.875rem; }
-        .review-name { font-weight: 700; color: var(--text-dark); }
-        .review-role { font-size: 0.875rem; color: var(--text-light); }
-        .cta-section { padding: var(--space-20) 0; background: var(--primary-gradient); text-align: center; }
-        .cta-content h2 { color: white; margin-bottom: var(--space-4); }
-        .cta-content p { color: rgba(255, 255, 255, 0.9); font-size: 1.25rem; margin-bottom: var(--space-8); }
-        .cta-content .btn-primary { background: white; color: var(--primary); }
-        @media (max-width: 1024px) { .features-grid { grid-template-columns: 1fr; } .carousel-nav { display: none; } .carousel-card { width: 220px; } }
-        @media (max-width: 768px) { .how-cards, .reviews-grid { grid-template-columns: 1fr; } .hero-title { font-size: 2rem; } .carousel-card { width: 170px; padding: var(--space-4); } .profile-avatar-large { width: 60px; height: 60px; font-size: 1.25rem; } }
+
+        .reviews-section {
+          padding: var(--space-20) 0;
+          background: white;
+        }
+
+        .reviews-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: var(--space-8);
+          margin-top: var(--space-12);
+        }
+
+        .review-card {
+          background: var(--bg);
+          padding: var(--space-8);
+          border-radius: var(--radius-2xl);
+          transition: all var(--transition);
+        }
+
+        .review-card:hover {
+          transform: translateY(-4px);
+          box-shadow: var(--shadow-lg);
+        }
+
+        .review-stars {
+          display: flex;
+          gap: var(--space-1);
+          margin-bottom: var(--space-4);
+        }
+
+        .review-text {
+          font-size: 1rem;
+          line-height: 1.7;
+          margin-bottom: var(--space-6);
+          color: var(--text);
+        }
+
+        .review-author {
+          display: flex;
+          align-items: center;
+          gap: var(--space-3);
+        }
+
+        .review-avatar {
+          width: 48px;
+          height: 48px;
+          border-radius: var(--radius-full);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: 700;
+          font-size: 0.875rem;
+        }
+
+        .review-name {
+          font-weight: 700;
+          color: var(--text-dark);
+        }
+
+        .review-role {
+          font-size: 0.875rem;
+          color: var(--text-light);
+        }
+
+        .cta-section {
+          padding: var(--space-20) 0;
+          background: var(--primary-gradient);
+          text-align: center;
+        }
+
+        .cta-content h2 {
+          color: white;
+          margin-bottom: var(--space-4);
+        }
+
+        .cta-content p {
+          color: rgba(255, 255, 255, 0.9);
+          font-size: 1.25rem;
+          margin-bottom: var(--space-8);
+        }
+
+        .cta-content .btn-primary {
+          background: white;
+          color: var(--primary);
+        }
+
+        @media (max-width: 1024px) {
+          .features-grid {
+            grid-template-columns: 1fr;
+          }
+          .carousel-nav {
+            display: none;
+          }
+          .carousel-card {
+            width: 220px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .how-cards, .reviews-grid {
+            grid-template-columns: 1fr;
+          }
+          .hero-title {
+            font-size: 2rem;
+          }
+          .carousel-card {
+            width: 170px;
+            padding: var(--space-4);
+          }
+          .profile-avatar-large {
+            width: 60px;
+            height: 60px;
+            font-size: 1.25rem;
+          }
+        }
       `}</style>
     </div>
   );
