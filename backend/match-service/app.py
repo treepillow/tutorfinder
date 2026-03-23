@@ -150,7 +150,7 @@ def get_matches(user_id):
 
 @app.route('/match/<int:match_id>/archive', methods=['PUT'])
 def archive_match(match_id):
-    match = Match.query.get(match_id)
+    match = db.session.get(Match, match_id)
     if not match:
         return jsonify({'error': 'Match not found'}), 404
     match.status = 'Archived'
