@@ -57,7 +57,7 @@ services:
 
   # ── Profile Service ───────────────────────────────────────
   profile-service:
-    build: ./profile-service
+    build: ./backend/profile-service
     container_name: profile-service
     restart: unless-stopped
     environment:
@@ -75,7 +75,7 @@ services:
 
   # ── Match Service ─────────────────────────────────────────
   match-service:
-    build: ./match-service
+    build: ./backend/match-service
     container_name: match-service
     restart: unless-stopped
     environment:
@@ -94,7 +94,7 @@ services:
 
   # ── Availability Service ──────────────────────────────────
   availability-service:
-    build: ./availability-service
+    build: ./backend/availability-service
     container_name: availability-service
     restart: unless-stopped
     environment:
@@ -109,7 +109,7 @@ services:
 
   # ── Booking Service ───────────────────────────────────────
   booking-service:
-    build: ./booking-service
+    build: ./backend/booking-service
     container_name: booking-service
     restart: unless-stopped
     environment:
@@ -124,7 +124,7 @@ services:
 
   # ── Payment Service (Java / Spring Boot) ──────────────────
   payment-service:
-    build: ./payment-service
+    build: ./backend/payment-service
     container_name: payment-service
     restart: unless-stopped
     environment:
@@ -146,7 +146,7 @@ services:
 
   # ── Notification Service ──────────────────────────────────
   notification-service:
-    build: ./notification-service
+    build: ./backend/notification-service
     container_name: notification-service
     restart: unless-stopped
     environment:
