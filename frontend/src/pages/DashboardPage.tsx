@@ -19,8 +19,12 @@ import {
   GraduationCap
 } from 'lucide-react';
 
+import type { AuthUser } from '../App';
+
 interface DashboardPageProps {
   onNavigate: (page: string) => void;
+  user: AuthUser | null;
+  onLogout: () => void;
 }
 
 // Mock data for tutors
@@ -111,7 +115,7 @@ const mockMatches = [
   }
 ];
 
-export function DashboardPage({ onNavigate }: DashboardPageProps) {
+export function DashboardPage({ onNavigate, user, onLogout }: DashboardPageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<'matched' | 'requests'>('matched');
   const [selectedProfile, setSelectedProfile] = useState<typeof mockTutors[0] | null>(null);
@@ -247,7 +251,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
             <Settings size={20} />
             <span>Settings</span>
           </button>
-          <button className="nav-item logout" onClick={() => onNavigate('landing')}>
+          <button className="nav-item logout" onClick={onLogout}>
             <span>Sign Out</span>
           </button>
         </div>
@@ -274,11 +278,11 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
             </button>
             <div className="user-menu">
               <div className="user-avatar" style={{ background: 'var(--primary-gradient)' }}>
-                <span>JD</span>
+                <span>{user?.name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'U'}</span>
               </div>
               <div className="user-info">
-                <span className="user-name">John Doe</span>
-                <span className="user-role">Student</span>
+                <span className="user-name">{user?.name || 'User'}</span>
+                <span className="user-role">{user?.role || ''}</span>
               </div>
             </div>
           </div>

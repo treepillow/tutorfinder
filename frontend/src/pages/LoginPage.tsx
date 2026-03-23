@@ -1,17 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { Mail, Lock, ArrowRight, Eye, EyeOff, GraduationCap } from 'lucide-react';
+import type { AuthUser } from '../App';
+
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:5001';
 
 interface LoginPageProps {
   onNavigate: (page: string) => void;
+  onLogin: (user: AuthUser) => void;
 }
 
-export function LoginPage({ onNavigate }: LoginPageProps) {
+export function LoginPage({ onNavigate, onLogin }: LoginPageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -61,13 +66,26 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     setIsLoading(true);
-    
-    // Simulate login
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsLoading(false);
-    onNavigate('dashboard');
+
+    try {
+      const res = await fetch(`${API_BASE}/profile/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Login failed');
+      } else {
+        onLogin({ token: data.token, user_id: data.user_id, role: data.role, name: data.name });
+      }
+    } catch {
+      setError('Could not connect to server. Is the backend running?');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -145,6 +163,8 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
               </label>
               <a href="#" className="forgot-link">Forgot password?</a>
             </div>
+
+            {error && <div className="login-error">{error}</div>}
 
             <button
               type="submit"
@@ -383,6 +403,15 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
 
         .forgot-link:hover {
           color: var(--primary-dark);
+        }
+
+        .login-error {
+          background: rgba(239, 68, 68, 0.08);
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          color: #dc2626;
+          border-radius: var(--radius-lg);
+          padding: var(--space-3) var(--space-4);
+          font-size: 0.875rem;
         }
 
         .login-submit {
