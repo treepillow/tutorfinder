@@ -226,12 +226,11 @@ export function RegisterPage({ onNavigate }: RegisterPageProps) {
 
               <div className="form-grid">
                 <div className="form-group">
-                  <label className="form-label">Full Name</label>
+                  <label className="form-label"><User size={18} />Full Name</label>
                   <div className="input-wrapper">
-                    <User className="input-icon" size={18} />
                     <input
                       type="text"
-                      className="form-input input-with-icon"
+                      className="form-input"
                       placeholder="Enter your full name"
                       value={formData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
@@ -255,12 +254,11 @@ export function RegisterPage({ onNavigate }: RegisterPageProps) {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Email Address</label>
+                  <label className="form-label"><Mail size={18} />Email Address</label>
                   <div className="input-wrapper">
-                    <Mail className="input-icon" size={18} />
                     <input
                       type="email"
-                      className="form-input input-with-icon"
+                      className="form-input"
                       placeholder="Enter your email"
                       value={formData.email}
                       onChange={(e) => handleInputChange('email', e.target.value)}
@@ -269,12 +267,11 @@ export function RegisterPage({ onNavigate }: RegisterPageProps) {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Contact Number</label>
+                  <label className="form-label"><Phone size={18} />Contact Number</label>
                   <div className="input-wrapper">
-                    <Phone className="input-icon" size={18} />
                     <input
                       type="tel"
-                      className="form-input input-with-icon"
+                      className="form-input"
                       placeholder="Enter phone number"
                       value={formData.contact}
                       onChange={(e) => handleInputChange('contact', e.target.value)}
@@ -283,11 +280,10 @@ export function RegisterPage({ onNavigate }: RegisterPageProps) {
                 </div>
 
                 <div className="form-group full-width">
-                  <label className="form-label">About Yourself</label>
+                  <label className="form-label"><FileText size={18} />About Yourself</label>
                   <div className="input-wrapper">
-                    <FileText className="input-icon textarea-icon" size={18} />
                     <textarea
-                      className="form-textarea input-with-icon"
+                      className="form-textarea"
                       placeholder={role === 'tutor' ? 'Tell students about your teaching experience...' : 'Tell tutors about your learning goals...'}
                       rows={3}
                       value={formData.blurb}
@@ -297,12 +293,11 @@ export function RegisterPage({ onNavigate }: RegisterPageProps) {
                 </div>
 
                 <div className="form-group full-width">
-                  <label className="form-label">Password</label>
+                  <label className="form-label"><Lock size={18} />Password</label>
                   <div className="input-wrapper">
-                    <Lock className="input-icon" size={18} />
                     <input
                       type="password"
-                      className="form-input input-with-icon"
+                      className="form-input"
                       placeholder="Create a password"
                       value={formData.password}
                       onChange={(e) => handleInputChange('password', e.target.value)}
@@ -680,10 +675,13 @@ export function RegisterPage({ onNavigate }: RegisterPageProps) {
           margin-bottom: var(--space-6);
         }
 
-        .preference-section .form-label {
+        .form-label {
           display: flex;
           align-items: center;
           gap: var(--space-2);
+        }
+
+        .preference-section .form-label {
           margin-bottom: var(--space-3);
         }
 

@@ -166,7 +166,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
                   const absOffset = Math.abs(offset);
                   
                   const x = offset * 200;
-                  const y = offset === 0 ? -80 : absOffset * 15;
+                  const y = absOffset * 15;
                   const scale = offset === 0 ? 1.05 : Math.max(0.85 - absOffset * 0.08, 0.5);
                   const opacity = absOffset > 3 ? 0 : (offset === 0 ? 1 : Math.max(0.7 - absOffset * 0.2, 0.3));
                   const rotateY = offset * -12;
@@ -195,15 +195,11 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
                             {profile.role}
                           </div>
                           <div className="profile-subject-large">{profile.subject}</div>
-                          {profile.rating && (
-                            <div className="profile-rating-large">
-                              <Star size={16} fill="#fbbf24" color="#fbbf24" />
-                              <span>{profile.rating}</span>
-                            </div>
-                          )}
-                          {offset === 0 && (
-                            <p className="profile-description">{profile.description}</p>
-                          )}
+                          <div className="profile-rating-large" style={{ visibility: profile.rating ? 'visible' : 'hidden' }}>
+                            <Star size={16} fill="#fbbf24" color="#fbbf24" />
+                            <span>{profile.rating}</span>
+                          </div>
+                          <p className="profile-description" style={{ visibility: offset === 0 ? 'visible' : 'hidden' }}>{profile.description}</p>
                         </div>
                       </div>
                     </div>
@@ -436,7 +432,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
         .hero-visual { position: relative; height: 420px; display: flex; align-items: center; justify-content: center; perspective: 1200px; }
         .carousel-wrapper { position: relative; width: 100%; max-width: 900px; height: 100%; display: flex; align-items: center; justify-content: center; }
         .carousel-track { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; }
-        .carousel-card { position: absolute; width: 260px; background: white; border-radius: var(--radius-2xl); padding: var(--space-6); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15); cursor: pointer; transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), filter 0.5s cubic-bezier(0.4, 0, 0.2, 1); will-change: transform, opacity, filter; }
+        .carousel-card { position: absolute; width: 260px; height: 300px; background: white; border-radius: var(--radius-2xl); padding: var(--space-6); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15); cursor: pointer; transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), filter 0.5s cubic-bezier(0.4, 0, 0.2, 1); will-change: transform, opacity, filter; overflow: hidden; }
         .carousel-card.active { box-shadow: 0 35px 90px rgba(0, 0, 0, 0.25); }
         .carousel-card:hover:not(.active) { filter: brightness(1.1); }
         .carousel-card-inner { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-4); }
