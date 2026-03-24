@@ -18,16 +18,13 @@ function LottiePlayer({ animationData, loop, style }: { animationData: object; l
   }, [animationData, loop]);
   return <div ref={containerRef} style={style} />;
 }
-import { 
-  Star, 
+import {
+  Star,
   ArrowRight,
   ArrowLeft,
   BookOpen,
   Users,
-  Award,
   Search,
-  Calendar,
-  MessageCircle
 } from 'lucide-react';
 
 import calendarAnimation from '../assets/schedule.json';
