@@ -16,9 +16,14 @@ TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
 TWILIO_AUTH_TOKEN  = os.environ.get('TWILIO_AUTH_TOKEN', '')
 TWILIO_FROM_NUMBER = os.environ.get('TWILIO_FROM_NUMBER', '')
 
+DB_SCHEMA = os.environ.get('DB_SCHEMA', 'public')
+
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-    'DATABASE_URL', 'mysql+pymysql://root:rootpassword@mysql:3306/notification_db')
+    'DATABASE_URL', 'postgresql://localhost/tutorfinder')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'connect_args': {'options': f'-csearch_path={DB_SCHEMA}'}
+}
 
 db = SQLAlchemy(app)
 
@@ -28,7 +33,7 @@ class Notification(db.Model):
 
     notify_id    = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id      = db.Column(db.Integer, nullable=True)
-    type         = db.Column(db.Enum('Match', 'Booking', 'Payment'), nullable=False)
+    type         = db.Column(db.Enum('Match', 'Booking', 'Payment', native_enum=False), nullable=False)
     message      = db.Column(db.Text, nullable=False)
     phone_number = db.Column(db.String(20), nullable=False)
     status       = db.Column(db.String(20), default='Pending')
@@ -46,6 +51,14 @@ class Notification(db.Model):
             'routing_key':  self.routing_key,
             'created_at':   self.created_at.isoformat() if self.created_at else None,
         }
+
+
+with app.app_context():
+    from sqlalchemy import text
+    with db.engine.connect() as conn:
+        conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {DB_SCHEMA}'))
+        conn.commit()
+    db.create_all()
 
 
 def send_sms(to_phone, message_text):
@@ -196,6 +209,10 @@ def get_notifications(user_id):
 
 if __name__ == '__main__':
     with app.app_context():
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {DB_SCHEMA}'))
+            conn.commit()
         db.create_all()
     start_consumer()
     app.run(host='0.0.0.0', port=5007, debug=False)

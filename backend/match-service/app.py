@@ -13,10 +13,14 @@ CORS(app)
 
 RABBITMQ_URL        = os.environ.get('RABBITMQ_URL', 'amqp://guest:guest@rabbitmq:5672/')
 PROFILE_SERVICE_URL = os.environ.get('PROFILE_SERVICE_URL', 'http://profile-service:5001')
+DB_SCHEMA           = os.environ.get('DB_SCHEMA', 'public')
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-    'DATABASE_URL', 'mysql+pymysql://root:rootpassword@mysql:3306/match_db')
+    'DATABASE_URL', 'postgresql://localhost/tutorfinder')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'connect_args': {'options': f'-csearch_path={DB_SCHEMA}'}
+}
 
 db = SQLAlchemy(app)
 
@@ -38,8 +42,16 @@ class Match(db.Model):
     match_id   = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_a_id  = db.Column(db.Integer, nullable=False)
     user_b_id  = db.Column(db.Integer, nullable=False)
-    status     = db.Column(db.Enum('Active', 'Archived'), default='Active', nullable=False)
+    status     = db.Column(db.Enum('Active', 'Archived', native_enum=False), default='Active', nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+with app.app_context():
+    from sqlalchemy import text
+    with db.engine.connect() as conn:
+        conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {DB_SCHEMA}'))
+        conn.commit()
+    db.create_all()
 
 
 def publish_message(routing_key, body):
@@ -148,6 +160,12 @@ def get_matches(user_id):
     } for m in matches]), 200
 
 
+@app.route('/match/swiped/<int:user_id>', methods=['GET'])
+def get_swiped(user_id):
+    rows = Swipe.query.filter_by(swiper_id=user_id).all()
+    return jsonify({'swiped_ids': [r.swiped_id for r in rows]}), 200
+
+
 @app.route('/match/<int:match_id>/archive', methods=['PUT'])
 def archive_match(match_id):
     match = db.session.get(Match, match_id)
@@ -160,5 +178,9 @@ def archive_match(match_id):
 
 if __name__ == '__main__':
     with app.app_context():
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {DB_SCHEMA}'))
+            conn.commit()
         db.create_all()
     app.run(host='0.0.0.0', port=5002, debug=False)

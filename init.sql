@@ -1,11 +1,10 @@
--- TutorFinder Database Initialisation
--- Runs once when the MySQL container first starts.
--- Each service manages its own schema via ORM (ddl-auto=update / db.create_all()),
--- so we only need to create the databases here.
+-- TutorFinder – Supabase Schema Initialisation
+-- Run this once in the Supabase SQL Editor to create the schemas.
+-- Each service manages its own tables via ORM (db.create_all / ddl-auto=update).
 
-CREATE DATABASE IF NOT EXISTS profile_db      CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS match_db        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS availability_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS booking_db      CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS payment_db      CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS notification_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE SCHEMA IF NOT EXISTS profile_schema;
+CREATE SCHEMA IF NOT EXISTS match_schema;
+CREATE SCHEMA IF NOT EXISTS availability_schema;
+CREATE SCHEMA IF NOT EXISTS booking_schema;
+CREATE SCHEMA IF NOT EXISTS payment_schema;
+CREATE SCHEMA IF NOT EXISTS notification_schema;

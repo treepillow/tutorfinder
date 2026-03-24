@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { Mail, Lock, ArrowRight, Eye, EyeOff, GraduationCap } from 'lucide-react';
-import type { AuthUser } from '../App';
+import type { AuthUser } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:5001';
 
