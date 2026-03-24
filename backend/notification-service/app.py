@@ -9,7 +9,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins='*')
 
 RABBITMQ_URL       = os.environ.get('RABBITMQ_URL', 'amqp://guest:guest@rabbitmq:5672/')
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')

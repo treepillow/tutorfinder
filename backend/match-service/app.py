@@ -9,7 +9,7 @@ from flask_cors import CORS
 from sqlalchemy import UniqueConstraint
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins='*')
 
 RABBITMQ_URL        = os.environ.get('RABBITMQ_URL', 'amqp://guest:guest@rabbitmq:5672/')
 PROFILE_SERVICE_URL = os.environ.get('PROFILE_SERVICE_URL', 'http://profile-service:5001')
