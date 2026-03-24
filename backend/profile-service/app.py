@@ -274,4 +274,4 @@ if __name__ == '__main__':
             conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {DB_SCHEMA}'))
             conn.commit()
         db.create_all()
-    app.run(host='0.0.0.0', port=5001, debug=False)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5001)), debug=False)
