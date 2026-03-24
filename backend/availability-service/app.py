@@ -7,9 +7,14 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
+DB_SCHEMA = os.environ.get('DB_SCHEMA', 'public')
+
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-    'DATABASE_URL', 'mysql+pymysql://root:rootpassword@mysql:3306/availability_db')
+    'DATABASE_URL', 'postgresql://localhost/tutorfinder')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'connect_args': {'options': f'-csearch_path={DB_SCHEMA}'}
+}
 
 db = SQLAlchemy(app)
 
@@ -23,7 +28,7 @@ class Availability(db.Model):
     start_time      = db.Column(db.Time, nullable=False)
     end_time        = db.Column(db.Time, nullable=False)
     status          = db.Column(
-        db.Enum('Available', 'Reserved', 'Unavailable'),
+        db.Enum('Available', 'Reserved', 'Unavailable', native_enum=False),
         default='Available', nullable=False)
     created_at      = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -36,6 +41,14 @@ class Availability(db.Model):
             'end_time':        str(self.end_time),
             'status':          self.status,
         }
+
+
+with app.app_context():
+    from sqlalchemy import text
+    with db.engine.connect() as conn:
+        conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {DB_SCHEMA}'))
+        conn.commit()
+    db.create_all()
 
 
 @app.route('/health', methods=['GET'])
@@ -118,5 +131,9 @@ def delete_slot(availability_id):
 
 if __name__ == '__main__':
     with app.app_context():
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {DB_SCHEMA}'))
+            conn.commit()
         db.create_all()
     app.run(host='0.0.0.0', port=5003, debug=False)

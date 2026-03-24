@@ -7,9 +7,14 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
+DB_SCHEMA = os.environ.get('DB_SCHEMA', 'public')
+
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-    'DATABASE_URL', 'mysql+pymysql://root:rootpassword@mysql:3306/booking_db')
+    'DATABASE_URL', 'postgresql://localhost/tutorfinder')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'connect_args': {'options': f'-csearch_path={DB_SCHEMA}'}
+}
 
 db = SQLAlchemy(app)
 
@@ -30,7 +35,7 @@ class Booking(db.Model):
     start_time      = db.Column(db.Time, nullable=False)
     end_time        = db.Column(db.Time, nullable=False)
     status          = db.Column(
-        db.Enum(*VALID_STATUSES),
+        db.Enum(*VALID_STATUSES, native_enum=False),
         default='AwaitingConfirmation', nullable=False)
     created_at      = db.Column(db.DateTime, default=datetime.utcnow)
     confirmed_at    = db.Column(db.DateTime, nullable=True)
@@ -48,6 +53,14 @@ class Booking(db.Model):
             'created_at':      self.created_at.isoformat() if self.created_at else None,
             'confirmed_at':    self.confirmed_at.isoformat() if self.confirmed_at else None,
         }
+
+
+with app.app_context():
+    from sqlalchemy import text
+    with db.engine.connect() as conn:
+        conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {DB_SCHEMA}'))
+        conn.commit()
+    db.create_all()
 
 
 @app.route('/health', methods=['GET'])
@@ -193,5 +206,9 @@ def get_expired_bookings():
 
 if __name__ == '__main__':
     with app.app_context():
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {DB_SCHEMA}'))
+            conn.commit()
         db.create_all()
     app.run(host='0.0.0.0', port=5004, debug=False)

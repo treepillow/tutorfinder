@@ -15,10 +15,14 @@ CORS(app)
 JWT_SECRET            = os.environ.get('JWT_SECRET', 'esd-jwt-secret-2024')
 MATCH_SERVICE_URL     = os.environ.get('MATCH_SERVICE_URL', 'http://match-service:5002')
 AVAILABILITY_SERVICE_URL = os.environ.get('AVAILABILITY_SERVICE_URL', 'http://availability-service:5003')
+DB_SCHEMA             = os.environ.get('DB_SCHEMA', 'public')
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-    'DATABASE_URL', 'mysql+pymysql://root:rootpassword@mysql:3306/profile_db')
+    'DATABASE_URL', 'postgresql://localhost/tutorfinder')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'connect_args': {'options': f'-csearch_path={DB_SCHEMA}'}
+}
 
 db = SQLAlchemy(app)
 
@@ -31,7 +35,7 @@ class Profile(db.Model):
     email         = db.Column(db.String(100), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     phone         = db.Column(db.String(20), nullable=False)
-    role          = db.Column(db.Enum('Tutor', 'Student'), nullable=False)
+    role          = db.Column(db.Enum('Tutor', 'Student', native_enum=False), nullable=False)
     subject       = db.Column(db.String(100))
     price_rate    = db.Column(db.Numeric(10, 2))
     latitude      = db.Column(db.Float)
@@ -65,6 +69,14 @@ class Profile(db.Model):
             'phone':   self.phone,
             'role':    self.role,
         }
+
+
+with app.app_context():
+    from sqlalchemy import text
+    with db.engine.connect() as conn:
+        conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {DB_SCHEMA}'))
+        conn.commit()
+    db.create_all()
 
 
 def token_required(f):
@@ -257,5 +269,9 @@ def verify_token():
 
 if __name__ == '__main__':
     with app.app_context():
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {DB_SCHEMA}'))
+            conn.commit()
         db.create_all()
     app.run(host='0.0.0.0', port=5001, debug=False)

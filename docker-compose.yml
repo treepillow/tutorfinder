@@ -7,32 +7,10 @@ networks:
 
 # ─── Named volumes ───────────────────────────────────────────
 volumes:
-  mysql_data:
   rabbitmq_data:
 
 # ─── Services ────────────────────────────────────────────────
 services:
-
-  # ── MySQL ────────────────────────────────────────────────
-  mysql:
-    image: mysql:8.0
-    container_name: mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_ROOT_HOST: "%"
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - tutorfinder_net
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpassword"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
 
   # ── RabbitMQ ─────────────────────────────────────────────
   rabbitmq:
@@ -61,7 +39,8 @@ services:
     container_name: profile-service
     restart: unless-stopped
     environment:
-      DATABASE_URL: mysql+pymysql://root:rootpassword@mysql:3306/profile_db
+      DATABASE_URL: ${SUPABASE_URL}
+      DB_SCHEMA: profile_schema
       JWT_SECRET: esd-jwt-secret-2024
       MATCH_SERVICE_URL: http://match-service:5002
       AVAILABILITY_SERVICE_URL: http://availability-service:5003
@@ -69,9 +48,6 @@ services:
       - "5001:5001"
     networks:
       - tutorfinder_net
-    depends_on:
-      mysql:
-        condition: service_healthy
 
   # ── Match Service ─────────────────────────────────────────
   match-service:
@@ -79,7 +55,8 @@ services:
     container_name: match-service
     restart: unless-stopped
     environment:
-      DATABASE_URL: mysql+pymysql://root:rootpassword@mysql:3306/match_db
+      DATABASE_URL: ${SUPABASE_URL}
+      DB_SCHEMA: match_schema
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       PROFILE_SERVICE_URL: http://profile-service:5001
     ports:
@@ -87,8 +64,6 @@ services:
     networks:
       - tutorfinder_net
     depends_on:
-      mysql:
-        condition: service_healthy
       rabbitmq:
         condition: service_healthy
 
@@ -98,14 +73,12 @@ services:
     container_name: availability-service
     restart: unless-stopped
     environment:
-      DATABASE_URL: mysql+pymysql://root:rootpassword@mysql:3306/availability_db
+      DATABASE_URL: ${SUPABASE_URL}
+      DB_SCHEMA: availability_schema
     ports:
       - "5003:5003"
     networks:
       - tutorfinder_net
-    depends_on:
-      mysql:
-        condition: service_healthy
 
   # ── Booking Service ───────────────────────────────────────
   booking-service:
@@ -113,14 +86,12 @@ services:
     container_name: booking-service
     restart: unless-stopped
     environment:
-      DATABASE_URL: mysql+pymysql://root:rootpassword@mysql:3306/booking_db
+      DATABASE_URL: ${SUPABASE_URL}
+      DB_SCHEMA: booking_schema
     ports:
       - "5004:5004"
     networks:
       - tutorfinder_net
-    depends_on:
-      mysql:
-        condition: service_healthy
 
   # ── Payment Service (Java / Spring Boot) ──────────────────
   payment-service:
@@ -128,9 +99,9 @@ services:
     container_name: payment-service
     restart: unless-stopped
     environment:
-      DATABASE_URL: jdbc:mysql://mysql:3306/payment_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
-      DB_USER: root
-      DB_PASSWORD: rootpassword
+      DATABASE_URL: jdbc:postgresql://aws-1-ap-south-1.pooler.supabase.com:5432/postgres?currentSchema=payment_schema&sslmode=require
+      DB_USER: postgres.ciqeksmhuutrnvtdqnxc
+      DB_PASSWORD: ${SUPABASE_PASSWORD}
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
@@ -139,8 +110,6 @@ services:
     networks:
       - tutorfinder_net
     depends_on:
-      mysql:
-        condition: service_healthy
       rabbitmq:
         condition: service_healthy
 
@@ -150,7 +119,8 @@ services:
     container_name: notification-service
     restart: unless-stopped
     environment:
-      DATABASE_URL: mysql+pymysql://root:rootpassword@mysql:3306/notification_db
+      DATABASE_URL: ${SUPABASE_URL}
+      DB_SCHEMA: notification_schema
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
@@ -160,7 +130,5 @@ services:
     networks:
       - tutorfinder_net
     depends_on:
-      mysql:
-        condition: service_healthy
       rabbitmq:
         condition: service_healthy
