@@ -57,7 +57,7 @@ function App() {
       <main className="main-content">
         {currentPage === 'landing' && <LandingPage onNavigate={handleNavigate} />}
         {currentPage === 'login' && <LoginPage onNavigate={handleNavigate} onLogin={handleLogin} />}
-        {currentPage === 'register' && <RegisterPage onNavigate={handleNavigate} />}
+        {currentPage === 'register' && <RegisterPage onNavigate={handleNavigate} onLogin={handleLogin} />}
         {currentPage === 'discover' && <DiscoverPage user={authUser} onNavigate={handleNavigate} onLogout={handleLogout} />}
         {currentPage === 'matches' && <MatchesPage user={authUser} onNavigate={handleNavigate} onLogout={handleLogout} />}
         {currentPage === 'requests' && <RequestsPage user={authUser} onNavigate={handleNavigate} onLogout={handleLogout} />}

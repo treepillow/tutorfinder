@@ -18,8 +18,11 @@ import {
   Clock
 } from 'lucide-react';
 
+import type { AuthUser } from '../types';
+
 interface RegisterPageProps {
   onNavigate: (page: string) => void;
+  onLogin: (user: AuthUser) => void;
 }
 
 const subjects = [
@@ -33,7 +36,7 @@ const levels = ['Primary 1-3', 'Primary 4-6', 'Secondary 1-2', 'Secondary 3-4', 
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const timeSlots = ['Morning (8am-12pm)', 'Afternoon (12pm-5pm)', 'Evening (5pm-9pm)'];
 
-export function RegisterPage({ onNavigate }: RegisterPageProps) {
+export function RegisterPage({ onNavigate, onLogin }: RegisterPageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState(1);
   const [role, setRole] = useState<'tutor' | 'tutee'>('tutee');
@@ -142,7 +145,17 @@ export function RegisterPage({ onNavigate }: RegisterPageProps) {
         if (!res.ok) {
           setError(data.error || 'Registration failed');
         } else {
-          onNavigate('login');
+          const loginRes = await fetch(`${API_BASE}/profile/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: formData.email, password: formData.password }),
+          });
+          if (loginRes.ok) {
+            const loginData = await loginRes.json();
+            onLogin(loginData);
+          } else {
+            onNavigate('login');
+          }
         }
       } catch {
         setError('Could not connect to server. Is the backend running?');
