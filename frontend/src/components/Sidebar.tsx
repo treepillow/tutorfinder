@@ -1,4 +1,4 @@
-import { Star, Users, BookOpen, Calendar, MessageSquare, Settings, LogOut } from 'lucide-react';
+import { Star, Users, BookOpen, Calendar, Settings, LogOut } from 'lucide-react';
 import type { AuthUser } from '../types';
 
 const GRADIENTS = [
@@ -33,7 +33,6 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout }: SidebarProp
     { key: 'matches', label: 'Matches', icon: <Users size={20} /> },
     { key: 'requests', label: 'Requests', icon: <BookOpen size={20} /> },
     { key: 'schedule', label: 'Schedule', icon: <Calendar size={20} /> },
-    { key: 'messages', label: 'Messages', icon: <MessageSquare size={20} /> },
   ];
 
   return (

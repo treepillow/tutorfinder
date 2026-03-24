@@ -12,13 +12,20 @@ import './App.css';
 type Page = 'landing' | 'login' | 'register' | 'discover' | 'matches' | 'requests';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<Page>('landing');
   const [authUser, setAuthUser] = useState<AuthUser | null>(() => {
     try {
       const stored = localStorage.getItem('tf_user');
       return stored ? JSON.parse(stored) : null;
     } catch {
       return null;
+    }
+  });
+  const [currentPage, setCurrentPage] = useState<Page>(() => {
+    try {
+      const stored = localStorage.getItem('tf_user');
+      return stored ? 'discover' : 'landing';
+    } catch {
+      return 'landing';
     }
   });
 

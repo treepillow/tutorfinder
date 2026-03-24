@@ -160,6 +160,12 @@ def get_matches(user_id):
     } for m in matches]), 200
 
 
+@app.route('/match/swiped/<int:user_id>', methods=['GET'])
+def get_swiped(user_id):
+    rows = Swipe.query.filter_by(swiper_id=user_id).all()
+    return jsonify({'swiped_ids': [r.swiped_id for r in rows]}), 200
+
+
 @app.route('/match/<int:match_id>/archive', methods=['PUT'])
 def archive_match(match_id):
     match = db.session.get(Match, match_id)

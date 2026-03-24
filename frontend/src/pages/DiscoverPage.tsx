@@ -69,18 +69,28 @@ export function DiscoverPage({ user, onNavigate, onLogout }: DiscoverPageProps) 
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${PROFILE_SERVICE}/profile/search`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user?.token}`,
-        },
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) throw new Error('Failed to fetch profiles');
-      const data = await res.json();
+      const [profilesRes, swipedRes] = await Promise.all([
+        fetch(`${PROFILE_SERVICE}/profile/search`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${user?.token}`,
+          },
+          body: JSON.stringify({}),
+        }),
+        fetch(`${MATCH_SERVICE}/match/swiped/${user?.user_id}`),
+      ]);
+
+      if (!profilesRes.ok) throw new Error('Failed to fetch profiles');
+      const data = await profilesRes.json();
       const list: Profile[] = Array.isArray(data) ? data : data.profiles ?? [];
-      setProfiles(list);
+
+      const swipedIds: number[] = swipedRes.ok
+        ? (await swipedRes.json()).swiped_ids ?? []
+        : [];
+
+      const swipedSet = new Set(swipedIds);
+      setProfiles(list.filter(p => !swipedSet.has(p.user_id)));
     } catch (e) {
       setError('Could not load profiles. Make sure the backend is running.');
     } finally {
