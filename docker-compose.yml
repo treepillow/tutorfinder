@@ -99,7 +99,7 @@ services:
     container_name: payment-service
     restart: unless-stopped
     environment:
-      DATABASE_URL: jdbc:postgresql://aws-1-ap-south-1.pooler.supabase.com:5432/postgres?currentSchema=payment_schema&sslmode=require
+      DATABASE_URL: jdbc:postgresql://aws-1-ap-south-1.pooler.supabase.com:6543/postgres?currentSchema=payment_schema&sslmode=require
       DB_USER: postgres.ciqeksmhuutrnvtdqnxc
       DB_PASSWORD: ${SUPABASE_PASSWORD}
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
