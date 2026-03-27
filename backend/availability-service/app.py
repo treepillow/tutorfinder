@@ -108,15 +108,16 @@ def update_slot(availability_id):
     slot = Availability.query.get(availability_id)
     if not slot:
         return jsonify({'error': 'Slot not found'}), 404
-    # Check if slot is already reserved or unavailable
-    if slot.status == 'Reserved':
-        return jsonify({'error': 'Slot is already reserved'}), 409
-    if slot.status == 'Unavailable':
-        return jsonify({'error': 'Slot is unavailable'}), 409
     data = request.get_json(force=True) or {}
     new_status = data.get('status')
     if new_status not in ['Available', 'Reserved', 'Unavailable']:
         return jsonify({'error': 'status must be Available, Reserved, or Unavailable'}), 400
+    # Only block if trying to RESERVE an already reserved/unavailable slot
+    if new_status == 'Reserved' and slot.status != 'Available':
+        if slot.status == 'Reserved':
+            return jsonify({'error': 'Slot is already reserved'}), 409
+        if slot.status == 'Unavailable':
+            return jsonify({'error': 'Slot is unavailable'}), 409
     slot.status = new_status
     db.session.commit()
     return jsonify(slot.to_dict()), 200
