@@ -252,6 +252,13 @@ export const bookingApi = {
       method: "PUT",
     });
   },
+
+  updateStatus(bookingId: number, status: string) {
+    return apiFetch(`${BOOKING_SERVICE}/booking/${bookingId}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ status }),
+    });
+  },
 };
 
 // ── Payment Service ──

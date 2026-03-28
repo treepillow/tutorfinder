@@ -27,32 +27,37 @@ export function RequestsPage() {
       const res = await bookingApi.getByUser(user.id);
       const bookings = res.bookings || [];
 
-      // Enrich bookings with profile data
-      const enriched = await Promise.all(
-        bookings.map(async (booking: any) => {
-          const otherUserId = user.userType === "student" ? booking.tutor_id : booking.tutee_id;
-          let otherProfile: any = {};
-          try {
-            const p = await profileApi.getProfile(otherUserId);
-            otherProfile = enrichProfile(p);
-          } catch {
-            otherProfile = { name: `User #${otherUserId}` };
-          }
-          return {
-            ...booking,
-            id: booking.booking_id,
-            tutorName: user.userType === "student" ? otherProfile.name : user.name,
-            studentName: user.userType === "tutor" ? otherProfile.name : user.name,
-            otherProfile,
-            // Map backend fields for display
-            subject: otherProfile.subjects?.[0]?.subject || "Lesson",
-            level: otherProfile.subjects?.[0]?.level || "",
-            day: booking.lesson_date,
-            slots: [`${booking.start_time?.slice(0, 5)}-${booking.end_time?.slice(0, 5)}`],
-            price: otherProfile.subjects?.[0]?.hourlyRate || otherProfile.price_rate || 0,
-          };
-        })
-      );
+      // Fetch each unique other-user profile once, then reuse
+      const uniqueIds = [...new Set(bookings.map((b: any) =>
+        user.userType === "student" ? b.tutor_id : b.tutee_id
+      ))] as number[];
+
+      const profileMap: Record<number, any> = {};
+      await Promise.all(uniqueIds.map(async (id) => {
+        try {
+          const p = await profileApi.getProfile(id);
+          profileMap[id] = enrichProfile(p);
+        } catch {
+          profileMap[id] = { name: `User #${id}` };
+        }
+      }));
+
+      const enriched = bookings.map((booking: any) => {
+        const otherUserId = user.userType === "student" ? booking.tutor_id : booking.tutee_id;
+        const otherProfile = profileMap[otherUserId] || { name: `User #${otherUserId}` };
+        return {
+          ...booking,
+          id: booking.booking_id,
+          tutorName: user.userType === "student" ? otherProfile.name : user.name,
+          studentName: user.userType === "tutor" ? otherProfile.name : user.name,
+          otherProfile,
+          subject: otherProfile.subjects?.[0]?.subject || "Lesson",
+          level: otherProfile.subjects?.[0]?.level || "",
+          day: booking.lesson_date,
+          slots: [`${booking.start_time?.slice(0, 5)}-${booking.end_time?.slice(0, 5)}`],
+          price: otherProfile.subjects?.[0]?.hourlyRate || otherProfile.price_rate || 0,
+        };
+      });
 
       // Split by status
       const pending = enriched.filter((b: any) => b.status === "AwaitingConfirmation");
@@ -133,17 +138,19 @@ export function RequestsPage() {
             paymentRes.stripe_payment_intent_id || paymentRes.payment_intent_id
           );
         } catch {
-          // Fall back to direct capture
+          // OutSystems unavailable — capture payment directly and update booking status
           await paymentApi.capture({
             booking_id: request.booking_id,
             stripe_payment_intent_id: paymentRes.stripe_payment_intent_id || paymentRes.payment_intent_id,
           });
+          await bookingApi.updateStatus(request.booking_id, "Confirmed");
         }
 
         toast.success("Payment successful! Lesson confirmed.");
         loadRequests(currentUser);
       } else {
         // Mock mode - payment service may be in mock mode
+        await bookingApi.updateStatus(request.booking_id, "Confirmed");
         toast.success("Payment processed (mock mode)");
         loadRequests(currentUser);
       }

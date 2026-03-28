@@ -1,20 +1,16 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
-import { Calendar, Clock, BookOpen, User } from "lucide-react";
+import { Calendar, Clock, BookOpen, User, ChevronLeft, ChevronRight, List } from "lucide-react";
 import { getCurrentUser, bookingApi, profileApi, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
-
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const HOURS = Array.from({ length: 12 }, (_, i) => i + 10); // 10am to 9pm
 
 export function SchedulePage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [schedule, setSchedule] = useState<any[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
-  const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
-  const isDragging = useRef(false);
-  const dragMode = useRef<"select" | "deselect">("select");
+  const [view, setView] = useState<"list" | "calendar">("list");
+  const [calendarDate, setCalendarDate] = useState(new Date());
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -27,42 +23,45 @@ export function SchedulePage() {
   const loadSchedule = async (user: any) => {
     setLoading(true);
     try {
-      // Get confirmed bookings
       const res = await bookingApi.getByUser(user.id, "Confirmed");
       const bookings = res.bookings || [];
 
-      // Enrich with profile data
-      const enriched = await Promise.all(
-        bookings.map(async (booking: any) => {
-          const otherUserId = user.userType === "student" ? booking.tutor_id : booking.tutee_id;
-          let otherProfile: any = {};
-          try {
-            const p = await profileApi.getProfile(otherUserId);
-            otherProfile = enrichProfile(p);
-          } catch {
-            otherProfile = { name: `User #${otherUserId}` };
-          }
-          // Convert lesson_date to day of week
-          const date = new Date(booking.lesson_date + "T00:00:00");
-          const dayName = DAYS[date.getDay() === 0 ? 6 : date.getDay() - 1];
+      // Fetch each unique other-user profile once, then reuse
+      const uniqueIds = [...new Set(bookings.map((b: any) =>
+        user.userType === "student" ? b.tutor_id : b.tutee_id
+      ))] as number[];
 
-          return {
-            ...booking,
-            day: dayName,
-            date: booking.lesson_date,
-            startHour: parseInt(booking.start_time?.split(":")[0] || "0"),
-            endHour: parseInt(booking.end_time?.split(":")[0] || "0"),
-            subject: otherProfile.subjects?.[0]?.subject || "Lesson",
-            level: otherProfile.subjects?.[0]?.level || "",
-            tutorName: user.userType === "student" ? otherProfile.name : user.name,
-            studentName: user.userType === "tutor" ? otherProfile.name : user.name,
-            otherName: otherProfile.name,
-            price: otherProfile.subjects?.[0]?.hourlyRate || otherProfile.price_rate || 0,
-            slots: [`${booking.start_time?.slice(0, 5)}-${booking.end_time?.slice(0, 5)}`],
-          };
-        })
-      );
+      const profileMap: Record<number, any> = {};
+      await Promise.all(uniqueIds.map(async (id) => {
+        try {
+          const p = await profileApi.getProfile(id);
+          profileMap[id] = enrichProfile(p);
+        } catch {
+          profileMap[id] = { name: `User #${id}` };
+        }
+      }));
 
+      const enriched = bookings.map((booking: any) => {
+        const otherUserId = user.userType === "student" ? booking.tutor_id : booking.tutee_id;
+        const otherProfile = profileMap[otherUserId] || { name: `User #${otherUserId}` };
+        return {
+          ...booking,
+          date: booking.lesson_date,
+          dateObj: new Date(booking.lesson_date + "T00:00:00"),
+          startHour: parseInt(booking.start_time?.split(":")[0] || "0"),
+          endHour: parseInt(booking.end_time?.split(":")[0] || "0"),
+          subject: otherProfile.subjects?.[0]?.subject || "Lesson",
+          level: otherProfile.subjects?.[0]?.level || "",
+          tutorName: user.userType === "student" ? otherProfile.name : user.name,
+          studentName: user.userType === "tutor" ? otherProfile.name : user.name,
+          otherName: otherProfile.name,
+          price: otherProfile.subjects?.[0]?.hourlyRate || otherProfile.price_rate || 0,
+          slots: [`${booking.start_time?.slice(0, 5)}-${booking.end_time?.slice(0, 5)}`],
+        };
+      });
+
+      // Sort by date ascending
+      enriched.sort((a: any, b: any) => a.dateObj.getTime() - b.dateObj.getTime());
       setSchedule(enriched);
     } catch (err: any) {
       console.error("Failed to load schedule:", err);
@@ -72,105 +71,88 @@ export function SchedulePage() {
     }
   };
 
-  useEffect(() => {
-    const stop = () => { isDragging.current = false; };
-    window.addEventListener("mouseup", stop);
-    return () => window.removeEventListener("mouseup", stop);
-  }, []);
+  // ── Calendar helpers ──
 
-  const applySlot = (key: string) => {
-    setSelectedSlots(prev => {
-      const next = new Set(prev);
-      dragMode.current === "select" ? next.add(key) : next.delete(key);
-      return next;
+  const prevMonth = () => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+  const nextMonth = () => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+
+  const calendarDays = (() => {
+    const year = calendarDate.getFullYear();
+    const month = calendarDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay(); // 0 = Sun
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    // Shift so Monday = 0
+    const startOffset = (firstDay + 6) % 7;
+    const cells: (number | null)[] = [
+      ...Array(startOffset).fill(null),
+      ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+    ];
+    // Pad to full weeks
+    while (cells.length % 7 !== 0) cells.push(null);
+    return cells;
+  })();
+
+  const getLessonsForDay = (day: number | null) => {
+    if (!day) return [];
+    const year = calendarDate.getFullYear();
+    const month = calendarDate.getMonth();
+    return schedule.filter(l => {
+      const d = l.dateObj;
+      return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
     });
   };
 
-  const getLessonForSlot = (day: string, hour: number) => {
-    return schedule.find((lesson) =>
-      lesson.day === day && lesson.startHour <= hour && lesson.endHour > hour
-    );
-  };
+  const today = new Date();
+  const isToday = (day: number) =>
+    day === today.getDate() &&
+    calendarDate.getMonth() === today.getMonth() &&
+    calendarDate.getFullYear() === today.getFullYear();
 
-  if (!currentUser) {
-    return null;
-  }
+  const formatDate = (dateObj: Date) =>
+    dateObj.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+
+  if (!currentUser) return null;
 
   return (
     <div className="min-h-screen p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl tracking-tight text-[#2F3B3D] mb-2">
-            Schedule
-          </h1>
-          <p className="text-[#2F3B3D]/70">
-            Your weekly schedule at a glance
-          </p>
+      <div className="max-w-5xl mx-auto">
+
+        {/* Header */}
+        <div className="mb-8 flex items-end justify-between">
+          <div>
+            <h1 className="text-4xl tracking-tight text-[#2F3B3D] mb-2">Schedule</h1>
+            <p className="text-[#2F3B3D]/70">Your confirmed lessons</p>
+          </div>
+
+          {/* View toggle */}
+          <div className="flex p-1 bg-[#EDE9DF] rounded-full">
+            <button
+              onClick={() => setView("list")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                view === "list" ? "bg-[#2F3B3D] text-white shadow" : "text-[#2F3B3D]/60 hover:text-[#2F3B3D]"
+              }`}
+            >
+              <List className="w-4 h-4" />
+              List
+            </button>
+            <button
+              onClick={() => setView("calendar")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                view === "calendar" ? "bg-[#2F3B3D] text-white shadow" : "text-[#2F3B3D]/60 hover:text-[#2F3B3D]"
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              Calendar
+            </button>
+          </div>
         </div>
 
         {loading ? (
           <div className="bg-[#EDE9DF] rounded-3xl p-16 text-center">
             <p className="text-[#2F3B3D]/70 animate-pulse">Loading schedule...</p>
           </div>
-        ) : (
-          <div className="bg-[#EDE9DF] rounded-3xl p-6 overflow-x-auto">
-            <div className="min-w-[700px]">
-              <div className="grid grid-cols-8 gap-2">
-                {/* Header */}
-                <div className="p-3"></div>
-                {DAYS.map((day) => (
-                  <div key={day} className="p-3 text-center text-[#2F3B3D]">
-                    {day}
-                  </div>
-                ))}
-
-                {/* Time Slots */}
-                {HOURS.map((hour) => (
-                  <>
-                    <div key={`label-${hour}`} className="p-3 text-[#2F3B3D]/70 text-sm flex items-center justify-center">
-                      {hour}:00
-                    </div>
-                    {DAYS.map((day) => {
-                      const lesson = getLessonForSlot(day, hour);
-                      return (
-                        <button
-                          key={`${day}-${hour}`}
-                          onMouseDown={() => {
-                            if (lesson) { setSelectedLesson(lesson); return; }
-                            const key = `${day}-${hour}`;
-                            isDragging.current = true;
-                            dragMode.current = selectedSlots.has(key) ? "deselect" : "select";
-                            applySlot(key);
-                          }}
-                          onMouseEnter={() => {
-                            if (!isDragging.current || lesson) return;
-                            applySlot(`${day}-${hour}`);
-                          }}
-                          className={`p-2 rounded-lg min-h-[36px] transition-colors duration-100 select-none ${
-                            lesson
-                              ? "bg-[#7C8D8C] text-white hover:bg-[#2F3B3D] cursor-pointer"
-                              : selectedSlots.has(`${day}-${hour}`)
-                              ? "bg-[#2F3B3D] cursor-pointer"
-                              : "bg-[#F5F3EF] hover:bg-[#D6CFBF] cursor-pointer"
-                          }`}
-                        >
-                          {lesson && (
-                            <div className="text-xs">
-                              <div className="truncate">{lesson.subject}</div>
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {!loading && schedule.length === 0 && (
-          <div className="mt-8 bg-[#EDE9DF] rounded-2xl p-12 text-center">
+        ) : schedule.length === 0 ? (
+          <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
             <div className="text-5xl mb-3">📅</div>
             <h3 className="text-xl text-[#2F3B3D] mb-2">No lessons scheduled yet</h3>
             <p className="text-[#2F3B3D]/70">
@@ -179,9 +161,124 @@ export function SchedulePage() {
                 : "Accept student requests to see scheduled lessons"}
             </p>
           </div>
+        ) : view === "list" ? (
+
+          // ── List View ──
+          <div className="space-y-3">
+            {schedule.map((lesson) => (
+              <button
+                key={lesson.booking_id}
+                onClick={() => setSelectedLesson(lesson)}
+                className="w-full text-left bg-[#EDE9DF] hover:bg-[#E3DDD3] rounded-2xl p-5 transition-colors duration-150"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    {/* Date badge */}
+                    <div className="flex-shrink-0 bg-[#2F3B3D] text-white rounded-xl px-4 py-3 text-center min-w-[56px]">
+                      <div className="text-xs font-medium opacity-70 uppercase">
+                        {lesson.dateObj.toLocaleDateString("en-US", { month: "short" })}
+                      </div>
+                      <div className="text-2xl font-semibold leading-none">
+                        {lesson.dateObj.getDate()}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-[#2F3B3D] font-medium">
+                        {lesson.subject}{lesson.level ? ` · ${lesson.level}` : ""}
+                      </div>
+                      <div className="text-[#2F3B3D]/60 text-sm mt-0.5">
+                        {currentUser.userType === "student" ? "Tutor" : "Student"}: {lesson.otherName}
+                      </div>
+                      <div className="flex items-center gap-1 text-[#2F3B3D]/50 text-sm mt-0.5">
+                        <Clock className="w-3.5 h-3.5" />
+                        {lesson.slots[0]}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="text-[#7C8D8C] font-medium">${lesson.price}</div>
+                    <div className="text-[#2F3B3D]/40 text-xs mt-1">
+                      {lesson.dateObj.toLocaleDateString("en-US", { weekday: "short" })}
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+
+        ) : (
+
+          // ── Calendar View ──
+          <div className="bg-[#EDE9DF] rounded-3xl p-6">
+            {/* Month navigation */}
+            <div className="flex items-center justify-between mb-6">
+              <button onClick={prevMonth} className="p-2 hover:bg-[#D6CFBF] rounded-full transition-colors">
+                <ChevronLeft className="w-5 h-5 text-[#2F3B3D]" />
+              </button>
+              <h2 className="text-xl font-medium text-[#2F3B3D]">
+                {calendarDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+              </h2>
+              <button onClick={nextMonth} className="p-2 hover:bg-[#D6CFBF] rounded-full transition-colors">
+                <ChevronRight className="w-5 h-5 text-[#2F3B3D]" />
+              </button>
+            </div>
+
+            {/* Day headers */}
+            <div className="grid grid-cols-7 mb-2">
+              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(d => (
+                <div key={d} className="text-center text-xs font-medium text-[#2F3B3D]/50 py-2">{d}</div>
+              ))}
+            </div>
+
+            {/* Calendar grid */}
+            <div className="grid grid-cols-7 gap-1">
+              {calendarDays.map((day, i) => {
+                const lessons = getLessonsForDay(day);
+                return (
+                  <div
+                    key={i}
+                    className={`min-h-[72px] rounded-xl p-1.5 ${
+                      day === null
+                        ? ""
+                        : isToday(day)
+                        ? "bg-[#2F3B3D]"
+                        : lessons.length > 0
+                        ? "bg-[#F5F3EF] cursor-pointer hover:bg-[#E3DDD3] transition-colors"
+                        : "bg-[#F5F3EF]/60"
+                    }`}
+                    onClick={() => lessons.length > 0 && setSelectedLesson(lessons[0])}
+                  >
+                    {day !== null && (
+                      <>
+                        <div className={`text-sm font-medium mb-1 ${isToday(day) ? "text-white" : "text-[#2F3B3D]/70"}`}>
+                          {day}
+                        </div>
+                        <div className="space-y-0.5">
+                          {lessons.slice(0, 2).map((lesson) => (
+                            <div
+                              key={lesson.booking_id}
+                              className="text-xs px-1.5 py-0.5 bg-[#7C8D8C] text-white rounded-md truncate"
+                            >
+                              {lesson.subject}
+                            </div>
+                          ))}
+                          {lessons.length > 2 && (
+                            <div className="text-xs text-[#7C8D8C] pl-1">+{lessons.length - 2} more</div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
       </div>
 
+      {/* Lesson detail dialog */}
       {selectedLesson && (
         <Dialog open={true} onOpenChange={() => setSelectedLesson(null)}>
           <DialogContent className="bg-[#F5F3EF] border-[#D6CFBF]">
@@ -204,7 +301,9 @@ export function SchedulePage() {
                 <BookOpen className="w-5 h-5 text-[#7C8D8C]" />
                 <div>
                   <div className="text-sm text-[#2F3B3D]/70">Subject</div>
-                  <div className="text-[#2F3B3D]">{selectedLesson.subject}{selectedLesson.level ? ` - ${selectedLesson.level}` : ""}</div>
+                  <div className="text-[#2F3B3D]">
+                    {selectedLesson.subject}{selectedLesson.level ? ` - ${selectedLesson.level}` : ""}
+                  </div>
                 </div>
               </div>
 
@@ -212,9 +311,7 @@ export function SchedulePage() {
                 <Calendar className="w-5 h-5 text-[#7C8D8C]" />
                 <div>
                   <div className="text-sm text-[#2F3B3D]/70">Date</div>
-                  <div className="text-[#2F3B3D]">
-                    {selectedLesson.day} ({new Date(selectedLesson.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })})
-                  </div>
+                  <div className="text-[#2F3B3D]">{formatDate(selectedLesson.dateObj)}</div>
                 </div>
               </div>
 
