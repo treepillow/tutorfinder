@@ -95,7 +95,7 @@ export function BookingDialog({ profile, onClose }: BookingDialogProps) {
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="bg-[#FFF2D5] border-[#C9B08E] max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="bg-[#F5F3EF] border-[#D6CFBF] max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl text-[#2F3B3D]">
             Book a Lesson with {profile.name}
@@ -107,7 +107,7 @@ export function BookingDialog({ profile, onClose }: BookingDialogProps) {
           <div className="space-y-2">
             <label className="text-sm text-[#2F3B3D]">Subject</label>
             <Select value={selectedSubject} onValueChange={handleSubjectChange}>
-              <SelectTrigger className="bg-[#E9D8BB] border-[#C9B08E]">
+              <SelectTrigger className="bg-[#EDE9DF] border-[#D6CFBF]">
                 <SelectValue placeholder="Select subject" />
               </SelectTrigger>
               <SelectContent>
@@ -125,7 +125,7 @@ export function BookingDialog({ profile, onClose }: BookingDialogProps) {
             <div className="space-y-2">
               <label className="text-sm text-[#2F3B3D]">Level</label>
               <Select value={selectedLevel} onValueChange={handleLevelChange}>
-                <SelectTrigger className="bg-[#E9D8BB] border-[#C9B08E]">
+                <SelectTrigger className="bg-[#EDE9DF] border-[#D6CFBF]">
                   <SelectValue placeholder="Select level" />
                 </SelectTrigger>
                 <SelectContent>
@@ -141,7 +141,7 @@ export function BookingDialog({ profile, onClose }: BookingDialogProps) {
 
           {/* Price Display */}
           {selectedLevel && price > 0 && (
-            <div className="bg-[#E9D8BB] p-4 rounded-xl flex items-center justify-between">
+            <div className="bg-[#EDE9DF] p-4 rounded-xl flex items-center justify-between">
               <span className="text-[#2F3B3D]">Hourly Rate</span>
               <span className="text-xl text-[#7C8D8C]">${price}/hr</span>
             </div>
@@ -151,7 +151,7 @@ export function BookingDialog({ profile, onClose }: BookingDialogProps) {
           <div className="space-y-2">
             <label className="text-sm text-[#2F3B3D]">Select Day</label>
             <Select value={selectedDay} onValueChange={handleDayChange}>
-              <SelectTrigger className="bg-[#E9D8BB] border-[#C9B08E]">
+              <SelectTrigger className="bg-[#EDE9DF] border-[#D6CFBF]">
                 <SelectValue placeholder="Select day" />
               </SelectTrigger>
               <SelectContent>
@@ -170,7 +170,7 @@ export function BookingDialog({ profile, onClose }: BookingDialogProps) {
               <label className="text-sm text-[#2F3B3D]">
                 Select Time Slots (can select multiple)
               </label>
-              <div className="bg-[#E9D8BB] p-4 rounded-xl">
+              <div className="bg-[#EDE9DF] p-4 rounded-xl">
                 <div className="flex flex-wrap gap-2">
                   {availableSlots.map((slot: string) => (
                     <button
@@ -180,7 +180,7 @@ export function BookingDialog({ profile, onClose }: BookingDialogProps) {
                       className={`px-4 py-2 rounded-full text-sm transition-all duration-200 ${
                         selectedSlots.includes(slot)
                           ? "bg-[#7C8D8C] text-white"
-                          : "bg-white text-[#2F3B3D] hover:bg-[#C9B08E]"
+                          : "bg-white text-[#2F3B3D] hover:bg-[#D6CFBF]"
                       }`}
                     >
                       {slot}
@@ -203,7 +203,7 @@ export function BookingDialog({ profile, onClose }: BookingDialogProps) {
           <div className="flex gap-4">
             <button
               onClick={onClose}
-              className="flex-1 px-6 py-3 bg-white text-[#2F3B3D] rounded-full border-2 border-[#C9B08E] hover:bg-[#E9D8BB] transition-all duration-300"
+              className="flex-1 px-6 py-3 bg-white text-[#2F3B3D] rounded-full border-2 border-[#D6CFBF] hover:bg-[#EDE9DF] transition-all duration-300"
             >
               Cancel
             </button>

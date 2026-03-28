@@ -29,10 +29,10 @@ export function ProfilePage() {
           </p>
         </div>
 
-        <div className="bg-[#E9D8BB] rounded-3xl p-8 space-y-8">
+        <div className="bg-[#EDE9DF] rounded-3xl p-8 space-y-8">
           {/* Profile Picture */}
           <div className="flex items-center gap-6">
-            <div className="w-32 h-32 bg-gradient-to-br from-[#C9B08E] to-[#7C8D8C] rounded-full flex items-center justify-center text-6xl">
+            <div className="w-32 h-32 bg-gradient-to-br from-[#D6CFBF] to-[#7C8D8C] rounded-full flex items-center justify-center text-6xl">
               {currentUser.gender === "Female" ? "👩" : "👨"}
             </div>
             <div>
@@ -47,7 +47,7 @@ export function ProfilePage() {
           <div>
             <h3 className="text-xl text-[#2F3B3D] mb-4">Basic Information</h3>
             <div className="grid md:grid-cols-2 gap-4">
-              <div className="bg-[#FFF2D5] p-4 rounded-xl">
+              <div className="bg-[#F5F3EF] p-4 rounded-xl">
                 <div className="text-sm text-[#2F3B3D]/70 mb-1">Email</div>
                 <div className="flex items-center gap-2 text-[#2F3B3D]">
                   <Mail className="w-4 h-4" />
@@ -55,7 +55,7 @@ export function ProfilePage() {
                 </div>
               </div>
 
-              <div className="bg-[#FFF2D5] p-4 rounded-xl">
+              <div className="bg-[#F5F3EF] p-4 rounded-xl">
                 <div className="text-sm text-[#2F3B3D]/70 mb-1">Phone</div>
                 <div className="flex items-center gap-2 text-[#2F3B3D]">
                   <Phone className="w-4 h-4" />
@@ -63,7 +63,7 @@ export function ProfilePage() {
                 </div>
               </div>
 
-              <div className="bg-[#FFF2D5] p-4 rounded-xl">
+              <div className="bg-[#F5F3EF] p-4 rounded-xl">
                 <div className="text-sm text-[#2F3B3D]/70 mb-1">Birthday</div>
                 <div className="flex items-center gap-2 text-[#2F3B3D]">
                   <Calendar className="w-4 h-4" />
@@ -71,12 +71,12 @@ export function ProfilePage() {
                 </div>
               </div>
 
-              <div className="bg-[#FFF2D5] p-4 rounded-xl">
+              <div className="bg-[#F5F3EF] p-4 rounded-xl">
                 <div className="text-sm text-[#2F3B3D]/70 mb-1">Gender</div>
                 <div className="text-[#2F3B3D]">{currentUser.gender}</div>
               </div>
 
-              <div className="bg-[#FFF2D5] p-4 rounded-xl">
+              <div className="bg-[#F5F3EF] p-4 rounded-xl">
                 <div className="text-sm text-[#2F3B3D]/70 mb-1">Location</div>
                 <div className="flex items-center gap-2 text-[#2F3B3D]">
                   <MapPin className="w-4 h-4" />
@@ -85,7 +85,7 @@ export function ProfilePage() {
               </div>
 
               {isTutor && (
-                <div className="bg-[#FFF2D5] p-4 rounded-xl">
+                <div className="bg-[#F5F3EF] p-4 rounded-xl">
                   <div className="text-sm text-[#2F3B3D]/70 mb-1">Qualification</div>
                   <div className="flex items-center gap-2 text-[#2F3B3D]">
                     <GraduationCap className="w-4 h-4" />
@@ -103,7 +103,7 @@ export function ProfilePage() {
             </h3>
             <div className="space-y-3">
               {currentUser.subjects?.map((subject: any, index: number) => (
-                <div key={index} className="bg-[#FFF2D5] p-4 rounded-xl">
+                <div key={index} className="bg-[#F5F3EF] p-4 rounded-xl">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <BookOpen className="w-5 h-5 text-[#7C8D8C]" />
@@ -127,7 +127,7 @@ export function ProfilePage() {
               <h3 className="text-xl text-[#2F3B3D] mb-4">Availability</h3>
               <div className="space-y-3">
                 {Object.entries(currentUser.availability).map(([day, slots]: [string, any]) => (
-                  <div key={day} className="bg-[#FFF2D5] p-4 rounded-xl">
+                  <div key={day} className="bg-[#F5F3EF] p-4 rounded-xl">
                     <div className="text-[#2F3B3D] mb-2">{day}</div>
                     <div className="flex flex-wrap gap-2">
                       {slots.map((slot: string) => (

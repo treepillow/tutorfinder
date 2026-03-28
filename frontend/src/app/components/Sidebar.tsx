@@ -60,7 +60,7 @@ export function Sidebar() {
           <h1 className={`text-2xl tracking-tight transition-opacity duration-300 ${
             isCollapsed ? "opacity-0" : "opacity-100"
           }`}>
-            {!isCollapsed && "TutorMatch"}
+            {!isCollapsed && "TutorFinder"}
           </h1>
           {isCollapsed && <div className="text-2xl text-center">T</div>}
         </div>
@@ -86,7 +86,7 @@ export function Sidebar() {
 
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute -right-3 top-6 w-6 h-6 bg-[#7C8D8C] rounded-full flex items-center justify-center hover:bg-[#C9B08E] transition-colors"
+          className="absolute -right-3 top-6 w-6 h-6 bg-[#7C8D8C] rounded-full flex items-center justify-center hover:bg-[#D6CFBF] transition-colors"
         >
           {isCollapsed ? (
             <ChevronRight className="w-4 h-4" />
@@ -110,7 +110,7 @@ export function Sidebar() {
 
       {/* Profile Menu Dialog */}
       <Dialog open={showProfileMenu} onOpenChange={setShowProfileMenu}>
-        <DialogContent className="bg-[#FFF2D5] border-[#C9B08E]">
+        <DialogContent className="bg-[#F5F3EF] border-[#D6CFBF]">
           <DialogHeader>
             <DialogTitle className="text-2xl text-[#2F3B3D]">Menu</DialogTitle>
           </DialogHeader>
@@ -119,7 +119,7 @@ export function Sidebar() {
               <button
                 key={index}
                 onClick={() => handleProfileMenuClick(item)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#E9D8BB] transition-all w-full text-[#2F3B3D]"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#EDE9DF] transition-all w-full text-[#2F3B3D]"
               >
                 <item.icon className="w-5 h-5" />
                 <span>{item.label}</span>
@@ -138,7 +138,7 @@ export function Sidebar() {
 
       {/* FAQ Dialog */}
       <Dialog open={showFAQ} onOpenChange={setShowFAQ}>
-        <DialogContent className="bg-[#FFF2D5] border-[#C9B08E] max-w-2xl">
+        <DialogContent className="bg-[#F5F3EF] border-[#D6CFBF] max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl text-[#2F3B3D]">Frequently Asked Questions</DialogTitle>
           </DialogHeader>
@@ -173,7 +173,7 @@ export function Sidebar() {
 
       {/* Safety Guidelines Dialog */}
       <Dialog open={showSafety} onOpenChange={setShowSafety}>
-        <DialogContent className="bg-[#FFF2D5] border-[#C9B08E] max-w-2xl">
+        <DialogContent className="bg-[#F5F3EF] border-[#D6CFBF] max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl text-[#2F3B3D]">Safety Guidelines</DialogTitle>
           </DialogHeader>

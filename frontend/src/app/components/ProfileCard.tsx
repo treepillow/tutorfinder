@@ -19,9 +19,9 @@ export function ProfileCard({ profile, onClick, userType }: ProfileCardProps) {
   return (
     <div
       onClick={onClick}
-      className="bg-[#E9D8BB] rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group"
+      className="bg-[#EDE9DF] rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group"
     >
-      <div className="aspect-[4/3] relative bg-gradient-to-br from-[#C9B08E] to-[#7C8D8C] flex items-center justify-center">
+      <div className="aspect-[4/3] relative bg-gradient-to-br from-[#7C8D8C] to-[#2F3B3D] flex items-center justify-center">
         <div className="text-7xl">{profile.gender === "Female" ? "👩" : "👨"}</div>
         <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm text-[#2F3B3D]">
           {profile.age || 20} years
@@ -44,7 +44,7 @@ export function ProfileCard({ profile, onClick, userType }: ProfileCardProps) {
         </div>
 
         {rateOrBudget && (
-          <div className="flex items-center justify-between py-2 px-3 bg-[#FFF2D5] rounded-lg">
+          <div className="flex items-center justify-between py-2 px-3 bg-[#F5F3EF] rounded-lg">
             <span className="text-sm text-[#2F3B3D]/70">
               {userType === "student" ? "Rate" : "Budget"}
             </span>

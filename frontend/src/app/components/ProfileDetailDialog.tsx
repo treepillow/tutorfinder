@@ -30,24 +30,24 @@ export function ProfileDetailDialog({
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="bg-[#FFF2D5] border-[#C9B08E] max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="bg-[#F5F3EF] border-[#D6CFBF] max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-3xl text-[#2F3B3D]">{profile.name}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* Profile Picture */}
-          <div className="aspect-[3/2] relative bg-gradient-to-br from-[#C9B08E] to-[#7C8D8C] rounded-2xl flex items-center justify-center">
+          <div className="aspect-[3/2] relative bg-gradient-to-br from-[#D6CFBF] to-[#7C8D8C] rounded-2xl flex items-center justify-center">
             <div className="text-9xl">{profile.gender === "Female" ? "👩" : "👨"}</div>
           </div>
 
           {/* Basic Info */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-[#E9D8BB] p-4 rounded-xl">
+            <div className="bg-[#EDE9DF] p-4 rounded-xl">
               <div className="text-sm text-[#2F3B3D]/70 mb-1">Age</div>
               <div className="text-lg text-[#2F3B3D]">{getAge()} years</div>
             </div>
-            <div className="bg-[#E9D8BB] p-4 rounded-xl">
+            <div className="bg-[#EDE9DF] p-4 rounded-xl">
               <div className="text-sm text-[#2F3B3D]/70 mb-1">Gender</div>
               <div className="text-lg text-[#2F3B3D]">{profile.gender}</div>
             </div>
@@ -88,7 +88,7 @@ export function ProfileDetailDialog({
             </h4>
             <div className="space-y-2">
               {profile.subjects?.map((subject: any, index: number) => (
-                <div key={index} className="bg-[#E9D8BB] p-4 rounded-xl">
+                <div key={index} className="bg-[#EDE9DF] p-4 rounded-xl">
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-[#2F3B3D]">{subject.subject}</div>
@@ -109,7 +109,7 @@ export function ProfileDetailDialog({
               <h4 className="text-lg text-[#2F3B3D] mb-3">Availability</h4>
               <div className="space-y-2">
                 {Object.entries(profile.availability).map(([day, slots]: [string, any]) => (
-                  <div key={day} className="bg-[#E9D8BB] p-4 rounded-xl">
+                  <div key={day} className="bg-[#EDE9DF] p-4 rounded-xl">
                     <div className="text-[#2F3B3D] mb-2">{day}</div>
                     <div className="flex flex-wrap gap-2">
                       {slots.map((slot: string) => (
@@ -132,7 +132,7 @@ export function ProfileDetailDialog({
             <div className="flex gap-4">
               <button
                 onClick={onReject}
-                className="flex-1 px-6 py-3 bg-white text-[#2F3B3D] rounded-full border-2 border-[#C9B08E] hover:bg-[#E9D8BB] transition-all duration-300"
+                className="flex-1 px-6 py-3 bg-white text-[#2F3B3D] rounded-full border-2 border-[#D6CFBF] hover:bg-[#EDE9DF] transition-all duration-300"
               >
                 Close
               </button>

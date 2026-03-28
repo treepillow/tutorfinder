@@ -74,7 +74,7 @@ export function SettingsPage() {
           </p>
         </div>
 
-        <div className="bg-[#E9D8BB] rounded-3xl p-8 space-y-8">
+        <div className="bg-[#EDE9DF] rounded-3xl p-8 space-y-8">
           {/* Basic Details */}
           <div>
             <h3 className="text-xl text-[#2F3B3D] mb-4">Basic Information</h3>
@@ -85,7 +85,7 @@ export function SettingsPage() {
                   <Input
                     value={formData.name || ""}
                     onChange={(e) => handleChange("name", e.target.value)}
-                    className="bg-[#FFF2D5] border-[#C9B08E]"
+                    className="bg-[#F5F3EF] border-[#D6CFBF]"
                   />
                 </div>
                 <div className="space-y-2">
@@ -93,7 +93,7 @@ export function SettingsPage() {
                   <Input
                     value={formData.contactNumber || ""}
                     onChange={(e) => handleChange("contactNumber", e.target.value)}
-                    className="bg-[#FFF2D5] border-[#C9B08E]"
+                    className="bg-[#F5F3EF] border-[#D6CFBF]"
                   />
                 </div>
               </div>
@@ -104,7 +104,7 @@ export function SettingsPage() {
                   type="email"
                   value={formData.email || ""}
                   onChange={(e) => handleChange("email", e.target.value)}
-                  className="bg-[#FFF2D5] border-[#C9B08E]"
+                  className="bg-[#F5F3EF] border-[#D6CFBF]"
                 />
               </div>
 
@@ -113,7 +113,7 @@ export function SettingsPage() {
                 <Input
                   value={formData.location || ""}
                   onChange={(e) => handleChange("location", e.target.value)}
-                  className="bg-[#FFF2D5] border-[#C9B08E]"
+                  className="bg-[#F5F3EF] border-[#D6CFBF]"
                 />
               </div>
 
@@ -124,7 +124,7 @@ export function SettingsPage() {
                     value={formData.qualification || ""}
                     onValueChange={(value) => handleChange("qualification", value)}
                   >
-                    <SelectTrigger className="bg-[#FFF2D5] border-[#C9B08E]">
+                    <SelectTrigger className="bg-[#F5F3EF] border-[#D6CFBF]">
                       <SelectValue placeholder="Select qualification" />
                     </SelectTrigger>
                     <SelectContent>
@@ -157,7 +157,7 @@ export function SettingsPage() {
 
             <div className="space-y-4">
               {formData.subjects?.map((subject: any, index: number) => (
-                <div key={index} className="bg-[#FFF2D5] p-6 rounded-2xl space-y-4">
+                <div key={index} className="bg-[#F5F3EF] p-6 rounded-2xl space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-[#2F3B3D]/70">Subject {index + 1}</span>
                     {formData.subjects.length > 1 && (
@@ -177,7 +177,7 @@ export function SettingsPage() {
                         value={subject.subject}
                         onValueChange={(value) => handleSubjectChange(index, "subject", value)}
                       >
-                        <SelectTrigger className="bg-white border-[#C9B08E]">
+                        <SelectTrigger className="bg-white border-[#D6CFBF]">
                           <SelectValue placeholder="Select subject" />
                         </SelectTrigger>
                         <SelectContent>
@@ -196,7 +196,7 @@ export function SettingsPage() {
                         value={subject.level}
                         onValueChange={(value) => handleSubjectChange(index, "level", value)}
                       >
-                        <SelectTrigger className="bg-white border-[#C9B08E]">
+                        <SelectTrigger className="bg-white border-[#D6CFBF]">
                           <SelectValue placeholder="Select level" />
                         </SelectTrigger>
                         <SelectContent>
@@ -223,7 +223,7 @@ export function SettingsPage() {
                             e.target.value
                           )
                         }
-                        className="bg-white border-[#C9B08E]"
+                        className="bg-white border-[#D6CFBF]"
                         placeholder="0"
                         min="0"
                       />
@@ -249,7 +249,7 @@ export function SettingsPage() {
           <div className="flex gap-4">
             <button
               onClick={() => navigate("/app/profile")}
-              className="flex-1 px-6 py-3 bg-white text-[#2F3B3D] rounded-full border-2 border-[#C9B08E] hover:bg-[#E9D8BB] transition-all duration-300"
+              className="flex-1 px-6 py-3 bg-white text-[#2F3B3D] rounded-full border-2 border-[#D6CFBF] hover:bg-[#EDE9DF] transition-all duration-300"
             >
               Cancel
             </button>

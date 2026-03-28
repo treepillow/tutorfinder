@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from "react-router";
 import { LandingPage } from "./pages/LandingPage";
+import { LoginPage } from "./pages/LoginPage";
 import { RegisterBasicDetails } from "./pages/RegisterBasicDetails";
 import { RegisterTutorDetails } from "./pages/RegisterTutorDetails";
 import { RegisterStudentDetails } from "./pages/RegisterStudentDetails";
@@ -15,6 +16,10 @@ export const router = createBrowserRouter([
   {
     path: "/",
     element: <LandingPage />,
+  },
+  {
+    path: "/login",
+    element: <LoginPage />,
   },
   {
     path: "/register",
