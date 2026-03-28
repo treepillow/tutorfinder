@@ -1,15 +1,30 @@
 import { useState, useEffect } from "react";
 import { Mail, Phone, MapPin, GraduationCap, BookOpen, Calendar } from "lucide-react";
+import { getCurrentUser, profileApi, enrichProfile } from "../utils/api";
 
 export function ProfilePage() {
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUserState] = useState<any>(null);
 
   useEffect(() => {
-    const userData = localStorage.getItem("currentUser");
-    if (userData) {
-      setCurrentUser(JSON.parse(userData));
-    }
+    loadProfile();
   }, []);
+
+  const loadProfile = async () => {
+    const user = getCurrentUser();
+    if (!user) return;
+
+    try {
+      // Refresh from backend
+      const profile = await profileApi.getProfile(user.id);
+      const enriched = enrichProfile(profile);
+      // Preserve availability from localStorage if not in backend
+      enriched.availability = user.availability || enriched.availability;
+      setCurrentUserState(enriched);
+    } catch {
+      // Fall back to localStorage
+      setCurrentUserState(user);
+    }
+  };
 
   if (!currentUser) {
     return null;
@@ -59,7 +74,7 @@ export function ProfilePage() {
                 <div className="text-sm text-[#2F3B3D]/70 mb-1">Phone</div>
                 <div className="flex items-center gap-2 text-[#2F3B3D]">
                   <Phone className="w-4 h-4" />
-                  <span>{currentUser.contactNumber}</span>
+                  <span>{currentUser.contactNumber || currentUser.phone}</span>
                 </div>
               </div>
 
@@ -67,13 +82,13 @@ export function ProfilePage() {
                 <div className="text-sm text-[#2F3B3D]/70 mb-1">Birthday</div>
                 <div className="flex items-center gap-2 text-[#2F3B3D]">
                   <Calendar className="w-4 h-4" />
-                  <span>{currentUser.birthday}</span>
+                  <span>{currentUser.birthday || "Not set"}</span>
                 </div>
               </div>
 
               <div className="bg-[#F5F3EF] p-4 rounded-xl">
                 <div className="text-sm text-[#2F3B3D]/70 mb-1">Gender</div>
-                <div className="text-[#2F3B3D]">{currentUser.gender}</div>
+                <div className="text-[#2F3B3D]">{currentUser.gender || "Not set"}</div>
               </div>
 
               <div className="bg-[#F5F3EF] p-4 rounded-xl">
@@ -89,7 +104,7 @@ export function ProfilePage() {
                   <div className="text-sm text-[#2F3B3D]/70 mb-1">Qualification</div>
                   <div className="flex items-center gap-2 text-[#2F3B3D]">
                     <GraduationCap className="w-4 h-4" />
-                    <span>{currentUser.qualification}</span>
+                    <span>{currentUser.qualification || "Not set"}</span>
                   </div>
                 </div>
               )}
@@ -97,32 +112,34 @@ export function ProfilePage() {
           </div>
 
           {/* Subjects */}
-          <div>
-            <h3 className="text-xl text-[#2F3B3D] mb-4">
-              {isTutor ? "Teaching Subjects" : "Learning Subjects"}
-            </h3>
-            <div className="space-y-3">
-              {currentUser.subjects?.map((subject: any, index: number) => (
-                <div key={index} className="bg-[#F5F3EF] p-4 rounded-xl">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <BookOpen className="w-5 h-5 text-[#7C8D8C]" />
-                      <div>
-                        <div className="text-[#2F3B3D]">{subject.subject}</div>
-                        <div className="text-sm text-[#2F3B3D]/70">{subject.level}</div>
+          {currentUser.subjects?.length > 0 && (
+            <div>
+              <h3 className="text-xl text-[#2F3B3D] mb-4">
+                {isTutor ? "Teaching Subjects" : "Learning Subjects"}
+              </h3>
+              <div className="space-y-3">
+                {currentUser.subjects.map((subject: any, index: number) => (
+                  <div key={index} className="bg-[#F5F3EF] p-4 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <BookOpen className="w-5 h-5 text-[#7C8D8C]" />
+                        <div>
+                          <div className="text-[#2F3B3D]">{subject.subject}</div>
+                          <div className="text-sm text-[#2F3B3D]/70">{subject.level}</div>
+                        </div>
+                      </div>
+                      <div className="text-xl text-[#7C8D8C]">
+                        ${subject.hourlyRate || subject.budget}/hr
                       </div>
                     </div>
-                    <div className="text-xl text-[#7C8D8C]">
-                      ${subject.hourlyRate || subject.budget}/hr
-                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Availability (for tutors) */}
-          {isTutor && currentUser.availability && (
+          {isTutor && currentUser.availability && Object.keys(currentUser.availability).length > 0 && (
             <div>
               <h3 className="text-xl text-[#2F3B3D] mb-4">Availability</h3>
               <div className="space-y-3">

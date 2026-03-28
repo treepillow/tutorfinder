@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,18 +7,43 @@ import {
 } from "./ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { toast } from "sonner";
+import { availabilityApi, bookingProcessApi, bookingApi } from "../utils/api";
 
 interface BookingDialogProps {
   profile: any;
+  currentUser: any;
   onClose: () => void;
 }
 
-export function BookingDialog({ profile, onClose }: BookingDialogProps) {
+export function BookingDialog({ profile, currentUser, onClose }: BookingDialogProps) {
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedLevel, setSelectedLevel] = useState("");
-  const [selectedDay, setSelectedDay] = useState("");
-  const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
+  const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
   const [price, setPrice] = useState(0);
+  const [availableSlots, setAvailableSlots] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingSlots, setLoadingSlots] = useState(true);
+
+  useEffect(() => {
+    loadAvailability();
+  }, []);
+
+  const loadAvailability = async () => {
+    setLoadingSlots(true);
+    try {
+      const res = await availabilityApi.getSlots(profile.id);
+      // Only show "Available" slots
+      const available = (res.availability || []).filter(
+        (s: any) => s.status === "Available"
+      );
+      setAvailableSlots(available);
+    } catch (err) {
+      console.error("Failed to load availability:", err);
+      toast.error("Failed to load tutor's availability");
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
 
   const handleSubjectChange = (subject: string) => {
     setSelectedSubject(subject);
@@ -28,70 +53,70 @@ export function BookingDialog({ profile, onClose }: BookingDialogProps) {
 
   const handleLevelChange = (level: string) => {
     setSelectedLevel(level);
-    
-    // Find the matching subject and level to get price
-    const subjectData = profile.subjects.find(
+
+    const subjectData = profile.subjects?.find(
       (s: any) => s.subject === selectedSubject && s.level === level
     );
-    
+
     if (subjectData) {
-      setPrice(parseFloat(subjectData.hourlyRate));
+      setPrice(parseFloat(subjectData.hourlyRate || subjectData.budget || "0"));
     }
   };
 
-  const handleDayChange = (day: string) => {
-    setSelectedDay(day);
-    setSelectedSlots([]);
-  };
-
-  const toggleSlot = (slot: string) => {
-    if (selectedSlots.includes(slot)) {
-      setSelectedSlots(selectedSlots.filter((s) => s !== slot));
-    } else {
-      setSelectedSlots([...selectedSlots, slot]);
-    }
-  };
-
-  const handleConfirm = () => {
-    if (!selectedSubject || !selectedLevel || selectedSlots.length === 0) {
-      toast.error("Please select subject, level and at least one time slot");
+  const handleConfirm = async () => {
+    if (!selectedSubject || !selectedLevel || !selectedSlotId) {
+      toast.error("Please select subject, level and a time slot");
       return;
     }
 
-    // Create booking request
-    const requests = JSON.parse(localStorage.getItem("requests") || "[]");
-    const newRequest = {
-      id: Date.now().toString(),
-      tutorId: profile.id,
-      tutorName: profile.name,
-      subject: selectedSubject,
-      level: selectedLevel,
-      day: selectedDay,
-      slots: selectedSlots,
-      price: price * selectedSlots.length,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    };
-    
-    requests.push(newRequest);
-    localStorage.setItem("requests", JSON.stringify(requests));
+    const slot = availableSlots.find((s: any) => s.availability_id === selectedSlotId);
+    if (!slot) return;
 
-    toast.success("Booking request sent successfully!");
-    onClose();
+    setLoading(true);
+    try {
+      // Try the OutSystems booking process service first
+      try {
+        await bookingProcessApi.initiate({
+          tutee_id: currentUser.id,
+          tutor_id: profile.id,
+          availability_id: selectedSlotId,
+          lesson_date: slot.date,
+          start_time: slot.start_time,
+          end_time: slot.end_time,
+          amount: price.toFixed(2),
+        });
+      } catch {
+        // If OutSystems is unavailable, fall back to direct booking service
+        await bookingApi.create({
+          tutor_id: profile.id,
+          tutee_id: currentUser.id,
+          availability_id: selectedSlotId,
+          lesson_date: slot.date,
+          start_time: slot.start_time,
+          end_time: slot.end_time,
+        });
+        // Reserve the slot directly
+        await availabilityApi.updateSlot(selectedSlotId, "Reserved");
+      }
+
+      toast.success("Booking request sent!");
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send booking request");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const availableDays = profile.availability ? Object.keys(profile.availability) : [];
-  const availableSlots = selectedDay && profile.availability ? profile.availability[selectedDay] : [];
-
-  // Get unique subjects and levels
-  const uniqueSubjects = [...new Set(profile.subjects.map((s: any) => s.subject))];
+  // Get unique subjects and levels from profile
+  const uniqueSubjects = [...new Set((profile.subjects || []).map((s: any) => s.subject))];
   const levelsForSubject = selectedSubject
-    ? profile.subjects
+    ? (profile.subjects || [])
         .filter((s: any) => s.subject === selectedSubject)
         .map((s: any) => s.level)
     : [];
 
-  const totalPrice = price * selectedSlots.length;
+  const selectedSlot = availableSlots.find((s: any) => s.availability_id === selectedSlotId);
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -129,7 +154,7 @@ export function BookingDialog({ profile, onClose }: BookingDialogProps) {
                   <SelectValue placeholder="Select level" />
                 </SelectTrigger>
                 <SelectContent>
-                  {levelsForSubject.map((level) => (
+                  {levelsForSubject.map((level: string) => (
                     <SelectItem key={level} value={level}>
                       {level}
                     </SelectItem>
@@ -147,55 +172,50 @@ export function BookingDialog({ profile, onClose }: BookingDialogProps) {
             </div>
           )}
 
-          {/* Day Selection */}
+          {/* Available Time Slots from Backend */}
           <div className="space-y-2">
-            <label className="text-sm text-[#2F3B3D]">Select Day</label>
-            <Select value={selectedDay} onValueChange={handleDayChange}>
-              <SelectTrigger className="bg-[#EDE9DF] border-[#D6CFBF]">
-                <SelectValue placeholder="Select day" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableDays.map((day) => (
-                  <SelectItem key={day} value={day}>
-                    {day}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Time Slots */}
-          {selectedDay && availableSlots.length > 0 && (
-            <div className="space-y-2">
-              <label className="text-sm text-[#2F3B3D]">
-                Select Time Slots (can select multiple)
-              </label>
+            <label className="text-sm text-[#2F3B3D]">Select Time Slot</label>
+            {loadingSlots ? (
+              <div className="bg-[#EDE9DF] p-4 rounded-xl text-center">
+                <p className="text-[#2F3B3D]/70 animate-pulse">Loading availability...</p>
+              </div>
+            ) : availableSlots.length === 0 ? (
+              <div className="bg-[#EDE9DF] p-4 rounded-xl text-center">
+                <p className="text-[#2F3B3D]/70">No available time slots</p>
+              </div>
+            ) : (
               <div className="bg-[#EDE9DF] p-4 rounded-xl">
                 <div className="flex flex-wrap gap-2">
-                  {availableSlots.map((slot: string) => (
-                    <button
-                      key={slot}
-                      type="button"
-                      onClick={() => toggleSlot(slot)}
-                      className={`px-4 py-2 rounded-full text-sm transition-all duration-200 ${
-                        selectedSlots.includes(slot)
-                          ? "bg-[#7C8D8C] text-white"
-                          : "bg-white text-[#2F3B3D] hover:bg-[#D6CFBF]"
-                      }`}
-                    >
-                      {slot}
-                    </button>
-                  ))}
+                  {availableSlots.map((slot: any) => {
+                    const dayName = new Date(slot.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short" });
+                    const dateStr = new Date(slot.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                    return (
+                      <button
+                        key={slot.availability_id}
+                        type="button"
+                        onClick={() => setSelectedSlotId(
+                          selectedSlotId === slot.availability_id ? null : slot.availability_id
+                        )}
+                        className={`px-4 py-2 rounded-full text-sm transition-all duration-200 ${
+                          selectedSlotId === slot.availability_id
+                            ? "bg-[#7C8D8C] text-white"
+                            : "bg-white text-[#2F3B3D] hover:bg-[#D6CFBF]"
+                        }`}
+                      >
+                        {dayName} {dateStr} {slot.start_time.slice(0, 5)}-{slot.end_time.slice(0, 5)}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Total Price */}
-          {selectedSlots.length > 0 && (
+          {selectedSlot && price > 0 && (
             <div className="bg-[#7C8D8C] text-white p-4 rounded-xl flex items-center justify-between">
-              <span>Total ({selectedSlots.length} hour{selectedSlots.length > 1 ? 's' : ''})</span>
-              <span className="text-2xl">${totalPrice}</span>
+              <span>Total (1 hour)</span>
+              <span className="text-2xl">${price}</span>
             </div>
           )}
 
@@ -209,10 +229,10 @@ export function BookingDialog({ profile, onClose }: BookingDialogProps) {
             </button>
             <button
               onClick={handleConfirm}
-              disabled={!selectedSubject || !selectedLevel || selectedSlots.length === 0}
+              disabled={!selectedSubject || !selectedLevel || !selectedSlotId || loading}
               className="flex-1 px-6 py-3 bg-[#7C8D8C] text-white rounded-full hover:bg-[#2F3B3D] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Send Request
+              {loading ? "Sending..." : "Send Request"}
             </button>
           </div>
         </div>

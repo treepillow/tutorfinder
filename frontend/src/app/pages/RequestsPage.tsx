@@ -2,60 +2,168 @@ import { useState, useEffect, useRef } from "react";
 import { RequestCard } from "../components/RequestCard";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
+import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, enrichProfile } from "../utils/api";
 
 export function RequestsPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [requests, setRequests] = useState<any[]>([]);
-  const [acceptedRequests, setAcceptedRequests] = useState<any[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [paymentRequests, setPaymentRequests] = useState<any[]>([]);
+  const [confirmedRequests, setConfirmedRequests] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"awaiting" | "payment">("awaiting");
   const prevTab = useRef<"awaiting" | "payment">("awaiting");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const userData = localStorage.getItem("currentUser");
-    if (userData) {
-      setCurrentUser(JSON.parse(userData));
+    const user = getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+      loadRequests(user);
     }
-
-    loadRequests();
   }, []);
 
-  const loadRequests = () => {
-    const allRequests = JSON.parse(localStorage.getItem("requests") || "[]");
-    const pending = allRequests.filter((r: any) => r.status === "pending");
-    const accepted = allRequests.filter((r: any) => r.status === "accepted");
-    
-    setRequests(pending);
-    setAcceptedRequests(accepted);
+  const loadRequests = async (user: any) => {
+    setLoading(true);
+    try {
+      const res = await bookingApi.getByUser(user.id);
+      const bookings = res.bookings || [];
+
+      // Enrich bookings with profile data
+      const enriched = await Promise.all(
+        bookings.map(async (booking: any) => {
+          const otherUserId = user.userType === "student" ? booking.tutor_id : booking.tutee_id;
+          let otherProfile: any = {};
+          try {
+            const p = await profileApi.getProfile(otherUserId);
+            otherProfile = enrichProfile(p);
+          } catch {
+            otherProfile = { name: `User #${otherUserId}` };
+          }
+          return {
+            ...booking,
+            id: booking.booking_id,
+            tutorName: user.userType === "student" ? otherProfile.name : user.name,
+            studentName: user.userType === "tutor" ? otherProfile.name : user.name,
+            otherProfile,
+            // Map backend fields for display
+            subject: otherProfile.subjects?.[0]?.subject || "Lesson",
+            level: otherProfile.subjects?.[0]?.level || "",
+            day: booking.lesson_date,
+            slots: [`${booking.start_time?.slice(0, 5)}-${booking.end_time?.slice(0, 5)}`],
+            price: otherProfile.subjects?.[0]?.hourlyRate || otherProfile.price_rate || 0,
+          };
+        })
+      );
+
+      // Split by status
+      const pending = enriched.filter((b: any) => b.status === "AwaitingConfirmation");
+      const awaiting_payment = enriched.filter((b: any) => b.status === "AwaitingPayment");
+      const confirmed = enriched.filter((b: any) => b.status === "Confirmed");
+
+      setPendingRequests(pending);
+      setPaymentRequests(awaiting_payment);
+      setConfirmedRequests(confirmed);
+    } catch (err: any) {
+      console.error("Failed to load requests:", err);
+      toast.error("Failed to load requests");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCancelRequest = (requestId: string) => {
-    const allRequests = JSON.parse(localStorage.getItem("requests") || "[]");
-    const updated = allRequests.filter((r: any) => r.id !== requestId);
-    localStorage.setItem("requests", JSON.stringify(updated));
-    loadRequests();
-    toast.success("Request cancelled");
+  const handleCancelRequest = async (bookingId: number) => {
+    try {
+      try {
+        await bookingProcessApi.cancel(bookingId, currentUser.userType === "student" ? "tutee" : "tutor");
+      } catch {
+        await bookingApi.cancel(bookingId);
+      }
+      toast.success("Request cancelled");
+      loadRequests(currentUser);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to cancel");
+    }
   };
 
-  const handleAcceptRequest = (requestId: string) => {
-    const allRequests = JSON.parse(localStorage.getItem("requests") || "[]");
-    const updated = allRequests.map((r: any) =>
-      r.id === requestId ? { ...r, status: "accepted" } : r
-    );
-    localStorage.setItem("requests", JSON.stringify(updated));
-    loadRequests();
-    toast.success("Request accepted");
+  const handleAcceptRequest = async (bookingId: number) => {
+    try {
+      try {
+        await bookingProcessApi.confirm(bookingId);
+      } catch {
+        await bookingApi.confirm(bookingId);
+      }
+      toast.success("Request accepted! Student will be notified to pay.");
+      loadRequests(currentUser);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to accept");
+    }
   };
 
-  const handleRejectRequest = (requestId: string) => {
-    handleCancelRequest(requestId);
+  const handleRejectRequest = async (bookingId: number) => {
+    try {
+      try {
+        await bookingProcessApi.reject(bookingId);
+      } catch {
+        await bookingApi.reject(bookingId);
+      }
+      toast.success("Request rejected");
+      loadRequests(currentUser);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to reject");
+    }
   };
 
-  const handlePay = (request: any) => {
-    toast.success("Redirecting to Stripe...");
-    // In real implementation, would redirect to Stripe
-    setTimeout(() => {
-      alert(`Payment of $${request.price} processed successfully!`);
-    }, 1000);
+  const handlePay = async (request: any) => {
+    try {
+      // Create a payment intent
+      const paymentRes = await paymentApi.createIntent({
+        booking_id: request.booking_id,
+        tutee_id: currentUser.id,
+        tutor_id: request.tutor_id,
+        amount: parseFloat(request.price) || 50,
+      });
+
+      if (paymentRes.client_secret) {
+        // In a full Stripe integration, we'd redirect to Stripe Checkout here
+        // For now, simulate payment capture
+        toast.success("Payment intent created! Processing...");
+
+        try {
+          await bookingProcessApi.paymentCaptured(
+            request.booking_id,
+            paymentRes.stripe_payment_intent_id || paymentRes.payment_intent_id
+          );
+        } catch {
+          // Fall back to direct capture
+          await paymentApi.capture({
+            booking_id: request.booking_id,
+            stripe_payment_intent_id: paymentRes.stripe_payment_intent_id || paymentRes.payment_intent_id,
+          });
+        }
+
+        toast.success("Payment successful! Lesson confirmed.");
+        loadRequests(currentUser);
+      } else {
+        // Mock mode - payment service may be in mock mode
+        toast.success("Payment processed (mock mode)");
+        loadRequests(currentUser);
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Payment failed");
+    }
+  };
+
+  const handleComplete = async (bookingId: number) => {
+    try {
+      try {
+        await bookingProcessApi.complete(bookingId);
+      } catch {
+        await bookingApi.complete(bookingId);
+      }
+      toast.success("Lesson marked as completed! Deposit will be released.");
+      loadRequests(currentUser);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to complete");
+    }
   };
 
   if (!currentUser) {
@@ -72,7 +180,7 @@ export function RequestsPage() {
 
   const tabs = [
     { key: "awaiting" as const, label: "Awaiting Response" },
-    { key: "payment" as const, label: "Awaiting Payment" },
+    { key: "payment" as const, label: isStudent ? "Awaiting Payment" : "Confirmed" },
   ];
 
   return (
@@ -87,7 +195,11 @@ export function RequestsPage() {
           </p>
         </div>
 
-        {isStudent ? (
+        {loading ? (
+          <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
+            <p className="text-[#2F3B3D]/70 animate-pulse">Loading requests...</p>
+          </div>
+        ) : (
           <div className="w-full">
             {/* Tab bar */}
             <div className="relative flex p-1 bg-[#EDE9DF] rounded-full mb-6">
@@ -121,34 +233,52 @@ export function RequestsPage() {
                   className="space-y-4"
                 >
                   {activeTab === "awaiting" ? (
-                    requests.length === 0 ? (
+                    pendingRequests.length === 0 ? (
                       <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
                         <div className="text-5xl mb-3">📫</div>
                         <p className="text-[#2F3B3D]/70">No pending requests</p>
                       </div>
                     ) : (
-                      requests.map((request) => (
+                      pendingRequests.map((request) => (
                         <RequestCard
                           key={request.id}
                           request={request}
-                          userType="student"
-                          onCancel={() => handleCancelRequest(request.id)}
+                          userType={currentUser.userType}
+                          onCancel={isStudent ? () => handleCancelRequest(request.booking_id) : undefined}
+                          onAccept={!isStudent ? () => handleAcceptRequest(request.booking_id) : undefined}
+                          onReject={!isStudent ? () => handleRejectRequest(request.booking_id) : undefined}
                         />
                       ))
                     )
-                  ) : (
-                    acceptedRequests.length === 0 ? (
+                  ) : isStudent ? (
+                    paymentRequests.length === 0 ? (
                       <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
                         <div className="text-5xl mb-3">💳</div>
                         <p className="text-[#2F3B3D]/70">No payments pending</p>
                       </div>
                     ) : (
-                      acceptedRequests.map((request) => (
+                      paymentRequests.map((request) => (
                         <RequestCard
                           key={request.id}
-                          request={request}
+                          request={{ ...request, status: "accepted" }}
                           userType="student"
                           onPay={() => handlePay(request)}
+                        />
+                      ))
+                    )
+                  ) : (
+                    confirmedRequests.length === 0 ? (
+                      <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
+                        <div className="text-5xl mb-3">📋</div>
+                        <p className="text-[#2F3B3D]/70">No confirmed lessons</p>
+                      </div>
+                    ) : (
+                      confirmedRequests.map((request) => (
+                        <RequestCard
+                          key={request.id}
+                          request={{ ...request, status: "confirmed" }}
+                          userType="tutor"
+                          onComplete={() => handleComplete(request.booking_id)}
                         />
                       ))
                     )
@@ -156,25 +286,6 @@ export function RequestsPage() {
                 </motion.div>
               </AnimatePresence>
             </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {requests.length === 0 ? (
-              <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
-                <div className="text-5xl mb-3">📬</div>
-                <p className="text-[#2F3B3D]/70">No requests yet</p>
-              </div>
-            ) : (
-              requests.map((request) => (
-                <RequestCard
-                  key={request.id}
-                  request={request}
-                  userType="tutor"
-                  onAccept={() => handleAcceptRequest(request.id)}
-                  onReject={() => handleRejectRequest(request.id)}
-                />
-              ))
-            )}
           </div>
         )}
       </div>

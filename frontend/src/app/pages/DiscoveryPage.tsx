@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { getMockProfiles } from "../utils/mockData";
 import { SwipeableCard } from "../components/SwipeableCard";
 import { ProfileDetailDialog } from "../components/ProfileDetailDialog";
 import { MatchDialog } from "../components/MatchDialog";
+import { getCurrentUser, profileApi, matchApi, enrichProfile } from "../utils/api";
+import { toast } from "sonner";
 
 export function DiscoveryPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -11,38 +12,57 @@ export function DiscoveryPage() {
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
   const [showMatchDialog, setShowMatchDialog] = useState(false);
   const [matchedProfile, setMatchedProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const userData = localStorage.getItem("currentUser");
-    if (userData) {
-      const user = JSON.parse(userData);
+    const user = getCurrentUser();
+    if (user) {
       setCurrentUser(user);
-      
-      // Load profiles based on user type
-      const mockProfiles = getMockProfiles(user.userType);
-      setProfiles(mockProfiles);
+      loadProfiles(user);
     }
   }, []);
 
+  const loadProfiles = async (user: any) => {
+    setLoading(true);
+    try {
+      // Search for profiles of the opposite role (no filters = get all)
+      const searchRes = await profileApi.search({ radius: 999 });
+      const allProfiles = (searchRes.profiles || []).map(enrichProfile);
+
+      // Get list of already-swiped user IDs to filter them out
+      const swipedRes = await matchApi.getSwipedIds(user.id);
+      const swipedIds = new Set(swipedRes.swiped_ids || []);
+
+      // Filter out already-swiped profiles
+      const unswiped = allProfiles.filter((p: any) => !swipedIds.has(p.id));
+      setProfiles(unswiped);
+    } catch (err: any) {
+      console.error("Failed to load profiles:", err);
+      toast.error("Failed to load profiles");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSwipe = (direction: "left" | "right", profile: any) => {
-    if (direction === "right") {
-      const isMatch = Math.random() > 0.5;
-      if (isMatch) {
-        const matches = JSON.parse(localStorage.getItem("matches") || "[]");
-        matches.push(profile);
-        localStorage.setItem("matches", JSON.stringify(matches));
-        setTimeout(() => {
+    const isLike = direction === "right";
+
+    // Move to next card immediately - don't wait for API
+    setTimeout(() => setCurrentIndex((i) => i + 1), 350);
+
+    // Fire API call in background
+    matchApi.swipe(currentUser.id, profile.id, isLike)
+      .then((res) => {
+        if (res.matched) {
           setMatchedProfile(profile);
           setShowMatchDialog(true);
-        }, 400);
-      }
-      const swipes = JSON.parse(localStorage.getItem("swipes") || "[]");
-      swipes.push({ profileId: profile.id, direction: "right" });
-      localStorage.setItem("swipes", JSON.stringify(swipes));
-    }
-
-    // Give the card time to fly out before removing it
-    setTimeout(() => setCurrentIndex((i) => i + 1), 350);
+        }
+      })
+      .catch((err: any) => {
+        if (err.status !== 409) {
+          console.error("Swipe failed:", err);
+        }
+      });
   };
 
   const handleCardClick = (profile: any) => {
@@ -69,7 +89,12 @@ export function DiscoveryPage() {
           </p>
         </div>
 
-        {currentIndex < profiles.length ? (
+        {loading ? (
+          <div className="bg-[#EDE9DF] rounded-3xl p-16 text-center">
+            <div className="text-4xl mb-4 animate-pulse">...</div>
+            <p className="text-[#2F3B3D]/70">Loading profiles...</p>
+          </div>
+        ) : currentIndex < profiles.length ? (
           <div className="relative">
             {profiles.slice(currentIndex, currentIndex + 2).map((profile, idx) => (
               <SwipeableCard
@@ -84,9 +109,13 @@ export function DiscoveryPage() {
           </div>
         ) : (
           <div className="bg-[#EDE9DF] rounded-3xl p-16 text-center">
-            <div className="text-6xl mb-4">🎉</div>
+            <div className="text-6xl mb-4">
+              {profiles.length === 0 ? "🔍" : "🎉"}
+            </div>
             <h3 className="text-2xl text-[#2F3B3D] mb-2">
-              You've seen everyone!
+              {profiles.length === 0
+                ? "No profiles found"
+                : "You've seen everyone!"}
             </h3>
             <p className="text-[#2F3B3D]/70">
               Check back later for new profiles

@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
+import { clearAuth } from "../utils/api";
 
 const navItems = [
   { path: "/app/discover", icon: Home, label: "Discover" },
@@ -44,7 +45,7 @@ export function Sidebar() {
   };
 
   const handleSignOut = () => {
-    localStorage.removeItem("currentUser");
+    clearAuth();
     sessionStorage.clear();
     navigate("/");
   };

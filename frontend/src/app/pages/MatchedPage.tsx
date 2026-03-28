@@ -2,26 +2,53 @@ import { useState, useEffect } from "react";
 import { ProfileCard } from "../components/ProfileCard";
 import { BookingDialog } from "../components/BookingDialog";
 import { ProfileDetailDialog } from "../components/ProfileDetailDialog";
+import { getCurrentUser, matchApi, profileApi, enrichProfile } from "../utils/api";
+import { toast } from "sonner";
 
 export function MatchedPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [matches, setMatches] = useState<any[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
   const [showBooking, setShowBooking] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const userData = localStorage.getItem("currentUser");
-    if (userData) {
-      setCurrentUser(JSON.parse(userData));
+    const user = getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+      loadMatches(user.id);
     }
-
-    const matchedProfiles = JSON.parse(localStorage.getItem("matches") || "[]");
-    setMatches(matchedProfiles);
   }, []);
+
+  const loadMatches = async (userId: number) => {
+    setLoading(true);
+    try {
+      // Get all match records
+      const matchRecords = await matchApi.getMatches(userId);
+
+      // Fetch profile for each matched user
+      const profilePromises = matchRecords.map(async (m: any) => {
+        try {
+          const profile = await profileApi.getProfile(m.other_user_id);
+          return enrichProfile(profile);
+        } catch {
+          return null;
+        }
+      });
+
+      const profiles = (await Promise.all(profilePromises)).filter(Boolean);
+      setMatches(profiles);
+    } catch (err: any) {
+      console.error("Failed to load matches:", err);
+      toast.error("Failed to load matches");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleProfileClick = (profile: any) => {
     setSelectedProfile(profile);
-    
+
     // Students can book, tutors just view
     if (currentUser?.userType === "student") {
       setShowBooking(true);
@@ -46,7 +73,11 @@ export function MatchedPage() {
           </p>
         </div>
 
-        {matches.length === 0 ? (
+        {loading ? (
+          <div className="bg-[#EDE9DF] rounded-3xl p-16 text-center">
+            <p className="text-[#2F3B3D]/70 animate-pulse">Loading matches...</p>
+          </div>
+        ) : matches.length === 0 ? (
           <div className="bg-[#EDE9DF] rounded-3xl p-16 text-center">
             <div className="text-6xl mb-4">💬</div>
             <h3 className="text-2xl text-[#2F3B3D] mb-2">
@@ -73,6 +104,7 @@ export function MatchedPage() {
       {selectedProfile && currentUser.userType === "student" && showBooking && (
         <BookingDialog
           profile={selectedProfile}
+          currentUser={currentUser}
           onClose={() => {
             setSelectedProfile(null);
             setShowBooking(false);
@@ -87,7 +119,6 @@ export function MatchedPage() {
           onClose={() => setSelectedProfile(null)}
           showActions={true}
           onAccept={() => {
-            // Handle messaging
             setSelectedProfile(null);
           }}
           onReject={() => setSelectedProfile(null)}
