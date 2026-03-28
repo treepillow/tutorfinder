@@ -1,5 +1,6 @@
 import os
 import json
+import threading
 import pika
 import requests
 from datetime import datetime
@@ -103,30 +104,35 @@ def swipe():
     db.session.add(new_match)
     db.session.commit()
 
-    user_a_name = user_a_phone = user_b_name = user_b_phone = None
-    try:
-        ra = requests.get(f'{PROFILE_SERVICE_URL}/profile/internal/{swiper_id}', timeout=5)
-        if ra.status_code == 200:
-            user_a_name  = ra.json().get('name')
-            user_a_phone = ra.json().get('phone')
-    except Exception:
-        pass
-    try:
-        rb = requests.get(f'{PROFILE_SERVICE_URL}/profile/internal/{swiped_id}', timeout=5)
-        if rb.status_code == 200:
-            user_b_name  = rb.json().get('name')
-            user_b_phone = rb.json().get('phone')
-    except Exception:
-        pass
+    match_id = new_match.match_id
 
-    publish_message('match.created', {
-        'match_id':     new_match.match_id,
-        'user_a_id':    swiper_id,   'user_b_id':    swiped_id,
-        'user_a_name':  user_a_name, 'user_b_name':  user_b_name,
-        'user_a_phone': user_a_phone,'user_b_phone': user_b_phone,
-    })
+    # Fetch profiles and publish notification in background so the response is instant
+    def notify(match_id, swiper_id, swiped_id):
+        user_a_name = user_a_phone = user_b_name = user_b_phone = None
+        try:
+            ra = requests.get(f'{PROFILE_SERVICE_URL}/profile/internal/{swiper_id}', timeout=5)
+            if ra.status_code == 200:
+                user_a_name  = ra.json().get('name')
+                user_a_phone = ra.json().get('phone')
+        except Exception:
+            pass
+        try:
+            rb = requests.get(f'{PROFILE_SERVICE_URL}/profile/internal/{swiped_id}', timeout=5)
+            if rb.status_code == 200:
+                user_b_name  = rb.json().get('name')
+                user_b_phone = rb.json().get('phone')
+        except Exception:
+            pass
+        publish_message('match.created', {
+            'match_id':     match_id,
+            'user_a_id':    swiper_id,   'user_b_id':    swiped_id,
+            'user_a_name':  user_a_name, 'user_b_name':  user_b_name,
+            'user_a_phone': user_a_phone,'user_b_phone': user_b_phone,
+        })
 
-    return jsonify({'matched': True, 'match_id': new_match.match_id}), 200
+    threading.Thread(target=notify, args=(match_id, swiper_id, swiped_id), daemon=True).start()
+
+    return jsonify({'matched': True, 'match_id': match_id}), 200
 
 
 @app.route('/match/status', methods=['GET'])
