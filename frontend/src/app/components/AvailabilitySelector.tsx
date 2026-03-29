@@ -29,7 +29,7 @@ export function AvailabilitySelector({ value, onChange }: AvailabilitySelectorPr
   };
 
   return (
-    <div className="bg-[#FFF2D5] p-6 rounded-2xl overflow-x-auto">
+    <div className="bg-[#F5F3EF] p-6 rounded-2xl overflow-x-auto">
       <div className="min-w-[800px]">
         <div className="grid grid-cols-8 gap-2">
           {/* Header */}
@@ -54,7 +54,7 @@ export function AvailabilitySelector({ value, onChange }: AvailabilitySelectorPr
                   className={`h-10 rounded transition-all duration-200 ${
                     isSlotSelected(day, hour)
                       ? "bg-[#7C8D8C] hover:bg-[#2F3B3D]"
-                      : "bg-white hover:bg-[#E9D8BB]"
+                      : "bg-white hover:bg-[#EDE9DF]"
                   }`}
                 />
               ))}

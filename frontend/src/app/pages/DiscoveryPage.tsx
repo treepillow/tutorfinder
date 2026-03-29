@@ -26,27 +26,23 @@ export function DiscoveryPage() {
 
   const handleSwipe = (direction: "left" | "right", profile: any) => {
     if (direction === "right") {
-      // Simulate matching (50% chance for demo)
       const isMatch = Math.random() > 0.5;
-      
       if (isMatch) {
-        // Add to matches
         const matches = JSON.parse(localStorage.getItem("matches") || "[]");
         matches.push(profile);
         localStorage.setItem("matches", JSON.stringify(matches));
-        
-        setMatchedProfile(profile);
-        setShowMatchDialog(true);
+        setTimeout(() => {
+          setMatchedProfile(profile);
+          setShowMatchDialog(true);
+        }, 400);
       }
-      
-      // Store the swipe
       const swipes = JSON.parse(localStorage.getItem("swipes") || "[]");
       swipes.push({ profileId: profile.id, direction: "right" });
       localStorage.setItem("swipes", JSON.stringify(swipes));
     }
 
-    // Move to next profile
-    setCurrentIndex(currentIndex + 1);
+    // Give the card time to fly out before removing it
+    setTimeout(() => setCurrentIndex((i) => i + 1), 350);
   };
 
   const handleCardClick = (profile: any) => {
@@ -60,8 +56,8 @@ export function DiscoveryPage() {
   }
 
   return (
-    <div className="min-h-screen p-8">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen flex flex-col items-center justify-center p-8">
+      <div className="w-full max-w-sm">
         <div className="mb-8">
           <h1 className="text-4xl tracking-tight text-[#2F3B3D] mb-2">
             Discover
@@ -87,7 +83,7 @@ export function DiscoveryPage() {
             ))}
           </div>
         ) : (
-          <div className="bg-[#E9D8BB] rounded-3xl p-16 text-center">
+          <div className="bg-[#EDE9DF] rounded-3xl p-16 text-center">
             <div className="text-6xl mb-4">🎉</div>
             <h3 className="text-2xl text-[#2F3B3D] mb-2">
               You've seen everyone!

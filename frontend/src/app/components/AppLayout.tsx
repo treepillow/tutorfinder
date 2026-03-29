@@ -13,7 +13,7 @@ export function AppLayout() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-[#FFF2D5] flex">
+    <div className="min-h-screen bg-gradient-to-br from-[#FAFAF8] via-[#F5F3EF] to-[#EDE9DF] flex">
       <Sidebar />
       <main className="flex-1">
         <Outlet />

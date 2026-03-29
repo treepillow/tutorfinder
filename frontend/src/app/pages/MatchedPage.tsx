@@ -47,7 +47,7 @@ export function MatchedPage() {
         </div>
 
         {matches.length === 0 ? (
-          <div className="bg-[#E9D8BB] rounded-3xl p-16 text-center">
+          <div className="bg-[#EDE9DF] rounded-3xl p-16 text-center">
             <div className="text-6xl mb-4">💬</div>
             <h3 className="text-2xl text-[#2F3B3D] mb-2">
               No matches yet

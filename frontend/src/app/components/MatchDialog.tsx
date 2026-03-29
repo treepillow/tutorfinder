@@ -18,13 +18,13 @@ export function MatchDialog({ profile, onClose }: MatchDialogProps) {
       particleCount: 100,
       spread: 70,
       origin: { y: 0.6 },
-      colors: ["#7C8D8C", "#C9B08E", "#E9D8BB"],
+      colors: ["#7C8D8C", "#D6CFBF", "#EDE9DF"],
     });
   }, []);
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="bg-[#FFF2D5] border-[#C9B08E]">
+      <DialogContent className="bg-[#F5F3EF] border-[#D6CFBF]">
         <div className="text-center space-y-6 py-8">
           <div className="w-20 h-20 bg-[#7C8D8C] rounded-full flex items-center justify-center mx-auto">
             <Heart className="w-10 h-10 text-white fill-white" />
@@ -39,7 +39,7 @@ export function MatchDialog({ profile, onClose }: MatchDialogProps) {
             </p>
           </div>
 
-          <div className="aspect-square w-32 mx-auto bg-gradient-to-br from-[#C9B08E] to-[#7C8D8C] rounded-full flex items-center justify-center">
+          <div className="aspect-square w-32 mx-auto bg-gradient-to-br from-[#D6CFBF] to-[#7C8D8C] rounded-full flex items-center justify-center">
             <div className="text-6xl">{profile.gender === "Female" ? "👩" : "👨"}</div>
           </div>
 
