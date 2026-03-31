@@ -136,12 +136,6 @@ export function ProfileDetailDialog({
               >
                 Close
               </button>
-              <button
-                onClick={onAccept}
-                className="flex-1 px-6 py-3 bg-[#7C8D8C] text-white rounded-full hover:bg-[#2F3B3D] transition-all duration-300"
-              >
-                Message
-              </button>
             </div>
           )}
         </div>
