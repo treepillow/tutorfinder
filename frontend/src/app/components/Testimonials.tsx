@@ -162,7 +162,7 @@ export function Testimonials() {
   const handleUserTypeSelect = (type: "student" | "tutor") => {
     setIsDialogOpen(false);
     sessionStorage.setItem("userType", type);
-    navigate("/register");
+    navigate("/register?mode=signup");
   };
 
   return (

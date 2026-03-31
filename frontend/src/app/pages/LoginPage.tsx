@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import gsap from "gsap";
 import { profileApi, setToken, setCurrentUser, enrichProfile } from "../utils/api";
@@ -9,8 +9,8 @@ type Mode = "login" | "signup";
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const initialMode = searchParams.get("mode") === "signup" ? "signup" : "login";
+  const location = useLocation();
+  const initialMode: Mode = location.pathname === "/register" ? "signup" : "login";
   const [mode, setMode] = useState<Mode>(initialMode);
   const [loading, setLoading] = useState(false);
 
@@ -19,6 +19,8 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
+  const [loginErrors, setLoginErrors] = useState<{ email?: string; password?: string }>({});
+  const [loginTouched, setLoginTouched] = useState<{ email?: boolean; password?: boolean }>({});
 
   // Signup state
   const [userType, setUserType] = useState<"student" | "tutor">("student");
@@ -26,11 +28,27 @@ export function LoginPage() {
     name: "", contactNumber: "", birthday: "", gender: "",
     email: "", password: "", confirmPassword: "",
   });
+  const [signupErrors, setSignupErrors] = useState<Partial<typeof signupData & { gender: string }>>({});
+  const [signupSubmitted, setSignupSubmitted] = useState(false);
+  const [signupTouched, setSignupTouched] = useState<Partial<Record<keyof typeof signupData, boolean>>>({});
   const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+
+  const validateLogin = (e: string, p: string) => {
+    const errs: { email?: string; password?: string } = {};
+    if (!e) errs.email = "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) errs.email = "Invalid email address";
+    if (!p) errs.password = "Password is required";
+    return errs;
+  };
 
   const handleLogin = async (e: React.SyntheticEvent) => {
     e.preventDefault();
+    const errs = validateLogin(email, password);
+    setLoginErrors(errs);
+    setLoginTouched({ email: true, password: true });
+    if (Object.keys(errs).length > 0) return;
     setLoading(true);
     try {
       const res = await profileApi.login(email, password);
@@ -50,12 +68,49 @@ export function LoginPage() {
     }
   };
 
+  const validateSignup = (data: typeof signupData) => {
+    const errs: Partial<typeof signupData> = {};
+    if (!data.name.trim()) errs.name = "Full name is required";
+
+    const phone = data.contactNumber.replace(/\s+/g, "");
+    if (!phone) errs.contactNumber = "Contact number is required";
+    else if (!/^\d{8}$/.test(phone)) errs.contactNumber = "Contact number must be 8 digits";
+
+    if (!data.birthday) {
+      errs.birthday = "Birthday is required";
+    } else {
+      const today = new Date();
+      const dob = new Date(data.birthday);
+      const age = today.getFullYear() - dob.getFullYear() -
+        (today < new Date(today.getFullYear(), dob.getMonth(), dob.getDate()) ? 1 : 0);
+      if (dob >= today) errs.birthday = "Birthday must be in the past";
+      else if (age < 13) errs.birthday = "Must be at least 13 years old";
+    }
+
+    if (!data.gender) errs.gender = "Please select a gender";
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!data.email) errs.email = "Email is required";
+    else if (!emailRegex.test(data.email)) errs.email = "Invalid email address";
+
+    if (!data.password) errs.password = "Password is required";
+    else if (data.password.length < 8) errs.password = "At least 8 characters";
+    else if (!/[A-Z]/.test(data.password)) errs.password = "Needs an uppercase letter";
+    else if (!/[0-9]/.test(data.password)) errs.password = "Needs a number";
+
+    if (!data.confirmPassword) errs.confirmPassword = "Please confirm your password";
+    else if (data.password !== data.confirmPassword) errs.confirmPassword = "Passwords do not match";
+
+    return errs;
+  };
+
   const handleSignup = (e: React.SyntheticEvent) => {
     e.preventDefault();
-    if (signupData.password !== signupData.confirmPassword) {
-      toast.error("Passwords do not match!");
-      return;
-    }
+    setSignupSubmitted(true);
+    const errs = validateSignup(signupData);
+    setSignupErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
     sessionStorage.setItem("userType", userType);
     sessionStorage.setItem("basicDetails", JSON.stringify(signupData));
 
@@ -106,12 +161,28 @@ export function LoginPage() {
     tl.to(formRef.current, { opacity: 0, duration: 0.18, ease: "power2.in" })
       .to(illustrationRef.current, { xPercent: toLogin ? 0 : 100 }, "<")
       .to(formRef.current,         { xPercent: toLogin ? 0 : -100 }, "<")
-      .call(() => setMode(newMode), [], 0.3)
+      .call(() => {
+        setMode(newMode);
+        navigate(toLogin ? "/login" : "/register", { replace: true });
+      }, [], 0.3)
       .to(formRef.current, { opacity: 1, duration: 0.3, ease: "power2.out" }, 0.3);
   };
 
-  const signupChange = (field: string, value: string) =>
-    setSignupData(prev => ({ ...prev, [field]: value }));
+  const signupChange = (field: string, value: string) => {
+    const updated = { ...signupData, [field]: value };
+    setSignupData(updated);
+    setSignupErrors(validateSignup(updated));
+    // Mark gender touched immediately on change (no blur for radio)
+    if (field === "gender") setSignupTouched(prev => ({ ...prev, gender: true }));
+  };
+
+  const signupBlur = (field: keyof typeof signupData) => {
+    setSignupTouched(prev => ({ ...prev, [field]: true }));
+    setSignupErrors(validateSignup(signupData));
+  };
+
+  const showError = (field: keyof typeof signupData) =>
+    (signupTouched[field] || signupSubmitted) && signupErrors[field];
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -150,17 +221,25 @@ export function LoginPage() {
             <h1 className="text-3xl font-bold text-[#1A2035] text-center mb-1">Welcome back!</h1>
             <p className="text-[#1A2035]/50 text-sm text-center mb-8">Please enter your details</p>
 
-            <form onSubmit={handleLogin} className="space-y-6">
+            <form onSubmit={handleLogin} noValidate className="space-y-6">
               <div className="space-y-1">
                 <label className="text-xs text-[#1A2035]/50 font-medium">Email</label>
                 <input
-                  type="email"
+                  type="text"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (loginTouched.email) setLoginErrors(prev => ({ ...prev, ...validateLogin(e.target.value, password) }));
+                  }}
+                  onBlur={() => {
+                    setLoginTouched(prev => ({ ...prev, email: true }));
+                    setLoginErrors(validateLogin(email, password));
+                  }}
+                  onInvalid={(e) => e.preventDefault()}
                   placeholder="you@example.com"
-                  required
-                  className="w-full bg-transparent border-0 border-b border-[#D6CFBF] pb-2 text-[#1A2035] text-sm placeholder:text-[#1A2035]/30 focus:outline-none focus:border-[#7C8D8C] transition-colors"
+                  className={`w-full bg-transparent border-0 border-b pb-2 text-[#1A2035] text-sm placeholder:text-[#1A2035]/30 focus:outline-none transition-colors ${loginTouched.email && loginErrors.email ? "border-red-400 focus:border-red-400" : "border-[#D6CFBF] focus:border-[#7C8D8C]"}`}
                 />
+                {loginTouched.email && loginErrors.email && <p className="text-red-500 text-xs mt-1">{loginErrors.email}</p>}
               </div>
 
               <div className="space-y-1">
@@ -169,16 +248,24 @@ export function LoginPage() {
                   <input
                     type={showPassword ? "text" : "password"}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (loginTouched.password) setLoginErrors(prev => ({ ...prev, ...validateLogin(email, e.target.value) }));
+                    }}
+                    onBlur={() => {
+                      setLoginTouched(prev => ({ ...prev, password: true }));
+                      setLoginErrors(validateLogin(email, password));
+                    }}
+                    onInvalid={(e) => e.preventDefault()}
                     placeholder="••••••••"
-                    required
-                    className="w-full bg-transparent border-0 border-b border-[#D6CFBF] pb-2 pr-8 text-[#1A2035] text-sm placeholder:text-[#1A2035]/30 focus:outline-none focus:border-[#7C8D8C] transition-colors"
+                    className={`w-full bg-transparent border-0 border-b pb-2 pr-8 text-[#1A2035] text-sm placeholder:text-[#1A2035]/30 focus:outline-none transition-colors ${loginTouched.password && loginErrors.password ? "border-red-400 focus:border-red-400" : "border-[#D6CFBF] focus:border-[#7C8D8C]"}`}
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-0 bottom-2 text-[#1A2035]/40 hover:text-[#1A2035]/70 transition-colors">
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                {loginTouched.password && loginErrors.password && <p className="text-red-500 text-xs mt-1">{loginErrors.password}</p>}
               </div>
 
               <div className="flex items-center justify-between">
@@ -254,26 +341,36 @@ export function LoginPage() {
               ))}
             </div>
 
-            <form onSubmit={handleSignup} className="space-y-4">
+            <form onSubmit={handleSignup} noValidate className="space-y-4">
               <div className="space-y-1">
                 <label className="text-xs text-[#1A2035]/50 font-medium">Full Name</label>
-                <input type="text" value={signupData.name} onChange={(e) => signupChange("name", e.target.value)}
-                  required placeholder="John Doe"
-                  className="w-full bg-transparent border-0 border-b border-[#D6CFBF] pb-2 text-[#1A2035] text-sm placeholder:text-[#1A2035]/30 focus:outline-none focus:border-[#7C8D8C] transition-colors" />
+                <input type="text" value={signupData.name}
+                  onChange={(e) => signupChange("name", e.target.value)}
+                  onBlur={() => signupBlur("name")}
+                  onInvalid={(e) => e.preventDefault()} placeholder="John Doe"
+                  className={`w-full bg-transparent border-0 border-b pb-2 text-[#1A2035] text-sm placeholder:text-[#1A2035]/30 focus:outline-none transition-colors ${showError("name") ? "border-red-400 focus:border-red-400" : "border-[#D6CFBF] focus:border-[#7C8D8C]"}`} />
+                {showError("name") && <p className="text-red-500 text-xs mt-1">{signupErrors.name}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs text-[#1A2035]/50 font-medium">Contact No.</label>
-                  <input type="tel" value={signupData.contactNumber} onChange={(e) => signupChange("contactNumber", e.target.value)}
-                    required placeholder="+65 9123 4567"
-                    className="w-full bg-transparent border-0 border-b border-[#D6CFBF] pb-2 text-[#1A2035] text-sm placeholder:text-[#1A2035]/30 focus:outline-none focus:border-[#7C8D8C] transition-colors" />
+                  <input type="tel" value={signupData.contactNumber}
+                    onChange={(e) => signupChange("contactNumber", e.target.value)}
+                    onBlur={() => signupBlur("contactNumber")}
+                    onInvalid={(e) => e.preventDefault()} placeholder="91234567"
+                    className={`w-full bg-transparent border-0 border-b pb-2 text-[#1A2035] text-sm placeholder:text-[#1A2035]/30 focus:outline-none transition-colors ${showError("contactNumber") ? "border-red-400 focus:border-red-400" : "border-[#D6CFBF] focus:border-[#7C8D8C]"}`} />
+                  {showError("contactNumber") && <p className="text-red-500 text-xs mt-1">{signupErrors.contactNumber}</p>}
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-[#1A2035]/50 font-medium">Birthday</label>
-                  <input type="date" value={signupData.birthday} onChange={(e) => signupChange("birthday", e.target.value)}
-                    required
-                    className="w-full bg-transparent border-0 border-b border-[#D6CFBF] pb-2 text-[#1A2035] text-sm focus:outline-none focus:border-[#7C8D8C] transition-colors" />
+                  <input type="date" value={signupData.birthday}
+                    onChange={(e) => signupChange("birthday", e.target.value)}
+                    onBlur={() => signupBlur("birthday")}
+                    onInvalid={(e) => e.preventDefault()}
+                    max="9999-12-31"
+                    className={`w-full bg-transparent border-0 border-b pb-2 text-[#1A2035] text-sm focus:outline-none transition-colors ${showError("birthday") ? "border-red-400 focus:border-red-400" : "border-[#D6CFBF] focus:border-[#7C8D8C]"}`} />
+                  {showError("birthday") && <p className="text-red-500 text-xs mt-1">{signupErrors.birthday}</p>}
                 </div>
               </div>
 
@@ -284,18 +381,22 @@ export function LoginPage() {
                     <label key={g} className="flex items-center gap-1.5 cursor-pointer">
                       <input type="radio" name="gender" value={g} checked={signupData.gender === g}
                         onChange={(e) => signupChange("gender", e.target.value)}
-                        className="accent-[#7C8D8C]" required />
+                        className="accent-[#7C8D8C]" />
                       <span className="text-xs text-[#1A2035]/70">{g}</span>
                     </label>
                   ))}
                 </div>
+                {showError("gender") && <p className="text-red-500 text-xs mt-1">{signupErrors.gender}</p>}
               </div>
 
               <div className="space-y-1">
                 <label className="text-xs text-[#1A2035]/50 font-medium">Email</label>
-                <input type="email" value={signupData.email} onChange={(e) => signupChange("email", e.target.value)}
-                  required placeholder="you@example.com"
-                  className="w-full bg-transparent border-0 border-b border-[#D6CFBF] pb-2 text-[#1A2035] text-sm placeholder:text-[#1A2035]/30 focus:outline-none focus:border-[#7C8D8C] transition-colors" />
+                <input type="text" value={signupData.email}
+                  onChange={(e) => signupChange("email", e.target.value)}
+                  onBlur={() => signupBlur("email")}
+                  onInvalid={(e) => e.preventDefault()} placeholder="you@example.com"
+                  className={`w-full bg-transparent border-0 border-b pb-2 text-[#1A2035] text-sm placeholder:text-[#1A2035]/30 focus:outline-none transition-colors ${showError("email") ? "border-red-400 focus:border-red-400" : "border-[#D6CFBF] focus:border-[#7C8D8C]"}`} />
+                {showError("email") && <p className="text-red-500 text-xs mt-1">{signupErrors.email}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -303,19 +404,31 @@ export function LoginPage() {
                   <label className="text-xs text-[#1A2035]/50 font-medium">Password</label>
                   <div className="relative">
                     <input type={showSignupPassword ? "text" : "password"} value={signupData.password}
-                      onChange={(e) => signupChange("password", e.target.value)} required placeholder="••••••••"
-                      className="w-full bg-transparent border-0 border-b border-[#D6CFBF] pb-2 pr-6 text-[#1A2035] text-sm placeholder:text-[#1A2035]/30 focus:outline-none focus:border-[#7C8D8C] transition-colors" />
+                      onChange={(e) => signupChange("password", e.target.value)}
+                      onBlur={() => signupBlur("password")}
+                      onInvalid={(e) => e.preventDefault()} placeholder="••••••••"
+                      className={`w-full bg-transparent border-0 border-b pb-2 pr-6 text-[#1A2035] text-sm placeholder:text-[#1A2035]/30 focus:outline-none transition-colors ${showError("password") ? "border-red-400 focus:border-red-400" : "border-[#D6CFBF] focus:border-[#7C8D8C]"}`} />
                     <button type="button" onClick={() => setShowSignupPassword(!showSignupPassword)}
                       className="absolute right-0 bottom-2 text-[#1A2035]/40">
                       {showSignupPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     </button>
                   </div>
+                  {showError("password") && <p className="text-red-500 text-xs mt-1">{signupErrors.password}</p>}
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-[#1A2035]/50 font-medium">Confirm</label>
-                  <input type="password" value={signupData.confirmPassword}
-                    onChange={(e) => signupChange("confirmPassword", e.target.value)} required placeholder="••••••••"
-                    className="w-full bg-transparent border-0 border-b border-[#D6CFBF] pb-2 text-[#1A2035] text-sm placeholder:text-[#1A2035]/30 focus:outline-none focus:border-[#7C8D8C] transition-colors" />
+                  <div className="relative">
+                    <input type={showConfirmPassword ? "text" : "password"} value={signupData.confirmPassword}
+                      onChange={(e) => signupChange("confirmPassword", e.target.value)}
+                      onBlur={() => signupBlur("confirmPassword")}
+                      onInvalid={(e) => e.preventDefault()} placeholder="••••••••"
+                      className={`w-full bg-transparent border-0 border-b pb-2 pr-6 text-[#1A2035] text-sm placeholder:text-[#1A2035]/30 focus:outline-none transition-colors ${showError("confirmPassword") ? "border-red-400 focus:border-red-400" : "border-[#D6CFBF] focus:border-[#7C8D8C]"}`} />
+                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-0 bottom-2 text-[#1A2035]/40">
+                      {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                  {showError("confirmPassword") && <p className="text-red-500 text-xs mt-1">{signupErrors.confirmPassword}</p>}
                 </div>
               </div>
 
