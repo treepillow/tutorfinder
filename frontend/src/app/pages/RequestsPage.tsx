@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { RequestCard } from "../components/RequestCard";
+import { PaymentDialog } from "../components/PaymentDialog";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, enrichProfile, availabilityApi } from "../utils/api";
@@ -11,6 +12,7 @@ export function RequestsPage() {
   const [activeTab, setActiveTab] = useState<"awaiting" | "payment">("awaiting");
   const prevTab = useRef<"awaiting" | "payment">("awaiting");
   const [loading, setLoading] = useState(true);
+  const [paymentDialog, setPaymentDialog] = useState<{ clientSecret: string; amount: number; request: any } | null>(null);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -125,43 +127,65 @@ export function RequestsPage() {
 
   const handlePay = async (request: any) => {
     try {
-      // Create a payment intent
+      const amount = parseFloat(request.price) || 50;
       const paymentRes = await paymentApi.createIntent({
         booking_id: request.booking_id,
         tutee_id: currentUser.id,
         tutor_id: request.tutor_id,
-        amount: parseFloat(request.price) || 50,
+        amount,
       });
 
-      if (paymentRes.client_secret) {
-        // In a full Stripe integration, we'd redirect to Stripe Checkout here
-        // For now, simulate payment capture
-        toast.success("Payment intent created! Processing...");
-
+      if (paymentRes.client_secret && !paymentRes.client_secret.startsWith("mock_")) {
+        // Real Stripe — open the payment dialog with card form
+        setPaymentDialog({
+          clientSecret: paymentRes.client_secret,
+          amount,
+          request: { ...request, stripe_payment_intent_id: paymentRes.stripe_payment_intent_id },
+        });
+      } else {
+        // Mock mode — no Stripe key configured, auto-confirm
         try {
           await bookingProcessApi.paymentCaptured(
             request.booking_id,
             paymentRes.stripe_payment_intent_id || paymentRes.payment_intent_id
           );
         } catch {
-          // OutSystems unavailable — capture payment directly and update booking status
           await paymentApi.capture({
             booking_id: request.booking_id,
             stripe_payment_intent_id: paymentRes.stripe_payment_intent_id || paymentRes.payment_intent_id,
           });
           await bookingApi.updateStatus(request.booking_id, "Confirmed");
         }
-
-        toast.success("Payment successful! Lesson confirmed.");
-        loadRequests(currentUser);
-      } else {
-        // Mock mode - payment service may be in mock mode
-        await bookingApi.updateStatus(request.booking_id, "Confirmed");
         toast.success("Payment processed (mock mode)");
         loadRequests(currentUser);
       }
     } catch (err: any) {
       toast.error(err.message || "Payment failed");
+    }
+  };
+
+  const handlePaymentSuccess = async () => {
+    if (!paymentDialog) return;
+    const { request } = paymentDialog;
+    setPaymentDialog(null);
+
+    try {
+      try {
+        await bookingProcessApi.paymentCaptured(
+          request.booking_id,
+          request.stripe_payment_intent_id
+        );
+      } catch {
+        await paymentApi.capture({
+          booking_id: request.booking_id,
+          stripe_payment_intent_id: request.stripe_payment_intent_id,
+        });
+        await bookingApi.updateStatus(request.booking_id, "Confirmed");
+      }
+      toast.success("Payment successful! Lesson confirmed.");
+      loadRequests(currentUser);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to confirm booking after payment");
     }
   };
 
@@ -274,6 +298,15 @@ export function RequestsPage() {
           </div>
         )}
       </div>
+
+      {paymentDialog && (
+        <PaymentDialog
+          clientSecret={paymentDialog.clientSecret}
+          amount={paymentDialog.amount}
+          onSuccess={handlePaymentSuccess}
+          onClose={() => setPaymentDialog(null)}
+        />
+      )}
     </div>
   );
 }
