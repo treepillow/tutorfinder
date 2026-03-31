@@ -5,6 +5,8 @@ import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { ArrowRight, Plus, Trash2, GraduationCap } from "lucide-react";
 import { AvailabilitySelector } from "../components/AvailabilitySelector";
+import { profileApi, setToken, setCurrentUser, encodeProfileExtra, enrichProfile, syncAvailabilityToBackend } from "../utils/api";
+import { toast } from "sonner";
 
 const SUBJECTS = [
   "Mathematics", "English", "Science", "Physics", "Chemistry",
@@ -36,6 +38,8 @@ export function RegisterTutorDetails() {
   const [location, setLocation] = useState("");
   const [qualification, setQualification] = useState("");
   const [availability, setAvailability] = useState<Record<string, string[]>>({});
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     const userType = sessionStorage.getItem("userType");
     if (userType !== "tutor") navigate("/");
@@ -53,18 +57,59 @@ export function RegisterTutorDetails() {
     setSubjects(subjects.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const basicDetails = sessionStorage.getItem("basicDetails");
     if (!basicDetails) { navigate("/register"); return; }
-    const userData = {
-      ...JSON.parse(basicDetails),
-      userType: "tutor",
-      subjects, location, qualification, availability,
-    };
-    localStorage.setItem("currentUser", JSON.stringify(userData));
-    sessionStorage.clear();
-    navigate("/app/discover");
+
+    const basic = JSON.parse(basicDetails);
+    setLoading(true);
+
+    try {
+      // Build the bio JSON with full structured data
+      const bio = encodeProfileExtra({
+        subjects,
+        qualification,
+        location,
+        gender: basic.gender,
+        birthday: basic.birthday,
+        contactNumber: basic.contactNumber,
+      });
+
+      // Register with the profile service
+      const res = await profileApi.register({
+        name: basic.name,
+        email: basic.email,
+        password: basic.password,
+        phone: basic.contactNumber,
+        role: "Tutor",
+        subject: subjects.map(s => s.subject).filter(Boolean).join(", "),
+        price_rate: parseFloat(subjects[0]?.hourlyRate) || 0,
+        bio,
+      });
+
+      // Auto-login after registration
+      const loginRes = await profileApi.login(basic.email, basic.password);
+      setToken(loginRes.token);
+
+      const profile = await profileApi.getProfile(loginRes.user_id);
+      const enriched = enrichProfile(profile);
+      // Sync availability slots to the backend
+      if (Object.keys(availability).length > 0) {
+        syncAvailabilityToBackend(loginRes.user_id, availability).catch(console.error);
+      }
+
+      enriched.availability = availability;
+      setCurrentUser(enriched);
+
+      sessionStorage.clear();
+      toast.success("Registration successful!");
+      navigate("/app/discover");
+    } catch (err: any) {
+      toast.error(err.message || "Registration failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -196,10 +241,11 @@ export function RegisterTutorDetails() {
 
               <button
                 type="submit"
-                className="w-full px-8 py-4 bg-[#7C8D8C] text-white rounded-full hover:bg-[#2F3B3D] transition-all duration-300 flex items-center justify-center gap-2 group shadow-lg shadow-[#7C8D8C]/25 font-medium"
+                disabled={loading}
+                className="w-full px-8 py-4 bg-[#7C8D8C] text-white rounded-full hover:bg-[#2F3B3D] transition-all duration-300 flex items-center justify-center gap-2 group shadow-lg shadow-[#7C8D8C]/25 font-medium disabled:opacity-50"
               >
-                Complete Registration
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                {loading ? "Creating account..." : "Complete Registration"}
+                {!loading && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
               </button>
             </form>
           </div>

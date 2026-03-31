@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import gsap from "gsap";
+import { profileApi, setToken, setCurrentUser, enrichProfile } from "../utils/api";
+import { toast } from "sonner";
 
 type Mode = "login" | "signup";
 
@@ -10,6 +12,7 @@ export function LoginPage() {
   const [searchParams] = useSearchParams();
   const initialMode = searchParams.get("mode") === "signup" ? "signup" : "login";
   const [mode, setMode] = useState<Mode>(initialMode);
+  const [loading, setLoading] = useState(false);
 
   // Login state
   const [email, setEmail] = useState("");
@@ -26,16 +29,31 @@ export function LoginPage() {
   const [showSignupPassword, setShowSignupPassword] = useState(false);
 
 
-  const handleLogin = (e: React.SyntheticEvent) => {
+  const handleLogin = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-    localStorage.setItem("currentUser", JSON.stringify({ email, userType: "student" }));
-    navigate("/app/discover");
+    setLoading(true);
+    try {
+      const res = await profileApi.login(email, password);
+      setToken(res.token);
+
+      // Fetch full profile
+      const profile = await profileApi.getProfile(res.user_id);
+      const enriched = enrichProfile(profile);
+      setCurrentUser(enriched);
+
+      toast.success("Welcome back!");
+      navigate("/app/discover");
+    } catch (err: any) {
+      toast.error(err.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSignup = (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (signupData.password !== signupData.confirmPassword) {
-      alert("Passwords do not match!");
+      toast.error("Passwords do not match!");
       return;
     }
     sessionStorage.setItem("userType", userType);
@@ -174,9 +192,9 @@ export function LoginPage() {
                 </button>
               </div>
 
-              <button type="submit"
-                className="w-full py-3.5 bg-[#2F3B3D] text-white rounded-full text-sm font-semibold hover:bg-[#7C8D8C] transition-all duration-300 shadow-lg shadow-[#2F3B3D]/20">
-                Log In
+              <button type="submit" disabled={loading}
+                className="w-full py-3.5 bg-[#2F3B3D] text-white rounded-full text-sm font-semibold hover:bg-[#7C8D8C] transition-all duration-300 shadow-lg shadow-[#2F3B3D]/20 disabled:opacity-50">
+                {loading ? "Logging in..." : "Log In"}
               </button>
 
               <button type="button"
@@ -231,7 +249,7 @@ export function LoginPage() {
                     userType === type ? "text-white" : "text-[#1A2035]/60 hover:text-[#1A2035]"
                   }`}
                 >
-                  {type === "student" ? "🎓 Student" : "👨‍🏫 Tutor"}
+                  {type === "student" ? "Student" : "Tutor"}
                 </button>
               ))}
             </div>

@@ -10,7 +10,6 @@ import { MatchedPage } from "./pages/MatchedPage";
 import { RequestsPage } from "./pages/RequestsPage";
 import { SchedulePage } from "./pages/SchedulePage";
 import { ProfilePage } from "./pages/ProfilePage";
-import { SettingsPage } from "./pages/SettingsPage";
 
 export const router = createBrowserRouter([
   {
@@ -60,10 +59,6 @@ export const router = createBrowserRouter([
       {
         path: "profile",
         element: <ProfilePage />,
-      },
-      {
-        path: "settings",
-        element: <SettingsPage />,
       },
     ],
   },

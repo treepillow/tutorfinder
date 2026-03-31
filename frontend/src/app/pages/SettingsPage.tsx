@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Plus, Trash2 } from "lucide-react";
 import { AvailabilitySelector } from "../components/AvailabilitySelector";
 import { toast } from "sonner";
+import { getCurrentUser, setCurrentUser, profileApi, encodeProfileExtra, enrichProfile, syncAvailabilityToBackend } from "../utils/api";
 
 const SUBJECTS = ["Mathematics", "English", "Science", "Physics", "Chemistry", "Biology", "History", "Geography", "Chinese", "Malay", "Tamil"];
 const EDUCATION_LEVELS = ["Primary 1-3", "Primary 4-6", "Secondary 1-2", "Secondary 3-4", "Junior College", "University"];
@@ -13,15 +14,15 @@ const QUALIFICATIONS = ["O-Levels", "A-Levels", "Diploma", "Bachelor's Degree", 
 
 export function SettingsPage() {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUserData, setCurrentUserData] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const userData = localStorage.getItem("currentUser");
+    const userData = getCurrentUser();
     if (userData) {
-      const user = JSON.parse(userData);
-      setCurrentUser(user);
-      setFormData(user);
+      setCurrentUserData(userData);
+      setFormData(userData);
     }
   }, []);
 
@@ -36,7 +37,7 @@ export function SettingsPage() {
   };
 
   const addSubject = () => {
-    const isTutor = currentUser.userType === "tutor";
+    const isTutor = currentUserData.userType === "tutor";
     const newSubject = isTutor
       ? { id: Date.now().toString(), subject: "", level: "", hourlyRate: "" }
       : { id: Date.now().toString(), subject: "", level: "", budget: "" };
@@ -50,17 +51,51 @@ export function SettingsPage() {
     }
   };
 
-  const handleSave = () => {
-    localStorage.setItem("currentUser", JSON.stringify(formData));
-    toast.success("Settings saved successfully!");
-    navigate("/app/profile");
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const bio = encodeProfileExtra({
+        subjects: formData.subjects,
+        qualification: formData.qualification,
+        location: formData.location,
+        gender: formData.gender,
+        birthday: formData.birthday,
+        contactNumber: formData.contactNumber,
+      });
+
+      await profileApi.updateProfile(currentUserData.id, {
+        name: formData.name,
+        phone: formData.contactNumber || formData.phone,
+        subject: (formData.subjects || []).map((s: any) => s.subject).filter(Boolean).join(", "),
+        price_rate: parseFloat(formData.subjects?.[0]?.hourlyRate || formData.subjects?.[0]?.budget) || 0,
+        bio,
+      });
+
+      // Sync availability to backend if tutor updated it
+      if (isTutor && formData.availability && Object.keys(formData.availability).length > 0) {
+        syncAvailabilityToBackend(currentUserData.id, formData.availability).catch(console.error);
+      }
+
+      // Refresh from backend
+      const profile = await profileApi.getProfile(currentUserData.id);
+      const enriched = enrichProfile(profile);
+      enriched.availability = formData.availability || currentUserData.availability;
+      setCurrentUser(enriched);
+
+      toast.success("Settings saved successfully!");
+      navigate("/app/profile");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  if (!currentUser) {
+  if (!currentUserData) {
     return null;
   }
 
-  const isTutor = currentUser.userType === "tutor";
+  const isTutor = currentUserData.userType === "tutor";
 
   return (
     <div className="min-h-screen p-8">
@@ -91,7 +126,7 @@ export function SettingsPage() {
                 <div className="space-y-2">
                   <Label className="text-[#2F3B3D]">Contact Number</Label>
                   <Input
-                    value={formData.contactNumber || ""}
+                    value={formData.contactNumber || formData.phone || ""}
                     onChange={(e) => handleChange("contactNumber", e.target.value)}
                     className="bg-[#F5F3EF] border-[#D6CFBF]"
                   />
@@ -103,9 +138,10 @@ export function SettingsPage() {
                 <Input
                   type="email"
                   value={formData.email || ""}
-                  onChange={(e) => handleChange("email", e.target.value)}
-                  className="bg-[#F5F3EF] border-[#D6CFBF]"
+                  disabled
+                  className="bg-[#F5F3EF] border-[#D6CFBF] opacity-60"
                 />
+                <p className="text-xs text-[#2F3B3D]/50">Email cannot be changed</p>
               </div>
 
               <div className="space-y-2">
@@ -255,9 +291,10 @@ export function SettingsPage() {
             </button>
             <button
               onClick={handleSave}
-              className="flex-1 px-6 py-3 bg-[#7C8D8C] text-white rounded-full hover:bg-[#2F3B3D] transition-all duration-300"
+              disabled={saving}
+              className="flex-1 px-6 py-3 bg-[#7C8D8C] text-white rounded-full hover:bg-[#2F3B3D] transition-all duration-300 disabled:opacity-50"
             >
-              Save Changes
+              {saving ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </div>

@@ -4,6 +4,8 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { ArrowRight, Plus, Trash2, GraduationCap } from "lucide-react";
+import { profileApi, setToken, setCurrentUser, encodeProfileExtra, enrichProfile } from "../utils/api";
+import { toast } from "sonner";
 
 const SUBJECTS = [
   "Mathematics", "English", "Science", "Physics", "Chemistry",
@@ -28,6 +30,8 @@ export function RegisterStudentDetails() {
     { id: "1", subject: "", level: "", budget: "" },
   ]);
   const [location, setLocation] = useState("");
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     const userType = sessionStorage.getItem("userType");
     if (userType !== "student") navigate("/");
@@ -45,18 +49,50 @@ export function RegisterStudentDetails() {
     setSubjects(subjects.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const basicDetails = sessionStorage.getItem("basicDetails");
     if (!basicDetails) { navigate("/register"); return; }
-    const userData = {
-      ...JSON.parse(basicDetails),
-      userType: "student",
-      subjects, location,
-    };
-    localStorage.setItem("currentUser", JSON.stringify(userData));
-    sessionStorage.clear();
-    navigate("/app/discover");
+
+    const basic = JSON.parse(basicDetails);
+    setLoading(true);
+
+    try {
+      const bio = encodeProfileExtra({
+        subjects,
+        location,
+        gender: basic.gender,
+        birthday: basic.birthday,
+        contactNumber: basic.contactNumber,
+      });
+
+      await profileApi.register({
+        name: basic.name,
+        email: basic.email,
+        password: basic.password,
+        phone: basic.contactNumber,
+        role: "Student",
+        subject: subjects.map(s => s.subject).filter(Boolean).join(", "),
+        price_rate: parseFloat(subjects[0]?.budget) || 0,
+        bio,
+      });
+
+      // Auto-login
+      const loginRes = await profileApi.login(basic.email, basic.password);
+      setToken(loginRes.token);
+
+      const profile = await profileApi.getProfile(loginRes.user_id);
+      const enriched = enrichProfile(profile);
+      setCurrentUser(enriched);
+
+      sessionStorage.clear();
+      toast.success("Registration successful!");
+      navigate("/app/discover");
+    } catch (err: any) {
+      toast.error(err.message || "Registration failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -169,10 +205,11 @@ export function RegisterStudentDetails() {
 
               <button
                 type="submit"
-                className="w-full px-8 py-4 bg-[#7C8D8C] text-white rounded-full hover:bg-[#2F3B3D] transition-all duration-300 flex items-center justify-center gap-2 group shadow-lg shadow-[#7C8D8C]/25 font-medium"
+                disabled={loading}
+                className="w-full px-8 py-4 bg-[#7C8D8C] text-white rounded-full hover:bg-[#2F3B3D] transition-all duration-300 flex items-center justify-center gap-2 group shadow-lg shadow-[#7C8D8C]/25 font-medium disabled:opacity-50"
               >
-                Complete Registration
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                {loading ? "Creating account..." : "Complete Registration"}
+                {!loading && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
               </button>
             </form>
           </div>

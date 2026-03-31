@@ -1,12 +1,13 @@
 import { NavLink, useNavigate } from "react-router";
 import { useState } from "react";
-import { Home, Heart, Inbox, Calendar, User, ChevronLeft, ChevronRight, Settings, HelpCircle, Shield, LogOut } from "lucide-react";
+import { Home, Heart, Inbox, Calendar, User, ChevronLeft, ChevronRight, HelpCircle, Shield, LogOut } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
+import { clearAuth } from "../utils/api";
 
 const navItems = [
   { path: "/app/discover", icon: Home, label: "Discover" },
@@ -18,7 +19,6 @@ const navItems = [
 
 const profileMenuItems = [
   { path: "/app/profile", icon: User, label: "Profile" },
-  { path: "/app/settings", icon: Settings, label: "Settings" },
   { icon: HelpCircle, label: "FAQ" },
   { icon: Shield, label: "Safety Guidelines" },
 ];
@@ -44,7 +44,7 @@ export function Sidebar() {
   };
 
   const handleSignOut = () => {
-    localStorage.removeItem("currentUser");
+    clearAuth();
     sessionStorage.clear();
     navigate("/");
   };

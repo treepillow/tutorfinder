@@ -1,13 +1,15 @@
 import { Outlet, useNavigate } from "react-router";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Sidebar } from "./Sidebar";
+import { getToken, getCurrentUser } from "../utils/api";
 
 export function AppLayout() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const currentUser = localStorage.getItem("currentUser");
-    if (!currentUser) {
+    const token = getToken();
+    const currentUser = getCurrentUser();
+    if (!token || !currentUser) {
       navigate("/");
     }
   }, [navigate]);
