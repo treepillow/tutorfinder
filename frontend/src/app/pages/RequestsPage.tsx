@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { RequestCard } from "../components/RequestCard";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
-import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, enrichProfile } from "../utils/api";
+import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, enrichProfile, availabilityApi } from "../utils/api";
 
 export function RequestsPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -75,12 +75,15 @@ export function RequestsPage() {
     }
   };
 
-  const handleCancelRequest = async (bookingId: number) => {
+  const handleCancelRequest = async (bookingId: number, availabilityId: number) => {
     try {
       try {
         await bookingProcessApi.cancel(bookingId, currentUser.userType === "student" ? "tutee" : "tutor");
       } catch {
         await bookingApi.cancel(bookingId);
+        if (availabilityId) {
+          await availabilityApi.updateSlot(availabilityId, "Available").catch(() => {});
+        }
       }
       toast.success("Request cancelled");
       loadRequests(currentUser);
@@ -251,7 +254,7 @@ export function RequestsPage() {
                           key={request.id}
                           request={request}
                           userType={currentUser.userType}
-                          onCancel={isStudent ? () => handleCancelRequest(request.booking_id) : undefined}
+                          onCancel={isStudent ? () => handleCancelRequest(request.booking_id, request.availability_id) : undefined}
                           onAccept={!isStudent ? () => handleAcceptRequest(request.booking_id) : undefined}
                           onReject={!isStudent ? () => handleRejectRequest(request.booking_id) : undefined}
                         />
