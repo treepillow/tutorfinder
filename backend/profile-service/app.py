@@ -10,7 +10,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, origins='*')
+CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
 
 JWT_SECRET            = os.environ.get('JWT_SECRET', 'esd-jwt-secret-2024')
 MATCH_SERVICE_URL     = os.environ.get('MATCH_SERVICE_URL', 'http://match-service:5002')
