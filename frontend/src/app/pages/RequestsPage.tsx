@@ -256,6 +256,7 @@ export function RequestsPage() {
                           request={request}
                           userType={currentUser.userType}
                           onPay={isStudent ? () => handlePay(request) : undefined}
+                          onCancel={() => handleCancelRequest(request.booking_id, request.availability_id)}
                         />
                       ))
                     )

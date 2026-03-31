@@ -113,6 +113,15 @@ export function RequestCard({ request, userType, onCancel, onAccept, onReject, o
               </button>
             )}
 
+            {(request.status === "accepted" || request.status === "AwaitingPayment") && onCancel && (
+              <button
+                onClick={onCancel}
+                className="flex-1 px-4 py-2 bg-white text-[#2F3B3D] rounded-full border-2 border-[#D6CFBF] hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all duration-300"
+              >
+                Cancel
+              </button>
+            )}
+
             {userType === "student" && (request.status === "accepted" || request.status === "AwaitingPayment") && onPay && (
               <button
                 onClick={onPay}
