@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { clearAuth } from "../utils/api";
-
+ 
 const navItems = [
   { path: "/app/discover", icon: Home, label: "Discover" },
   { path: "/app/matched", icon: Heart, label: "Matched" },
@@ -16,20 +16,20 @@ const navItems = [
   { path: "/app/schedule", icon: Calendar, label: "Schedule" },
   { path: "/app/profile", icon: User, label: "Profile" },
 ];
-
+ 
 const profileMenuItems = [
   { path: "/app/profile", icon: User, label: "Profile" },
   { icon: HelpCircle, label: "FAQ" },
   { icon: Shield, label: "Safety Guidelines" },
 ];
-
+ 
 export function Sidebar() {
   const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showFAQ, setShowFAQ] = useState(false);
   const [showSafety, setShowSafety] = useState(false);
-
+ 
   const handleProfileMenuClick = (item: typeof profileMenuItems[0]) => {
     if (item.path) {
       navigate(item.path);
@@ -42,13 +42,13 @@ export function Sidebar() {
       setShowProfileMenu(false);
     }
   };
-
+ 
   const handleSignOut = () => {
     clearAuth();
     sessionStorage.clear();
     navigate("/");
   };
-
+ 
   return (
     <>
       <aside
@@ -64,7 +64,7 @@ export function Sidebar() {
           </h1>
           {isCollapsed && <div className="text-2xl text-center">T</div>}
         </div>
-
+ 
         <nav className="px-3 space-y-2">
           {navItems.map((item) => (
             <NavLink
@@ -83,7 +83,7 @@ export function Sidebar() {
             </NavLink>
           ))}
         </nav>
-
+ 
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="absolute -right-3 top-6 w-6 h-6 bg-[#7C8D8C] rounded-full flex items-center justify-center hover:bg-[#D6CFBF] transition-colors"
@@ -94,7 +94,7 @@ export function Sidebar() {
             <ChevronLeft className="w-4 h-4" />
           )}
         </button>
-
+ 
         <div className="absolute bottom-6 left-0 right-0 px-3">
           <button
             onClick={() => setShowProfileMenu(true)}
@@ -107,7 +107,7 @@ export function Sidebar() {
           </button>
         </div>
       </aside>
-
+ 
       {/* Profile Menu Dialog */}
       <Dialog open={showProfileMenu} onOpenChange={setShowProfileMenu}>
         <DialogContent className="bg-[#F5F3EF] border-[#D6CFBF]">
@@ -135,7 +135,7 @@ export function Sidebar() {
           </div>
         </DialogContent>
       </Dialog>
-
+ 
       {/* FAQ Dialog */}
       <Dialog open={showFAQ} onOpenChange={setShowFAQ}>
         <DialogContent className="bg-[#F5F3EF] border-[#D6CFBF] max-w-2xl">
@@ -170,7 +170,7 @@ export function Sidebar() {
           </div>
         </DialogContent>
       </Dialog>
-
+ 
       {/* Safety Guidelines Dialog */}
       <Dialog open={showSafety} onOpenChange={setShowSafety}>
         <DialogContent className="bg-[#F5F3EF] border-[#D6CFBF] max-w-2xl">
