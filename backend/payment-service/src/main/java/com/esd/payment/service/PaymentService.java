@@ -47,16 +47,35 @@ public class PaymentService {
             Integer bookingId, Integer tuteeId, Integer tutorId,
             BigDecimal amount, String currency) throws StripeException {
 
-        // Idempotency: return existing if already created
+        // If an existing payment record exists, handle it
         Optional<Payment> existing = paymentRepository.findByBookingId(bookingId);
         if (existing.isPresent()) {
             Payment p = existing.get();
-            Map<String, Object> resp = new HashMap<>();
-            resp.put("payment_id", p.getPaymentId());
-            resp.put("stripe_payment_intent_id", p.getStripePaymentIntentId());
-            resp.put("status", p.getStatus().name());
-            resp.put("client_secret", null); // already created
-            return resp;
+            if (stripeEnabled() && p.getStripePaymentIntentId() != null
+                    && !p.getStripePaymentIntentId().startsWith("mock_")) {
+                try {
+                    PaymentIntent intent = PaymentIntent.retrieve(p.getStripePaymentIntentId());
+                    String status = intent.getStatus();
+                    if ("requires_capture".equals(status) || "requires_confirmation".equals(status)
+                            || "requires_action".equals(status)) {
+                        // Intent is still usable — return its client_secret
+                        Map<String, Object> resp = new HashMap<>();
+                        resp.put("payment_id", p.getPaymentId());
+                        resp.put("stripe_payment_intent_id", p.getStripePaymentIntentId());
+                        resp.put("status", p.getStatus().name());
+                        resp.put("client_secret", intent.getClientSecret());
+                        return resp;
+                    }
+                    // Intent is stuck (requires_payment_method) or terminal — cancel and recreate
+                    if ("requires_payment_method".equals(status)) {
+                        intent.cancel();
+                    }
+                } catch (StripeException e) {
+                    // ignore — will delete and recreate
+                }
+            }
+            // Remove stale record so a fresh one is created below
+            paymentRepository.delete(p);
         }
 
         Payment payment = new Payment();
