@@ -16,21 +16,36 @@ export function RequestsPage() {
 
   useEffect(() => {
     const user = getCurrentUser();
-    if (user) {
-      setCurrentUser(user);
-      loadRequests(user);
+    if (!user) return;
+    setCurrentUser(user);
 
-      // Handle return from Stripe Checkout
-      const paymentStatus = searchParams.get("payment");
-      const bookingId = searchParams.get("booking_id");
-      if (paymentStatus === "success" && bookingId) {
-        setSearchParams({});
-        setActiveTab("payment");
-        handlePostCheckout(parseInt(bookingId));
-      } else if (paymentStatus === "cancelled") {
+    const paymentStatus = searchParams.get("payment");
+    const bookingId = searchParams.get("booking_id");
+
+    if (paymentStatus === "success" && bookingId) {
+      setSearchParams({});
+      setActiveTab("payment");
+      // Complete checkout first, then reload
+      (async () => {
+        try {
+          const paymentRes = await paymentApi.completeCheckout(parseInt(bookingId));
+          try {
+            await bookingProcessApi.paymentCaptured(parseInt(bookingId), paymentRes.stripe_payment_intent_id);
+          } catch {
+            await bookingApi.updateStatus(parseInt(bookingId), "Confirmed");
+          }
+          toast.success("Payment successful! Lesson confirmed.");
+        } catch (err: any) {
+          toast.error(err.message || "Failed to confirm payment");
+        }
+        loadRequests(user);
+      })();
+    } else {
+      if (paymentStatus === "cancelled") {
         setSearchParams({});
         toast.error("Payment was cancelled");
       }
+      loadRequests(user);
     }
   }, []);
 
@@ -172,23 +187,7 @@ export function RequestsPage() {
     }
   };
 
-  const handlePostCheckout = async (bookingId: number) => {
-    try {
-      // Retrieve checkout session, capture payment, update DB
-      const paymentRes = await paymentApi.completeCheckout(bookingId);
 
-      // Update booking status to Confirmed
-      try {
-        await bookingProcessApi.paymentCaptured(bookingId, paymentRes.stripe_payment_intent_id);
-      } catch {
-        await bookingApi.updateStatus(bookingId, "Confirmed");
-      }
-      toast.success("Payment successful! Lesson confirmed.");
-      loadRequests(currentUser!);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to confirm payment");
-    }
-  };
 
 
   if (!currentUser) {
