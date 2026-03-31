@@ -1,4 +1,7 @@
 import os
+import json
+import pika
+import requests
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
@@ -7,7 +10,9 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
 
-DB_SCHEMA = os.environ.get('DB_SCHEMA', 'booking_schema')
+DB_SCHEMA           = os.environ.get('DB_SCHEMA', 'booking_schema')
+RABBITMQ_URL        = os.environ.get('RABBITMQ_URL', 'amqp://guest:guest@rabbitmq:5672/')
+PROFILE_SERVICE_URL = os.environ.get('PROFILE_SERVICE_URL', 'http://profile-service:5001')
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL', 'postgresql://localhost/tutorfinder')
@@ -64,6 +69,36 @@ with app.app_context():
     db.create_all()
 
 
+def get_phone(user_id):
+    """Look up a user's phone number from the profile service."""
+    try:
+        resp = requests.get(f'{PROFILE_SERVICE_URL}/profile/internal/{user_id}', timeout=3)
+        if resp.status_code == 200:
+            return resp.json().get('phone', '')
+    except Exception as e:
+        print(f'[BOOKING] Phone lookup error for user {user_id}: {e}')
+    return ''
+
+
+def publish_event(routing_key, payload):
+    """Publish an event to the RabbitMQ esd_exchange."""
+    try:
+        params = pika.URLParameters(RABBITMQ_URL)
+        conn = pika.BlockingConnection(params)
+        ch = conn.channel()
+        ch.exchange_declare(exchange='esd_exchange', exchange_type='topic', durable=True)
+        ch.basic_publish(
+            exchange='esd_exchange',
+            routing_key=routing_key,
+            body=json.dumps(payload),
+            properties=pika.BasicProperties(delivery_mode=2)
+        )
+        conn.close()
+        print(f'[BOOKING] Published {routing_key}: {payload}')
+    except Exception as e:
+        print(f'[BOOKING] RabbitMQ publish error: {e}')
+
+
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({'status': 'healthy', 'service': 'booking-service'}), 200
@@ -86,6 +121,13 @@ def create_booking():
         )
         db.session.add(booking)
         db.session.commit()
+        publish_event('booking.created', {
+            'booking_id': booking.booking_id,
+            'tutor_id':   booking.tutor_id,
+            'tutor_phone': get_phone(booking.tutor_id),
+            'lesson_date': data['lesson_date'],
+            'start_time':  data['start_time'],
+        })
         return jsonify(booking.to_dict()), 201
     except ValueError as e:
         return jsonify({'error': f'Invalid date/time format: {e}'}), 400
@@ -120,6 +162,12 @@ def confirm_booking(booking_id):
     booking.status = 'AwaitingPayment'
     booking.confirmed_at = datetime.utcnow()
     db.session.commit()
+    publish_event('booking.confirmed', {
+        'booking_id':  booking.booking_id,
+        'tutee_id':    booking.tutee_id,
+        'tutee_phone': get_phone(booking.tutee_id),
+        'lesson_date': booking.lesson_date.isoformat(),
+    })
     return jsonify(booking.to_dict()), 200
 
 
@@ -132,6 +180,11 @@ def reject_booking(booking_id):
         return jsonify({'error': f'Cannot reject booking with status: {booking.status}'}), 400
     booking.status = 'Cancelled'
     db.session.commit()
+    publish_event('booking.rejected', {
+        'booking_id':  booking.booking_id,
+        'tutee_id':    booking.tutee_id,
+        'tutee_phone': get_phone(booking.tutee_id),
+    })
     return jsonify(booking.to_dict()), 200
 
 
@@ -144,6 +197,13 @@ def cancel_booking(booking_id):
         return jsonify({'error': f'Cannot cancel booking with status: {booking.status}'}), 400
     booking.status = 'Cancelled'
     db.session.commit()
+    publish_event('booking.cancelled', {
+        'booking_id':   booking.booking_id,
+        'tutee_id':     booking.tutee_id,
+        'tutee_phone':  get_phone(booking.tutee_id),
+        'tutor_id':     booking.tutor_id,
+        'tutor_phone':  get_phone(booking.tutor_id),
+    })
     return jsonify(booking.to_dict()), 200
 
 

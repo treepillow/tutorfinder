@@ -88,10 +88,15 @@ services:
     environment:
       DATABASE_URL: ${SUPABASE_URL}
       DB_SCHEMA: booking_schema
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      PROFILE_SERVICE_URL: http://profile-service:5001
     ports:
       - "5004:5004"
     networks:
       - tutorfinder_net
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
   # ── Payment Service (Java / Spring Boot) ──────────────────
   payment-service:
