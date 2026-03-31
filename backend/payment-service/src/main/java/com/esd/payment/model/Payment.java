@@ -24,12 +24,12 @@ public class Payment {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
 
-    // Stripe PaymentIntent ID
-    @Column(length = 100)
+    // Stripe PaymentIntent ID (null until checkout completes)
+    @Column(length = 100, nullable = true)
     private String stripePaymentIntentId;
 
     // Stripe Checkout Session ID
-    @Column(length = 200)
+    @Column(name = "stripe_session_id", length = 200, nullable = true)
     private String stripeSessionId;
 
     // Stripe Transfer ID (when releasing to tutor)
