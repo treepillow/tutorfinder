@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { motion, useMotionValue, useTransform } from "motion/react";
 import { MapPin, X, Heart } from "lucide-react";
 
@@ -8,16 +8,61 @@ interface SwipeableCardProps {
   onClick: () => void;
   isTop: boolean;
   userType: "student" | "tutor";
+  forceSwipe?: "left" | "right" | null;
 }
 
-export function SwipeableCard({ profile, onSwipe, onClick, isTop, userType }: SwipeableCardProps) {
+export function SwipeableCard({ profile, onSwipe, onClick, isTop, userType, forceSwipe }: SwipeableCardProps) {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-250, 250], [-18, 18]);
   const dragStartX = useRef(0);
   const [exitX, setExitX] = useState<number | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
-  const likeOpacity = useTransform(x, [20, 120], [0, 1]);
-  const nopeOpacity = useTransform(x, [-120, -20], [1, 0]);
+  const triggerSwipe = (direction: "left" | "right") => {
+    setExitX(direction === "right" ? 600 : -600);
+    onSwipe(direction);
+  };
+
+  // forceSwipe from keyboard
+  useEffect(() => {
+    if (!forceSwipe) return;
+    triggerSwipe(forceSwipe);
+  }, [forceSwipe]);
+
+  // Non-passive wheel listener — also attach to document to intercept browser back gesture
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || !isTop) return;
+
+    const wheelAccum = { value: 0 };
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const onWheel = (e: WheelEvent) => {
+      if (exitX !== null) return;
+      if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      wheelAccum.value += e.deltaX;
+      x.set(x.get() - e.deltaX * 0.8);
+
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        const accum = wheelAccum.value;
+        wheelAccum.value = 0;
+        if (Math.abs(accum) > 30) {
+          const direction = accum < 0 ? "right" : "left";
+          setExitX(direction === "right" ? 600 : -600);
+          onSwipe(direction);
+        } else {
+          x.set(0); // snap back
+        }
+      }, 80);
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [isTop, exitX, x, onSwipe]);
 
   const handleDragStart = (_: any, info: any) => {
     dragStartX.current = info.point.x;
@@ -38,14 +83,7 @@ export function SwipeableCard({ profile, onSwipe, onClick, isTop, userType }: Sw
     onClick();
   };
 
-  const handleButtonSwipe = (direction: "left" | "right", e: React.MouseEvent) => {
-    e.stopPropagation();
-    setExitX(direction === "right" ? 600 : -600);
-    onSwipe(direction);
-  };
-
   const getAge = () => profile.age ?? 20;
-
   const displaySubjects = profile.subjects?.slice(0, 2) || [];
   const subjectText = displaySubjects.map((s: any) => `${s.subject} (${s.level})`).join(", ");
   const rateOrBudget = userType === "student"
@@ -54,6 +92,7 @@ export function SwipeableCard({ profile, onSwipe, onClick, isTop, userType }: Sw
 
   return (
     <motion.div
+      ref={cardRef}
       style={{
         x,
         rotate,
@@ -61,14 +100,15 @@ export function SwipeableCard({ profile, onSwipe, onClick, isTop, userType }: Sw
         top: 0, left: 0, right: 0,
         zIndex: isTop ? 2 : 1,
         cursor: isTop ? "grab" : "default",
-      }}
-      drag={isTop && !exitX ? "x" : false}
+        overscrollBehaviorX: "none",
+      } as any}
+      drag={isTop && exitX === null ? "x" : false}
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={1}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       whileDrag={{ cursor: "grabbing" }}
-      animate={exitX !== null ? { x: exitX, opacity: 0, rotate: exitX > 0 ? 20 : -20 } : { x: 0 }}
+      animate={exitX !== null ? { x: exitX, opacity: 0, rotate: exitX > 0 ? 20 : -20 } : {}}
       transition={{ type: "spring", stiffness: 300, damping: 28 }}
       className="w-full select-none"
     >
@@ -78,25 +118,6 @@ export function SwipeableCard({ profile, onSwipe, onClick, isTop, userType }: Sw
         <div className="aspect-[3/2] relative bg-gradient-to-br from-[#7C8D8C] to-[#2F3B3D] flex items-center justify-center">
           <div className="text-7xl">{profile.gender === "Female" ? "👩" : "👨"}</div>
 
-          {/* LIKE overlay */}
-          <motion.div
-            style={{ opacity: likeOpacity }}
-            className="absolute inset-0 bg-[#7C8D8C]/20 flex items-center justify-center pointer-events-none"
-          >
-            <span className="text-white text-4xl font-bold border-4 border-white rounded-xl px-4 py-1 rotate-[-15deg]">
-              LIKE
-            </span>
-          </motion.div>
-
-          {/* NOPE overlay */}
-          <motion.div
-            style={{ opacity: nopeOpacity }}
-            className="absolute inset-0 bg-red-400/20 flex items-center justify-center pointer-events-none"
-          >
-            <span className="text-red-200 text-4xl font-bold border-4 border-red-200 rounded-xl px-4 py-1 rotate-[15deg]">
-              NOPE
-            </span>
-          </motion.div>
         </div>
 
         {/* Info */}
@@ -128,13 +149,13 @@ export function SwipeableCard({ profile, onSwipe, onClick, isTop, userType }: Sw
           {isTop && (
             <div className="flex gap-4 pt-2">
               <button
-                onClick={(e) => handleButtonSwipe("left", e)}
+                onClick={(e) => { e.stopPropagation(); triggerSwipe("left"); }}
                 className="flex-1 py-4 bg-white rounded-full hover:bg-red-50 transition-all duration-300 flex items-center justify-center border-2 border-transparent hover:border-red-200"
               >
                 <X className="w-6 h-6 text-red-500" />
               </button>
               <button
-                onClick={(e) => handleButtonSwipe("right", e)}
+                onClick={(e) => { e.stopPropagation(); triggerSwipe("right"); }}
                 className="flex-1 py-4 bg-[#7C8D8C] text-white rounded-full hover:bg-[#2F3B3D] transition-all duration-300 flex items-center justify-center"
               >
                 <Heart className="w-6 h-6" />

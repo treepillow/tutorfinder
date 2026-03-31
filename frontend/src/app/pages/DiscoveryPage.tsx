@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { SwipeableCard } from "../components/SwipeableCard";
 import { ProfileDetailDialog } from "../components/ProfileDetailDialog";
 import { MatchDialog } from "../components/MatchDialog";
@@ -14,6 +14,7 @@ export function DiscoveryPage() {
   const [matchedProfile, setMatchedProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [likedByIds, setLikedByIds] = useState<Set<number>>(new Set());
+  const [keySwipe, setKeySwipe] = useState<"left" | "right" | null>(null);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -48,7 +49,7 @@ export function DiscoveryPage() {
     }
   };
 
-  const handleSwipe = (direction: "left" | "right", profile: any) => {
+  const handleSwipe = useCallback((direction: "left" | "right", profile: any) => {
     const isLike = direction === "right";
 
     // Move to next card immediately - don't wait for API
@@ -76,7 +77,17 @@ export function DiscoveryPage() {
           console.error("Swipe failed:", err);
         }
       });
-  };
+  }, [currentUser, likedByIds]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!profiles[currentIndex] || selectedProfile || showMatchDialog || keySwipe) return;
+      if (e.key === "ArrowLeft") setKeySwipe("left");
+      if (e.key === "ArrowRight") setKeySwipe("right");
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [profiles, currentIndex, selectedProfile, showMatchDialog, keySwipe]);
 
   const handleCardClick = (profile: any) => {
     setSelectedProfile(profile);
@@ -113,10 +124,11 @@ export function DiscoveryPage() {
               <SwipeableCard
                 key={profile.id}
                 profile={profile}
-                onSwipe={(direction) => handleSwipe(direction, profile)}
+                onSwipe={(direction) => { setKeySwipe(null); handleSwipe(direction, profile); }}
                 onClick={() => handleCardClick(profile)}
                 isTop={idx === 0}
                 userType={currentUser.userType}
+                forceSwipe={idx === 0 ? keySwipe : null}
               />
             ))}
           </div>
