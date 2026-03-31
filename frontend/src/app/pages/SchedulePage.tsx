@@ -151,17 +151,18 @@ export function SchedulePage() {
           <div className="bg-[#EDE9DF] rounded-3xl p-16 text-center">
             <p className="text-[#2F3B3D]/70 animate-pulse">Loading schedule...</p>
           </div>
-        ) : schedule.length === 0 ? (
-          <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
-            <div className="text-5xl mb-3">📅</div>
-            <h3 className="text-xl text-[#2F3B3D] mb-2">No lessons scheduled yet</h3>
-            <p className="text-[#2F3B3D]/70">
-              {currentUser.userType === "student"
-                ? "Book lessons with your matched tutors to see them here"
-                : "Accept student requests to see scheduled lessons"}
-            </p>
-          </div>
         ) : view === "list" ? (
+          schedule.length === 0 ? (
+            <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
+              <div className="text-5xl mb-3">📅</div>
+              <h3 className="text-xl text-[#2F3B3D] mb-2">No lessons scheduled yet</h3>
+              <p className="text-[#2F3B3D]/70">
+                {currentUser.userType === "student"
+                  ? "Book lessons with your matched tutors to see them here"
+                  : "Accept student requests to see scheduled lessons"}
+              </p>
+            </div>
+          ) : (
 
           // ── List View ──
           <div className="space-y-3">
@@ -207,7 +208,7 @@ export function SchedulePage() {
               </button>
             ))}
           </div>
-
+          )
         ) : (
 
           // ── Calendar View ──
