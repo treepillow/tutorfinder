@@ -8,7 +8,6 @@ export function RequestsPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [paymentRequests, setPaymentRequests] = useState<any[]>([]);
-  const [confirmedRequests, setConfirmedRequests] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"awaiting" | "payment">("awaiting");
   const prevTab = useRef<"awaiting" | "payment">("awaiting");
   const [loading, setLoading] = useState(true);
@@ -62,11 +61,8 @@ export function RequestsPage() {
       // Split by status
       const pending = enriched.filter((b: any) => b.status === "AwaitingConfirmation");
       const awaiting_payment = enriched.filter((b: any) => b.status === "AwaitingPayment");
-      const confirmed = enriched.filter((b: any) => b.status === "Confirmed");
-
       setPendingRequests(pending);
       setPaymentRequests(awaiting_payment);
-      setConfirmedRequests(confirmed);
     } catch (err: any) {
       console.error("Failed to load requests:", err);
       toast.error("Failed to load requests");
@@ -162,19 +158,6 @@ export function RequestsPage() {
     }
   };
 
-  const handleComplete = async (bookingId: number) => {
-    try {
-      try {
-        await bookingProcessApi.complete(bookingId);
-      } catch {
-        await bookingApi.complete(bookingId);
-      }
-      toast.success("Lesson marked as completed! Deposit will be released.");
-      loadRequests(currentUser);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to complete");
-    }
-  };
 
   if (!currentUser) {
     return null;
@@ -190,7 +173,7 @@ export function RequestsPage() {
 
   const tabs = [
     { key: "awaiting" as const, label: "Awaiting Response" },
-    { key: "payment" as const, label: isStudent ? "Awaiting Payment" : "Confirmed" },
+    { key: "payment" as const, label: "Awaiting Payment" },
   ];
 
   return (
@@ -260,7 +243,7 @@ export function RequestsPage() {
                         />
                       ))
                     )
-                  ) : isStudent ? (
+                  ) : (
                     paymentRequests.length === 0 ? (
                       <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
                         <div className="text-5xl mb-3">💳</div>
@@ -270,25 +253,9 @@ export function RequestsPage() {
                       paymentRequests.map((request) => (
                         <RequestCard
                           key={request.id}
-                          request={{ ...request, status: "accepted" }}
-                          userType="student"
-                          onPay={() => handlePay(request)}
-                        />
-                      ))
-                    )
-                  ) : (
-                    confirmedRequests.length === 0 ? (
-                      <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
-                        <div className="text-5xl mb-3">📋</div>
-                        <p className="text-[#2F3B3D]/70">No confirmed lessons</p>
-                      </div>
-                    ) : (
-                      confirmedRequests.map((request) => (
-                        <RequestCard
-                          key={request.id}
-                          request={{ ...request, status: "confirmed" }}
-                          userType="tutor"
-                          onComplete={() => handleComplete(request.booking_id)}
+                          request={request}
+                          userType={currentUser.userType}
+                          onPay={isStudent ? () => handlePay(request) : undefined}
                         />
                       ))
                     )
