@@ -11,6 +11,7 @@ import com.stripe.model.Transfer;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.RefundCreateParams;
 import com.stripe.param.TransferCreateParams;
+import jakarta.transaction.Transactional;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -43,6 +44,7 @@ public class PaymentService {
      * Create a Stripe PaymentIntent (deposit hold) and save a PENDING payment record.
      * Returns client_secret so the frontend can confirm the payment.
      */
+    @Transactional
     public Map<String, Object> createPaymentIntent(
             Integer bookingId, Integer tuteeId, Integer tutorId,
             BigDecimal amount, String currency) throws StripeException {
@@ -51,31 +53,32 @@ public class PaymentService {
         Optional<Payment> existing = paymentRepository.findByBookingId(bookingId);
         if (existing.isPresent()) {
             Payment p = existing.get();
-            if (stripeEnabled() && p.getStripePaymentIntentId() != null
-                    && !p.getStripePaymentIntentId().startsWith("mock_")) {
+            String oldIntentId = p.getStripePaymentIntentId();
+
+            // Try to reuse a valid Stripe intent
+            if (stripeEnabled() && oldIntentId != null && !oldIntentId.startsWith("mock_")) {
                 try {
-                    PaymentIntent intent = PaymentIntent.retrieve(p.getStripePaymentIntentId());
+                    PaymentIntent intent = PaymentIntent.retrieve(oldIntentId);
                     String status = intent.getStatus();
                     if ("requires_capture".equals(status) || "requires_confirmation".equals(status)
                             || "requires_action".equals(status)) {
-                        // Intent is still usable — return its client_secret
                         Map<String, Object> resp = new HashMap<>();
                         resp.put("payment_id", p.getPaymentId());
-                        resp.put("stripe_payment_intent_id", p.getStripePaymentIntentId());
+                        resp.put("stripe_payment_intent_id", oldIntentId);
                         resp.put("status", p.getStatus().name());
                         resp.put("client_secret", intent.getClientSecret());
                         return resp;
                     }
-                    // Intent is stuck (requires_payment_method) or terminal — cancel and recreate
+                    // Cancel stuck intent on Stripe (best effort)
                     if ("requires_payment_method".equals(status)) {
-                        intent.cancel();
+                        try { intent.cancel(); } catch (Exception ignored) {}
                     }
-                } catch (StripeException e) {
-                    // ignore — will delete and recreate
-                }
+                } catch (Exception ignored) {}
             }
-            // Remove stale record so a fresh one is created below
-            paymentRepository.delete(p);
+
+            // Delete stale DB record and flush so the new insert won't conflict
+            paymentRepository.deleteById(p.getPaymentId());
+            paymentRepository.flush();
         }
 
         Payment payment = new Payment();
