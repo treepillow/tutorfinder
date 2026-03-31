@@ -21,6 +21,16 @@ export function DiscoveryPage() {
     if (user) {
       setCurrentUser(user);
       loadProfiles(user);
+
+      // Refresh likedByIds every 5 seconds so the optimistic match path
+      // works even when the other user swipes after page load
+      const interval = setInterval(async () => {
+        try {
+          const res = await matchApi.getLikedMe(user.id);
+          setLikedByIds(new Set(res.liked_by_ids || []));
+        } catch {}
+      }, 5000);
+      return () => clearInterval(interval);
     }
   }, []);
 
