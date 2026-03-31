@@ -184,29 +184,55 @@ export function BookingDialog({ profile, currentUser, onClose }: BookingDialogPr
                 <p className="text-[#2F3B3D]/70">No available time slots</p>
               </div>
             ) : (
-              <div className="bg-[#EDE9DF] p-4 rounded-xl">
-                <div className="flex flex-wrap gap-2">
-                  {availableSlots.map((slot: any) => {
-                    const dayName = new Date(slot.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short" });
-                    const dateStr = new Date(slot.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+              <div className="bg-[#EDE9DF] p-4 rounded-xl space-y-4">
+                {(() => {
+                  // Filter to 2 weeks in advance and group by date
+                  const twoWeeksLater = new Date();
+                  twoWeeksLater.setDate(twoWeeksLater.getDate() + 14);
+                  const filtered = availableSlots.filter((s: any) => {
+                    const d = new Date(s.date + "T00:00:00");
+                    return d <= twoWeeksLater;
+                  });
+                  const grouped: Record<string, any[]> = {};
+                  for (const slot of filtered) {
+                    if (!grouped[slot.date]) grouped[slot.date] = [];
+                    grouped[slot.date].push(slot);
+                  }
+                  const sortedDates = Object.keys(grouped).sort();
+                  if (sortedDates.length === 0) {
+                    return <p className="text-[#2F3B3D]/70 text-center">No slots in the next 2 weeks</p>;
+                  }
+                  return sortedDates.map((date) => {
+                    const dateObj = new Date(date + "T00:00:00");
+                    const dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                    const dayName = dateObj.toLocaleDateString("en-US", { weekday: "long" });
                     return (
-                      <button
-                        key={slot.availability_id}
-                        type="button"
-                        onClick={() => setSelectedSlotId(
-                          selectedSlotId === slot.availability_id ? null : slot.availability_id
-                        )}
-                        className={`px-4 py-2 rounded-full text-sm transition-all duration-200 ${
-                          selectedSlotId === slot.availability_id
-                            ? "bg-[#7C8D8C] text-white"
-                            : "bg-white text-[#2F3B3D] hover:bg-[#D6CFBF]"
-                        }`}
-                      >
-                        {dayName} {dateStr} {slot.start_time.slice(0, 5)}-{slot.end_time.slice(0, 5)}
-                      </button>
+                      <div key={date}>
+                        <div className="text-sm font-medium text-[#2F3B3D] mb-2">
+                          {dateStr} — {dayName}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {grouped[date].map((slot: any) => (
+                            <button
+                              key={slot.availability_id}
+                              type="button"
+                              onClick={() => setSelectedSlotId(
+                                selectedSlotId === slot.availability_id ? null : slot.availability_id
+                              )}
+                              className={`px-4 py-2 rounded-full text-sm transition-all duration-200 ${
+                                selectedSlotId === slot.availability_id
+                                  ? "bg-[#7C8D8C] text-white"
+                                  : "bg-white text-[#2F3B3D] hover:bg-[#D6CFBF]"
+                              }`}
+                            >
+                              {slot.start_time.slice(0, 5)}-{slot.end_time.slice(0, 5)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     );
-                  })}
-                </div>
+                  });
+                })()}
               </div>
             )}
           </div>

@@ -445,8 +445,8 @@ export async function syncAvailabilityToBackend(
   const today = new Date();
   const slots: { date: string; start_time: string; end_time: string }[] = [];
 
-  // Generate slots for the next 4 weeks
-  for (let week = 0; week < 4; week++) {
+  // Generate slots for the next 2 weeks
+  for (let week = 0; week < 2; week++) {
     for (const [dayName, timeSlots] of Object.entries(availability)) {
       const targetDay = dayMap[dayName];
       if (targetDay === undefined || !timeSlots?.length) continue;
