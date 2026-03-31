@@ -21,6 +21,7 @@ db = SQLAlchemy(app)
 
 class Availability(db.Model):
     __tablename__ = 'availability'
+    __table_args__ = {'schema': DB_SCHEMA}
 
     availability_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id         = db.Column(db.Integer, nullable=False)

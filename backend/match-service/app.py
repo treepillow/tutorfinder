@@ -31,6 +31,7 @@ class Swipe(db.Model):
     __table_args__ = (
         UniqueConstraint('swiper_id', 'swiped_id', name='uq_swipe'),
         Index('idx_reverse_like', 'swiper_id', 'swiped_id', 'is_like'),
+        {'schema': DB_SCHEMA},
     )
 
     swipe_id   = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -42,6 +43,7 @@ class Swipe(db.Model):
 
 class Match(db.Model):
     __tablename__ = 'matches'
+    __table_args__ = {'schema': DB_SCHEMA}
 
     match_id   = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_a_id  = db.Column(db.Integer, nullable=False)

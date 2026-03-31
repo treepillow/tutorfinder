@@ -26,6 +26,7 @@ VALID_STATUSES = [
 
 class Booking(db.Model):
     __tablename__ = 'bookings'
+    __table_args__ = {'schema': DB_SCHEMA}
 
     booking_id      = db.Column(db.Integer, primary_key=True, autoincrement=True)
     tutor_id        = db.Column(db.Integer, nullable=False)

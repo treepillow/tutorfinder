@@ -30,6 +30,7 @@ db = SQLAlchemy(app)
 
 class Notification(db.Model):
     __tablename__ = 'notifications'
+    __table_args__ = {'schema': DB_SCHEMA}
 
     notify_id    = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id      = db.Column(db.Integer, nullable=True)

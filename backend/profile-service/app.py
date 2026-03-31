@@ -29,6 +29,7 @@ db = SQLAlchemy(app)
 
 class Profile(db.Model):
     __tablename__ = 'profiles'
+    __table_args__ = {'schema': DB_SCHEMA}
 
     user_id       = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name          = db.Column(db.String(100), nullable=False)
@@ -128,16 +129,20 @@ def register():
         data['password'].encode('utf-8'), bcrypt.gensalt()
     ).decode('utf-8')
 
-    profile = Profile(
-        name=data['name'], email=data['email'],
-        password_hash=password_hash, phone=data['phone'],
-        role=data['role'], subject=data.get('subject'),
-        price_rate=data.get('price_rate'),
-        latitude=data.get('latitude'), longitude=data.get('longitude'),
-        bio=data.get('bio', '')
-    )
-    db.session.add(profile)
-    db.session.commit()
+    try:
+        profile = Profile(
+            name=data['name'], email=data['email'],
+            password_hash=password_hash, phone=data['phone'],
+            role=data['role'], subject=data.get('subject'),
+            price_rate=data.get('price_rate'),
+            latitude=data.get('latitude'), longitude=data.get('longitude'),
+            bio=data.get('bio', '')
+        )
+        db.session.add(profile)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Database error: {str(e)}'}), 500
     return jsonify({'message': 'Profile created', 'user_id': profile.user_id}), 201
 
 
