@@ -7,7 +7,7 @@ from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import UniqueConstraint, Index
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
@@ -28,7 +28,10 @@ db = SQLAlchemy(app)
 
 class Swipe(db.Model):
     __tablename__ = 'swipes'
-    __table_args__ = (UniqueConstraint('swiper_id', 'swiped_id', name='uq_swipe'),)
+    __table_args__ = (
+        UniqueConstraint('swiper_id', 'swiped_id', name='uq_swipe'),
+        Index('idx_reverse_like', 'swiper_id', 'swiped_id', 'is_like'),
+    )
 
     swipe_id   = db.Column(db.Integer, primary_key=True, autoincrement=True)
     swiper_id  = db.Column(db.Integer, nullable=False)
@@ -170,6 +173,13 @@ def get_matches(user_id):
 def get_swiped(user_id):
     rows = Swipe.query.filter_by(swiper_id=user_id).all()
     return jsonify({'swiped_ids': [r.swiped_id for r in rows]}), 200
+
+
+@app.route('/match/liked-me/<int:user_id>', methods=['GET'])
+def get_liked_me(user_id):
+    """Return IDs of users who have already liked this user."""
+    rows = Swipe.query.filter_by(swiped_id=user_id, is_like=True).all()
+    return jsonify({'liked_by_ids': [r.swiper_id for r in rows]}), 200
 
 
 @app.route('/match/<int:match_id>/archive', methods=['PUT'])

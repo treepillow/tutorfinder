@@ -13,6 +13,7 @@ export function DiscoveryPage() {
   const [showMatchDialog, setShowMatchDialog] = useState(false);
   const [matchedProfile, setMatchedProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [likedByIds, setLikedByIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -25,16 +26,19 @@ export function DiscoveryPage() {
   const loadProfiles = async (user: any) => {
     setLoading(true);
     try {
-      // Search for profiles of the opposite role (no filters = get all)
-      const searchRes = await profileApi.search({ radius: 999 });
-      const allProfiles = (searchRes.profiles || []).map(enrichProfile);
+      // Fetch profiles, swiped IDs, and who liked me — all in parallel
+      const [searchRes, swipedRes, likedMeRes] = await Promise.all([
+        profileApi.search({ radius: 999 }),
+        matchApi.getSwipedIds(user.id),
+        matchApi.getLikedMe(user.id),
+      ]);
 
-      // Get list of already-swiped user IDs to filter them out
-      const swipedRes = await matchApi.getSwipedIds(user.id);
       const swipedIds = new Set(swipedRes.swiped_ids || []);
+      setLikedByIds(new Set(likedMeRes.liked_by_ids || []));
 
-      // Filter out already-swiped profiles
-      const unswiped = allProfiles.filter((p: any) => !swipedIds.has(p.id));
+      const unswiped = (searchRes.profiles || [])
+        .map(enrichProfile)
+        .filter((p: any) => !swipedIds.has(p.id));
       setProfiles(unswiped);
     } catch (err: any) {
       console.error("Failed to load profiles:", err);
@@ -50,10 +54,19 @@ export function DiscoveryPage() {
     // Move to next card immediately - don't wait for API
     setTimeout(() => setCurrentIndex((i) => i + 1), 350);
 
-    // Fire API call in background
+    // If we already know they liked us, show match dialog instantly
+    if (isLike && likedByIds.has(profile.id)) {
+      setTimeout(() => {
+        setMatchedProfile(profile);
+        setShowMatchDialog(true);
+      }, 400);
+    }
+
+    // Fire API call in background (still needed to record the swipe/match on server)
     matchApi.swipe(currentUser.id, profile.id, isLike)
       .then((res) => {
-        if (res.matched) {
+        // Only show dialog if we didn't already show it optimistically
+        if (res.matched && !likedByIds.has(profile.id)) {
           setMatchedProfile(profile);
           setShowMatchDialog(true);
         }

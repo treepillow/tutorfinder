@@ -8,6 +8,14 @@ const PAYMENT_SERVICE = import.meta.env.VITE_PAYMENT_SERVICE;
 const NOTIFICATION_SERVICE = import.meta.env.VITE_NOTIFICATION_SERVICE;
 const BOOKING_PROCESS_SERVICE = import.meta.env.VITE_BOOKING_PROCESS_SERVICE;
 
+// ── Warm up services on app load to avoid cold-start delays ──
+export function warmUpServices() {
+  const services = [PROFILE_SERVICE, MATCH_SERVICE, AVAILABILITY_SERVICE, BOOKING_SERVICE];
+  services.forEach((url) => {
+    if (url) fetch(`${url}/health`).catch(() => {});
+  });
+}
+
 // ── Auth helpers ──
 
 export function getToken(): string | null {
@@ -134,6 +142,10 @@ export const matchApi = {
 
   getSwipedIds(userId: number) {
     return apiFetch(`${MATCH_SERVICE}/match/swiped/${userId}`);
+  },
+
+  getLikedMe(userId: number) {
+    return apiFetch(`${MATCH_SERVICE}/match/liked-me/${userId}`);
   },
 
   checkStatus(userA: number, userB: number) {
