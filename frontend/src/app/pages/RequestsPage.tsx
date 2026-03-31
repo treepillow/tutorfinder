@@ -26,35 +26,42 @@ export function RequestsPage() {
       const res = await bookingApi.getByUser(user.id);
       const bookings = res.bookings || [];
 
-      // Fetch each unique other-user profile once, then reuse
-      const uniqueIds = [...new Set(bookings.map((b: any) =>
+      // Fetch other-user profiles + the current user's own profile for subject/price info
+      const otherIds = [...new Set(bookings.map((b: any) =>
         user.userType === "student" ? b.tutor_id : b.tutee_id
       ))] as number[];
 
       const profileMap: Record<number, any> = {};
-      await Promise.all(uniqueIds.map(async (id) => {
-        try {
-          const p = await profileApi.getProfile(id);
-          profileMap[id] = enrichProfile(p);
-        } catch {
-          profileMap[id] = { name: `User #${id}` };
-        }
-      }));
+      let myProfile: any = null;
+      await Promise.all([
+        ...otherIds.map(async (id) => {
+          try {
+            const p = await profileApi.getProfile(id);
+            profileMap[id] = enrichProfile(p);
+          } catch {
+            profileMap[id] = { name: `User #${id}` };
+          }
+        }),
+        profileApi.getProfile(user.id).then((p) => { myProfile = enrichProfile(p); }).catch(() => {}),
+      ]);
 
+      // For tutors, use their own profile for subject/level/price
+      // For students, use the tutor's profile
       const enriched = bookings.map((booking: any) => {
         const otherUserId = user.userType === "student" ? booking.tutor_id : booking.tutee_id;
         const otherProfile = profileMap[otherUserId] || { name: `User #${otherUserId}` };
+        const infoProfile = user.userType === "tutor" && myProfile ? myProfile : otherProfile;
         return {
           ...booking,
           id: booking.booking_id,
           tutorName: user.userType === "student" ? otherProfile.name : user.name,
           studentName: user.userType === "tutor" ? otherProfile.name : user.name,
           otherProfile,
-          subject: otherProfile.subjects?.[0]?.subject || "Lesson",
-          level: otherProfile.subjects?.[0]?.level || "",
+          subject: infoProfile.subjects?.[0]?.subject || "Lesson",
+          level: infoProfile.subjects?.[0]?.level || "",
           day: booking.lesson_date,
           slots: [`${booking.start_time?.slice(0, 5)}-${booking.end_time?.slice(0, 5)}`],
-          price: otherProfile.subjects?.[0]?.hourlyRate || otherProfile.price_rate || 0,
+          price: infoProfile.subjects?.[0]?.hourlyRate || infoProfile.price_rate || 0,
         };
       });
 
