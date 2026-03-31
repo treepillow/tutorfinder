@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { Calendar, Clock, BookOpen, User, ChevronLeft, ChevronRight, List } from "lucide-react";
-import { getCurrentUser, bookingApi, profileApi, enrichProfile } from "../utils/api";
+import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, availabilityApi, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
 
 export function SchedulePage() {
@@ -68,6 +68,34 @@ export function SchedulePage() {
       toast.error("Failed to load schedule");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCancelBooking = async (lesson: any) => {
+    try {
+      // Refund the deposit
+      try {
+        const paymentRes = await paymentApi.getByBooking(lesson.booking_id);
+        if (paymentRes.payment_id) {
+          await paymentApi.refund(paymentRes.payment_id);
+        }
+      } catch {}
+
+      // Cancel the booking
+      try {
+        await bookingProcessApi.cancel(lesson.booking_id, currentUser.userType === "student" ? "tutee" : "tutor");
+      } catch {
+        await bookingApi.cancel(lesson.booking_id);
+        if (lesson.availability_id) {
+          await availabilityApi.updateSlot(lesson.availability_id, "Available").catch(() => {});
+        }
+      }
+
+      toast.success("Booking cancelled and deposit refunded");
+      setSelectedLesson(null);
+      loadSchedule(currentUser);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to cancel booking");
     }
   };
 
@@ -336,6 +364,13 @@ export function SchedulePage() {
                   <span className="text-2xl text-[#7C8D8C]">${selectedLesson.price}</span>
                 </div>
               )}
+
+              <button
+                onClick={() => handleCancelBooking(selectedLesson)}
+                className="w-full px-4 py-2 bg-white text-[#2F3B3D] rounded-full border-2 border-[#D6CFBF] hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all duration-300"
+              >
+                Cancel Booking
+              </button>
             </div>
           </DialogContent>
         </Dialog>
