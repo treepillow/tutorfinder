@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { RequestCard } from "../components/RequestCard";
-import { PaymentDialog } from "../components/PaymentDialog";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, enrichProfile, availabilityApi } from "../utils/api";
@@ -12,13 +12,25 @@ export function RequestsPage() {
   const [activeTab, setActiveTab] = useState<"awaiting" | "payment">("awaiting");
   const prevTab = useRef<"awaiting" | "payment">("awaiting");
   const [loading, setLoading] = useState(true);
-  const [paymentDialog, setPaymentDialog] = useState<{ clientSecret: string; amount: number; request: any } | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
       setCurrentUser(user);
       loadRequests(user);
+
+      // Handle return from Stripe Checkout
+      const paymentStatus = searchParams.get("payment");
+      const bookingId = searchParams.get("booking_id");
+      if (paymentStatus === "success" && bookingId) {
+        setSearchParams({});
+        setActiveTab("payment");
+        handlePostCheckout(parseInt(bookingId));
+      } else if (paymentStatus === "cancelled") {
+        setSearchParams({});
+        toast.error("Payment was cancelled");
+      }
     }
   }, []);
 
@@ -128,31 +140,27 @@ export function RequestsPage() {
   const handlePay = async (request: any) => {
     try {
       const amount = parseFloat(request.price) || 50;
-      const paymentRes = await paymentApi.createIntent({
+      const checkoutRes = await paymentApi.checkout({
         booking_id: request.booking_id,
         tutee_id: currentUser.id,
         tutor_id: request.tutor_id,
         amount,
       });
 
-      if (paymentRes.client_secret && !paymentRes.client_secret.startsWith("mock_")) {
-        // Real Stripe — open the payment dialog with card form
-        setPaymentDialog({
-          clientSecret: paymentRes.client_secret,
-          amount,
-          request: { ...request, stripe_payment_intent_id: paymentRes.stripe_payment_intent_id },
-        });
+      if (checkoutRes.checkout_url) {
+        // Redirect to Stripe Checkout
+        window.location.href = checkoutRes.checkout_url;
       } else {
-        // Mock mode — no Stripe key configured, auto-confirm
+        // Mock mode — no Stripe key, auto-confirm
         try {
           await bookingProcessApi.paymentCaptured(
             request.booking_id,
-            paymentRes.stripe_payment_intent_id || paymentRes.payment_intent_id
+            checkoutRes.stripe_payment_intent_id
           );
         } catch {
           await paymentApi.capture({
             booking_id: request.booking_id,
-            stripe_payment_intent_id: paymentRes.stripe_payment_intent_id || paymentRes.payment_intent_id,
+            stripe_payment_intent_id: checkoutRes.stripe_payment_intent_id,
           });
           await bookingApi.updateStatus(request.booking_id, "Confirmed");
         }
@@ -164,28 +172,25 @@ export function RequestsPage() {
     }
   };
 
-  const handlePaymentSuccess = async () => {
-    if (!paymentDialog) return;
-    const { request } = paymentDialog;
-    setPaymentDialog(null);
-
+  const handlePostCheckout = async (bookingId: number) => {
     try {
+      // Look up the payment record and capture it
+      const paymentRes = await paymentApi.getByBooking(bookingId);
+      const intentId = paymentRes.stripe_payment_intent_id;
+
       try {
-        await bookingProcessApi.paymentCaptured(
-          request.booking_id,
-          request.stripe_payment_intent_id
-        );
+        await bookingProcessApi.paymentCaptured(bookingId, intentId);
       } catch {
         await paymentApi.capture({
-          booking_id: request.booking_id,
-          stripe_payment_intent_id: request.stripe_payment_intent_id,
+          booking_id: bookingId,
+          stripe_payment_intent_id: intentId,
         });
-        await bookingApi.updateStatus(request.booking_id, "Confirmed");
+        await bookingApi.updateStatus(bookingId, "Confirmed");
       }
       toast.success("Payment successful! Lesson confirmed.");
-      loadRequests(currentUser);
+      loadRequests(currentUser!);
     } catch (err: any) {
-      toast.error(err.message || "Failed to confirm booking after payment");
+      toast.error(err.message || "Failed to confirm payment");
     }
   };
 
@@ -299,14 +304,6 @@ export function RequestsPage() {
         )}
       </div>
 
-      {paymentDialog && (
-        <PaymentDialog
-          clientSecret={paymentDialog.clientSecret}
-          amount={paymentDialog.amount}
-          onSuccess={handlePaymentSuccess}
-          onClose={() => setPaymentDialog(null)}
-        />
-      )}
     </div>
   );
 }

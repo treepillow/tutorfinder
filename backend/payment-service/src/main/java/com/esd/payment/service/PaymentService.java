@@ -8,9 +8,11 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import com.stripe.model.Refund;
 import com.stripe.model.Transfer;
+import com.stripe.model.checkout.Session;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.RefundCreateParams;
 import com.stripe.param.TransferCreateParams;
+import com.stripe.param.checkout.SessionCreateParams;
 import jakarta.transaction.Transactional;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,6 +32,9 @@ public class PaymentService {
 
     @Value("${stripe.api.key:}")
     private String stripeApiKey;
+
+    @Value("${frontend.url:http://localhost:5173}")
+    private String frontendUrl;
 
     public PaymentService(PaymentRepository paymentRepository, RabbitTemplate rabbitTemplate) {
         this.paymentRepository = paymentRepository;
@@ -124,6 +129,98 @@ public class PaymentService {
         resp.put("stripe_payment_intent_id", intentId);
         resp.put("client_secret", clientSecret);
         resp.put("status", payment.getStatus().name());
+        return resp;
+    }
+
+    /**
+     * Create a Stripe Checkout Session that redirects the user to Stripe's hosted page.
+     */
+    @Transactional
+    public Map<String, Object> createCheckoutSession(
+            Integer bookingId, Integer tuteeId, Integer tutorId,
+            BigDecimal amount, String currency) throws StripeException {
+
+        // Clean up any existing payment record for this booking
+        Optional<Payment> existing = paymentRepository.findByBookingId(bookingId);
+        if (existing.isPresent()) {
+            Payment p = existing.get();
+            // Cancel old Stripe intent if possible
+            if (stripeEnabled() && p.getStripePaymentIntentId() != null
+                    && !p.getStripePaymentIntentId().startsWith("mock_")) {
+                try {
+                    PaymentIntent intent = PaymentIntent.retrieve(p.getStripePaymentIntentId());
+                    if ("requires_payment_method".equals(intent.getStatus())) {
+                        intent.cancel();
+                    }
+                } catch (Exception ignored) {}
+            }
+            paymentRepository.deleteById(p.getPaymentId());
+            paymentRepository.flush();
+        }
+
+        if (!stripeEnabled()) {
+            // Mock mode — return mock data
+            String mockId = "mock_pi_" + bookingId + "_" + System.currentTimeMillis();
+            Payment payment = new Payment();
+            payment.setBookingId(bookingId);
+            payment.setTuteeId(tuteeId);
+            payment.setTutorId(tutorId);
+            payment.setAmount(amount);
+            payment.setTuteeCurrency(currency);
+            payment.setStatus(Payment.PaymentStatus.PENDING);
+            payment.setStripePaymentIntentId(mockId);
+            paymentRepository.save(payment);
+
+            Map<String, Object> resp = new HashMap<>();
+            resp.put("payment_id", payment.getPaymentId());
+            resp.put("stripe_payment_intent_id", mockId);
+            resp.put("checkout_url", null);
+            resp.put("mock", true);
+            return resp;
+        }
+
+        long amountCents = amount.multiply(BigDecimal.valueOf(100)).longValue();
+        SessionCreateParams params = SessionCreateParams.builder()
+                .setMode(SessionCreateParams.Mode.PAYMENT)
+                .setPaymentIntentData(
+                        SessionCreateParams.PaymentIntentData.builder()
+                                .setCaptureMethod(SessionCreateParams.PaymentIntentData.CaptureMethod.MANUAL)
+                                .putMetadata("booking_id", String.valueOf(bookingId))
+                                .putMetadata("tutee_id", String.valueOf(tuteeId))
+                                .putMetadata("tutor_id", String.valueOf(tutorId))
+                                .build())
+                .addLineItem(SessionCreateParams.LineItem.builder()
+                        .setQuantity(1L)
+                        .setPriceData(SessionCreateParams.LineItem.PriceData.builder()
+                                .setCurrency(currency)
+                                .setUnitAmount(amountCents)
+                                .setProductData(SessionCreateParams.LineItem.PriceData.ProductData.builder()
+                                        .setName("Tutoring Lesson (Booking #" + bookingId + ")")
+                                        .build())
+                                .build())
+                        .build())
+                .setSuccessUrl(frontendUrl + "/app/requests?payment=success&booking_id=" + bookingId)
+                .setCancelUrl(frontendUrl + "/app/requests?payment=cancelled")
+                .build();
+
+        Session session = Session.create(params);
+
+        // Save payment record with the PaymentIntent ID from the session
+        Payment payment = new Payment();
+        payment.setBookingId(bookingId);
+        payment.setTuteeId(tuteeId);
+        payment.setTutorId(tutorId);
+        payment.setAmount(amount);
+        payment.setTuteeCurrency(currency);
+        payment.setStatus(Payment.PaymentStatus.PENDING);
+        payment.setStripePaymentIntentId(session.getPaymentIntent());
+        paymentRepository.save(payment);
+
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("payment_id", payment.getPaymentId());
+        resp.put("stripe_payment_intent_id", session.getPaymentIntent());
+        resp.put("checkout_url", session.getUrl());
+        resp.put("session_id", session.getId());
         return resp;
     }
 

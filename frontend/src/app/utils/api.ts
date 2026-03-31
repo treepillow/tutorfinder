@@ -288,6 +288,18 @@ export const paymentApi = {
     });
   },
 
+  checkout(data: {
+    booking_id: number;
+    tutee_id: number;
+    tutor_id: number;
+    amount: number;
+  }) {
+    return apiFetch(`${PAYMENT_SERVICE}/payment/checkout`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
   capture(data: {
     booking_id: number;
     stripe_payment_intent_id: string;

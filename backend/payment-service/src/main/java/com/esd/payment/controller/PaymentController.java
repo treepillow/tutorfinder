@@ -53,6 +53,33 @@ public class PaymentController {
     }
 
     /**
+     * POST /payment/checkout
+     * Creates a Stripe Checkout Session and returns the redirect URL.
+     * Body: { booking_id, tutee_id, tutor_id, amount, currency? }
+     */
+    @PostMapping("/payment/checkout")
+    public ResponseEntity<?> checkout(@RequestBody Map<String, Object> body) {
+        try {
+            Integer bookingId = intVal(body, "booking_id");
+            Integer tuteeId   = intVal(body, "tutee_id");
+            Integer tutorId   = intVal(body, "tutor_id");
+            BigDecimal amount = new BigDecimal(body.get("amount").toString());
+            String currency   = body.getOrDefault("currency", "sgd").toString();
+
+            if (bookingId == null || tuteeId == null || tutorId == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "booking_id, tutee_id, tutor_id are required"));
+            }
+
+            Map<String, Object> result = paymentService.createCheckoutSession(
+                    bookingId, tuteeId, tutorId, amount, currency);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
      * POST /payment/capture
      * Called after the tutee's frontend confirms the Stripe payment.
      * Body: { stripe_payment_intent_id, tutee_phone? }
