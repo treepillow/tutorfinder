@@ -76,6 +76,10 @@ public class PaymentService {
                     .setAmount(amountCents)
                     .setCurrency(currency)
                     .setCaptureMethod(PaymentIntentCreateParams.CaptureMethod.MANUAL)
+                    .setAutomaticPaymentMethods(
+                            PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
+                                    .setEnabled(true)
+                                    .build())
                     .putMetadata("booking_id", String.valueOf(bookingId))
                     .putMetadata("tutee_id", String.valueOf(tuteeId))
                     .putMetadata("tutor_id", String.valueOf(tutorId))
