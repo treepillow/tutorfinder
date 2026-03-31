@@ -174,17 +174,13 @@ export function RequestsPage() {
 
   const handlePostCheckout = async (bookingId: number) => {
     try {
-      // Look up the payment record and capture it
-      const paymentRes = await paymentApi.getByBooking(bookingId);
-      const intentId = paymentRes.stripe_payment_intent_id;
+      // Retrieve checkout session, capture payment, update DB
+      const paymentRes = await paymentApi.completeCheckout(bookingId);
 
+      // Update booking status to Confirmed
       try {
-        await bookingProcessApi.paymentCaptured(bookingId, intentId);
+        await bookingProcessApi.paymentCaptured(bookingId, paymentRes.stripe_payment_intent_id);
       } catch {
-        await paymentApi.capture({
-          booking_id: bookingId,
-          stripe_payment_intent_id: intentId,
-        });
         await bookingApi.updateStatus(bookingId, "Confirmed");
       }
       toast.success("Payment successful! Lesson confirmed.");

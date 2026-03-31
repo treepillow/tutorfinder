@@ -300,6 +300,13 @@ export const paymentApi = {
     });
   },
 
+  completeCheckout(bookingId: number) {
+    return apiFetch(`${PAYMENT_SERVICE}/payment/complete-checkout`, {
+      method: "POST",
+      body: JSON.stringify({ booking_id: bookingId }),
+    });
+  },
+
   capture(data: {
     booking_id: number;
     stripe_payment_intent_id: string;

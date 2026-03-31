@@ -28,6 +28,10 @@ public class Payment {
     @Column(length = 100)
     private String stripePaymentIntentId;
 
+    // Stripe Checkout Session ID
+    @Column(length = 200)
+    private String stripeSessionId;
+
     // Stripe Transfer ID (when releasing to tutor)
     @Column(length = 100)
     private String stripeTransferId;
@@ -71,6 +75,9 @@ public class Payment {
 
     public String getStripePaymentIntentId() { return stripePaymentIntentId; }
     public void setStripePaymentIntentId(String id) { this.stripePaymentIntentId = id; }
+
+    public String getStripeSessionId() { return stripeSessionId; }
+    public void setStripeSessionId(String id) { this.stripeSessionId = id; }
 
     public String getStripeTransferId() { return stripeTransferId; }
     public void setStripeTransferId(String id) { this.stripeTransferId = id; }

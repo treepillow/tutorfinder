@@ -205,7 +205,7 @@ public class PaymentService {
 
         Session session = Session.create(params);
 
-        // Save payment record with the PaymentIntent ID from the session
+        // Save payment record — PaymentIntent ID is null until customer pays
         Payment payment = new Payment();
         payment.setBookingId(bookingId);
         payment.setTuteeId(tuteeId);
@@ -213,15 +213,55 @@ public class PaymentService {
         payment.setAmount(amount);
         payment.setTuteeCurrency(currency);
         payment.setStatus(Payment.PaymentStatus.PENDING);
-        payment.setStripePaymentIntentId(session.getPaymentIntent());
+        payment.setStripeSessionId(session.getId());
         paymentRepository.save(payment);
 
         Map<String, Object> resp = new HashMap<>();
         resp.put("payment_id", payment.getPaymentId());
-        resp.put("stripe_payment_intent_id", session.getPaymentIntent());
         resp.put("checkout_url", session.getUrl());
         resp.put("session_id", session.getId());
         return resp;
+    }
+
+    /**
+     * Complete a Checkout Session: retrieve the PaymentIntent, capture it, update DB.
+     * Called by the frontend after Stripe redirects back on success.
+     */
+    @Transactional
+    public Payment completeCheckout(Integer bookingId) throws StripeException {
+        Payment payment = paymentRepository.findByBookingId(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Payment not found for booking: " + bookingId));
+
+        if (payment.getStatus() != Payment.PaymentStatus.PENDING) {
+            // Already completed
+            return payment;
+        }
+
+        String sessionId = payment.getStripeSessionId();
+        if (sessionId == null || sessionId.isBlank()) {
+            throw new IllegalStateException("No checkout session for this payment");
+        }
+
+        if (stripeEnabled()) {
+            Session session = Session.retrieve(sessionId);
+            String intentId = session.getPaymentIntent();
+            if (intentId == null) {
+                throw new IllegalStateException("Checkout session has no PaymentIntent — payment may not be complete");
+            }
+            payment.setStripePaymentIntentId(intentId);
+
+            // Capture the payment (manual capture mode)
+            PaymentIntent intent = PaymentIntent.retrieve(intentId);
+            if ("requires_capture".equals(intent.getStatus())) {
+                intent.capture();
+            }
+        } else {
+            payment.setStripePaymentIntentId("mock_pi_" + bookingId);
+        }
+
+        payment.setStatus(Payment.PaymentStatus.HELD);
+        paymentRepository.save(payment);
+        return payment;
     }
 
     /**

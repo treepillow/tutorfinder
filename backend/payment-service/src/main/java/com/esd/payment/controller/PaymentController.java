@@ -80,6 +80,28 @@ public class PaymentController {
     }
 
     /**
+     * POST /payment/complete-checkout
+     * Called by the frontend after Stripe Checkout redirects back.
+     * Retrieves the session, captures the PaymentIntent, updates DB.
+     * Body: { booking_id }
+     */
+    @PostMapping("/payment/complete-checkout")
+    public ResponseEntity<?> completeCheckout(@RequestBody Map<String, Object> body) {
+        try {
+            Integer bookingId = intVal(body, "booking_id");
+            if (bookingId == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "booking_id is required"));
+            }
+            Payment payment = paymentService.completeCheckout(bookingId);
+            return ResponseEntity.ok(toMap(payment));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
      * POST /payment/capture
      * Called after the tutee's frontend confirms the Stripe payment.
      * Body: { stripe_payment_intent_id, tutee_phone? }
