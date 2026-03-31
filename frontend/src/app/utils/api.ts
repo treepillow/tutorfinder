@@ -327,28 +327,28 @@ export const bookingProcessApi = {
     end_time: string;
     amount: string;
   }) {
-    return apiFetch(`${BOOKING_PROCESS_SERVICE}/Initiate`, {
+    return apiFetch(`${BOOKING_PROCESS_SERVICE}/initiate`, {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
   confirm(bookingId: number) {
-    return apiFetch(`${BOOKING_PROCESS_SERVICE}/Confirm`, {
+    return apiFetch(`${BOOKING_PROCESS_SERVICE}/confirm`, {
       method: "POST",
       body: JSON.stringify({ booking_id: bookingId }),
     });
   },
 
   reject(bookingId: number) {
-    return apiFetch(`${BOOKING_PROCESS_SERVICE}/Reject`, {
+    return apiFetch(`${BOOKING_PROCESS_SERVICE}/reject`, {
       method: "POST",
       body: JSON.stringify({ booking_id: bookingId }),
     });
   },
 
   paymentCaptured(bookingId: number, stripePaymentIntentId: string) {
-    return apiFetch(`${BOOKING_PROCESS_SERVICE}/PaymentCaptured`, {
+    return apiFetch(`${BOOKING_PROCESS_SERVICE}/payment-captured`, {
       method: "POST",
       body: JSON.stringify({
         booking_id: bookingId,
@@ -358,14 +358,14 @@ export const bookingProcessApi = {
   },
 
   complete(bookingId: number) {
-    return apiFetch(`${BOOKING_PROCESS_SERVICE}/Complete`, {
+    return apiFetch(`${BOOKING_PROCESS_SERVICE}/complete`, {
       method: "POST",
       body: JSON.stringify({ booking_id: bookingId }),
     });
   },
 
   cancel(bookingId: number, initiatedBy: "tutee" | "tutor") {
-    return apiFetch(`${BOOKING_PROCESS_SERVICE}/Cancel`, {
+    return apiFetch(`${BOOKING_PROCESS_SERVICE}/cancel`, {
       method: "POST",
       body: JSON.stringify({
         booking_id: bookingId,
@@ -428,6 +428,20 @@ export async function syncAvailabilityToBackend(
     Friday: 5, Saturday: 6, Sunday: 0,
   };
 
+  // Delete all existing Available slots for this user before re-creating them.
+  // Reserved slots are left untouched (backend will reject their deletion).
+  try {
+    const res = await availabilityApi.getSlots(userId);
+    const existingAvailable = (res.availability || []).filter(
+      (s: any) => s.status === "Available"
+    );
+    await Promise.allSettled(
+      existingAvailable.map((s: any) => availabilityApi.deleteSlot(s.availability_id))
+    );
+  } catch (err) {
+    console.error("Failed to clear old availability slots:", err);
+  }
+
   const today = new Date();
   const slots: { date: string; start_time: string; end_time: string }[] = [];
 
@@ -463,7 +477,7 @@ export async function syncAvailabilityToBackend(
     }
   }
 
-  // Create all slots in parallel (ignore errors for duplicates)
+  // Create all new slots
   const results = await Promise.allSettled(
     slots.map((slot) =>
       availabilityApi.addSlot({ user_id: userId, ...slot })
