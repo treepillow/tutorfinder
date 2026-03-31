@@ -15,7 +15,7 @@ CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "
 JWT_SECRET            = os.environ.get('JWT_SECRET', 'esd-jwt-secret-2024')
 MATCH_SERVICE_URL     = os.environ.get('MATCH_SERVICE_URL', 'http://match-service:5002')
 AVAILABILITY_SERVICE_URL = os.environ.get('AVAILABILITY_SERVICE_URL', 'http://availability-service:5003')
-DB_SCHEMA             = os.environ.get('DB_SCHEMA', 'public')
+DB_SCHEMA             = os.environ.get('DB_SCHEMA', 'profile_schema')
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL', 'postgresql://localhost/tutorfinder')

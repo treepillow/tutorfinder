@@ -7,7 +7,7 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
 
-DB_SCHEMA = os.environ.get('DB_SCHEMA', 'public')
+DB_SCHEMA = os.environ.get('DB_SCHEMA', 'availability_schema')
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL', 'postgresql://localhost/tutorfinder')

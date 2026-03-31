@@ -14,7 +14,7 @@ CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "
 
 RABBITMQ_URL        = os.environ.get('RABBITMQ_URL', 'amqp://guest:guest@rabbitmq:5672/')
 PROFILE_SERVICE_URL = os.environ.get('PROFILE_SERVICE_URL', 'http://profile-service:5001')
-DB_SCHEMA           = os.environ.get('DB_SCHEMA', 'public')
+DB_SCHEMA           = os.environ.get('DB_SCHEMA', 'match_schema')
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL', 'postgresql://localhost/tutorfinder')
