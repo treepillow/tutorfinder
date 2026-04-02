@@ -113,26 +113,26 @@ def swipe():
 
     # Fetch profiles and publish notification in background so the response is instant
     def notify(match_id, swiper_id, swiped_id):
-        user_a_name = user_a_phone = user_b_name = user_b_phone = None
+        user_a_name = user_a_email = user_b_name = user_b_email = None
         try:
             ra = requests.get(f'{PROFILE_SERVICE_URL}/profile/internal/{swiper_id}', timeout=5)
             if ra.status_code == 200:
                 user_a_name  = ra.json().get('name')
-                user_a_phone = ra.json().get('phone')
+                user_a_email = ra.json().get('email')
         except Exception:
             pass
         try:
             rb = requests.get(f'{PROFILE_SERVICE_URL}/profile/internal/{swiped_id}', timeout=5)
             if rb.status_code == 200:
                 user_b_name  = rb.json().get('name')
-                user_b_phone = rb.json().get('phone')
+                user_b_email = rb.json().get('email')
         except Exception:
             pass
         publish_message('match.created', {
             'match_id':     match_id,
             'user_a_id':    swiper_id,   'user_b_id':    swiped_id,
             'user_a_name':  user_a_name, 'user_b_name':  user_b_name,
-            'user_a_phone': user_a_phone,'user_b_phone': user_b_phone,
+            'user_a_email': user_a_email,'user_b_email': user_b_email,
         })
 
     threading.Thread(target=notify, args=(match_id, swiper_id, swiped_id), daemon=True).start()

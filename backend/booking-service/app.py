@@ -69,14 +69,14 @@ with app.app_context():
     db.create_all()
 
 
-def get_phone(user_id):
-    """Look up a user's phone number from the profile service."""
+def get_email(user_id):
+    """Look up a user's email address from the profile service."""
     try:
         resp = requests.get(f'{PROFILE_SERVICE_URL}/profile/internal/{user_id}', timeout=3)
         if resp.status_code == 200:
-            return resp.json().get('phone', '')
+            return resp.json().get('email', '')
     except Exception as e:
-        print(f'[BOOKING] Phone lookup error for user {user_id}: {e}')
+        print(f'[BOOKING] Email lookup error for user {user_id}: {e}')
     return ''
 
 
@@ -122,9 +122,9 @@ def create_booking():
         db.session.add(booking)
         db.session.commit()
         publish_event('booking.created', {
-            'booking_id': booking.booking_id,
-            'tutor_id':   booking.tutor_id,
-            'tutor_phone': get_phone(booking.tutor_id),
+            'booking_id':  booking.booking_id,
+            'tutor_id':    booking.tutor_id,
+            'tutor_email': get_email(booking.tutor_id),
             'lesson_date': data['lesson_date'],
             'start_time':  data['start_time'],
         })
@@ -165,7 +165,7 @@ def confirm_booking(booking_id):
     publish_event('booking.confirmed', {
         'booking_id':  booking.booking_id,
         'tutee_id':    booking.tutee_id,
-        'tutee_phone': get_phone(booking.tutee_id),
+        'tutee_email': get_email(booking.tutee_id),
         'lesson_date': booking.lesson_date.isoformat(),
     })
     return jsonify(booking.to_dict()), 200
@@ -183,7 +183,7 @@ def reject_booking(booking_id):
     publish_event('booking.rejected', {
         'booking_id':  booking.booking_id,
         'tutee_id':    booking.tutee_id,
-        'tutee_phone': get_phone(booking.tutee_id),
+        'tutee_email': get_email(booking.tutee_id),
     })
     return jsonify(booking.to_dict()), 200
 
@@ -200,9 +200,9 @@ def cancel_booking(booking_id):
     publish_event('booking.cancelled', {
         'booking_id':   booking.booking_id,
         'tutee_id':     booking.tutee_id,
-        'tutee_phone':  get_phone(booking.tutee_id),
+        'tutee_email':  get_email(booking.tutee_id),
         'tutor_id':     booking.tutor_id,
-        'tutor_phone':  get_phone(booking.tutor_id),
+        'tutor_email':  get_email(booking.tutor_id),
     })
     return jsonify(booking.to_dict()), 200
 

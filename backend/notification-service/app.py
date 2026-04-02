@@ -11,10 +11,9 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
 
-RABBITMQ_URL       = os.environ.get('RABBITMQ_URL', 'amqp://guest:guest@rabbitmq:5672/')
-TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
-TWILIO_AUTH_TOKEN  = os.environ.get('TWILIO_AUTH_TOKEN', '')
-TWILIO_FROM_NUMBER = os.environ.get('TWILIO_FROM_NUMBER', '')
+RABBITMQ_URL     = os.environ.get('RABBITMQ_URL', 'amqp://guest:guest@rabbitmq:5672/')
+RESEND_API_KEY   = os.environ.get('RESEND_API_KEY', '')
+RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', 'noreply@tutorfinder.com')
 
 DB_SCHEMA = os.environ.get('DB_SCHEMA', 'notification_schema')
 
@@ -32,25 +31,25 @@ class Notification(db.Model):
     __tablename__ = 'notifications'
     __table_args__ = {'schema': DB_SCHEMA}
 
-    notify_id    = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id      = db.Column(db.Integer, nullable=True)
-    type         = db.Column(db.Enum('Match', 'Booking', 'Payment', native_enum=False), nullable=False)
-    message      = db.Column(db.Text, nullable=False)
-    phone_number = db.Column(db.String(20), nullable=False)
-    status       = db.Column(db.String(20), default='Pending')
-    routing_key  = db.Column(db.String(100), nullable=True)
-    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    notify_id   = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id     = db.Column(db.Integer, nullable=True)
+    type        = db.Column(db.Enum('Match', 'Booking', 'Payment', native_enum=False), nullable=False)
+    message     = db.Column(db.Text, nullable=False)
+    email       = db.Column(db.String(100), nullable=False)
+    status      = db.Column(db.String(20), default='Pending')
+    routing_key = db.Column(db.String(100), nullable=True)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self):
         return {
-            'notify_id':    self.notify_id,
-            'user_id':      self.user_id,
-            'type':         self.type,
-            'message':      self.message,
-            'phone_number': self.phone_number,
-            'status':       self.status,
-            'routing_key':  self.routing_key,
-            'created_at':   self.created_at.isoformat() if self.created_at else None,
+            'notify_id':   self.notify_id,
+            'user_id':     self.user_id,
+            'type':        self.type,
+            'message':     self.message,
+            'email':       self.email,
+            'status':      self.status,
+            'routing_key': self.routing_key,
+            'created_at':  self.created_at.isoformat() if self.created_at else None,
         }
 
 
@@ -62,29 +61,34 @@ with app.app_context():
     db.create_all()
 
 
-def send_sms(to_phone, message_text):
-    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_FROM_NUMBER:
-        print(f'[SMS MOCK] To: {to_phone} | {message_text}')
+def send_email(to_email, subject, message_text):
+    if not RESEND_API_KEY:
+        print(f'[EMAIL MOCK] To: {to_email} | Subject: {subject} | {message_text}')
         return True
     try:
-        from twilio.rest import Client
-        Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN).messages.create(
-            body=message_text, from_=TWILIO_FROM_NUMBER, to=to_phone)
+        import resend
+        resend.api_key = RESEND_API_KEY
+        resend.Emails.send({
+            'from': RESEND_FROM_EMAIL,
+            'to': [to_email],
+            'subject': subject,
+            'text': message_text,
+        })
         return True
     except Exception as e:
-        print(f'SMS error: {e}')
+        print(f'Email error: {e}')
         return False
 
 
-def save_and_notify(user_id, notify_type, phone, message, routing_key):
-    if not phone:
+def save_and_notify(user_id, notify_type, email, subject, message, routing_key):
+    if not email:
         return
-    status = 'Sent' if send_sms(phone, message) else 'Failed'
+    status = 'Sent' if send_email(email, subject, message) else 'Failed'
     try:
         with app.app_context():
             notif = Notification(
                 user_id=user_id, type=notify_type, message=message,
-                phone_number=phone, status=status, routing_key=routing_key)
+                email=email, status=status, routing_key=routing_key)
             db.session.add(notif)
             db.session.commit()
     except Exception as e:
@@ -98,49 +102,61 @@ def handle_message(ch, method, properties, body):
         print(f'[NOTIFICATION] {rk}: {data}')
 
         if rk == 'match.created':
-            save_and_notify(data.get('user_a_id'), 'Match', data.get('user_a_phone'),
+            save_and_notify(data.get('user_a_id'), 'Match', data.get('user_a_email'),
+                            'New Match on TutorFinder!',
                             f"Hi {data.get('user_a_name', 'there')}! You have a new match on TutorFinder!", rk)
-            save_and_notify(data.get('user_b_id'), 'Match', data.get('user_b_phone'),
+            save_and_notify(data.get('user_b_id'), 'Match', data.get('user_b_email'),
+                            'New Match on TutorFinder!',
                             f"Hi {data.get('user_b_name', 'there')}! You have a new match on TutorFinder!", rk)
 
         elif rk == 'booking.created':
-            save_and_notify(data.get('tutor_id'), 'Booking', data.get('tutor_phone'),
+            save_and_notify(data.get('tutor_id'), 'Booking', data.get('tutor_email'),
+                            'New Booking Request',
                             f"New booking request on {data.get('lesson_date')} at "
                             f"{data.get('start_time')}. Please confirm or reject in the app.", rk)
 
         elif rk == 'booking.confirmed':
-            save_and_notify(data.get('tutee_id'), 'Booking', data.get('tutee_phone'),
+            save_and_notify(data.get('tutee_id'), 'Booking', data.get('tutee_email'),
+                            'Booking Confirmed',
                             f"Your booking on {data.get('lesson_date')} is confirmed! "
                             f"Please pay your deposit within 24 hours.", rk)
 
         elif rk == 'booking.rejected':
-            save_and_notify(data.get('tutee_id'), 'Booking', data.get('tutee_phone'),
+            save_and_notify(data.get('tutee_id'), 'Booking', data.get('tutee_email'),
+                            'Booking Rejected',
                             "Your booking was rejected by the tutor. Please select another slot.", rk)
 
         elif rk == 'booking.expired':
-            save_and_notify(data.get('tutee_id'), 'Booking', data.get('tutee_phone'),
+            save_and_notify(data.get('tutee_id'), 'Booking', data.get('tutee_email'),
+                            'Booking Cancelled',
                             f"Booking cancelled. Reason: {data.get('reason', 'Expired')}", rk)
 
         elif rk == 'booking.cancelled':
-            save_and_notify(data.get('tutee_id'), 'Booking', data.get('tutee_phone'),
+            save_and_notify(data.get('tutee_id'), 'Booking', data.get('tutee_email'),
+                            'Booking Cancelled',
                             "A booking has been cancelled.", rk)
-            save_and_notify(data.get('tutor_id'), 'Booking', data.get('tutor_phone'),
+            save_and_notify(data.get('tutor_id'), 'Booking', data.get('tutor_email'),
+                            'Booking Cancelled',
                             "A booking has been cancelled.", rk)
 
         elif rk == 'payment.success':
-            save_and_notify(data.get('tutee_id'), 'Payment', data.get('tutee_phone'),
+            save_and_notify(data.get('tutee_id'), 'Payment', data.get('tutee_email'),
+                            'Payment Received',
                             f"Payment of SGD {data.get('amount')} received! Your lesson is confirmed.", rk)
 
         elif rk == 'payment.failed':
-            save_and_notify(data.get('tutee_id'), 'Payment', data.get('tutee_phone'),
+            save_and_notify(data.get('tutee_id'), 'Payment', data.get('tutee_email'),
+                            'Payment Failed',
                             "Payment failed. Please try again in the app.", rk)
 
         elif rk == 'deposit.released':
-            save_and_notify(data.get('tutor_id'), 'Payment', data.get('tutor_phone'),
+            save_and_notify(data.get('tutor_id'), 'Payment', data.get('tutor_email'),
+                            'Deposit Released',
                             "Your lesson deposit has been released to your account!", rk)
 
         elif rk == 'deposit.refunded':
-            save_and_notify(data.get('tutee_id'), 'Payment', data.get('tutee_phone'),
+            save_and_notify(data.get('tutee_id'), 'Payment', data.get('tutee_email'),
+                            'Deposit Refunded',
                             "Your deposit has been refunded. Allow 3-5 business days.", rk)
 
         else:
@@ -181,19 +197,20 @@ def health():
 @app.route('/notify/send', methods=['POST'])
 def send_notification():
     data = request.get_json(force=True) or {}
-    for field in ['user_id', 'type', 'message', 'phone_number']:
+    for field in ['user_id', 'type', 'message', 'email']:
         if not data.get(field):
             return jsonify({'error': f'Missing required field: {field}'}), 400
     if data['type'] not in ['Match', 'Booking', 'Payment']:
         return jsonify({'error': "type must be Match, Booking, or Payment"}), 400
 
-    phone  = data['phone_number']
+    email  = data['email']
     msg    = data['message']
-    status = 'Sent' if send_sms(phone, msg) else 'Failed'
+    subject = data.get('subject', 'TutorFinder Notification')
+    status = 'Sent' if send_email(email, subject, msg) else 'Failed'
 
     notif = Notification(
         user_id=data['user_id'], type=data['type'],
-        message=msg, phone_number=phone,
+        message=msg, email=email,
         status=status, routing_key='direct')
     db.session.add(notif)
     db.session.commit()

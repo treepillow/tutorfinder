@@ -69,7 +69,7 @@ class Profile(db.Model):
         return {
             'user_id': self.user_id,
             'name':    self.name,
-            'phone':   self.phone,
+            'email':   self.email,
             'role':    self.role,
         }
 
