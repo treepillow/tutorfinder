@@ -1,4 +1,4 @@
-import { ArrowRight, GraduationCap, MapPin } from "lucide-react";
+import { ArrowRight, MapPin } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { gsap } from "gsap";
@@ -29,10 +29,12 @@ function wrap(offset: number) {
 
 function ProfileCard({ card }: { card: typeof cardData[0] }) {
   return (
-    <div className="w-[210px] bg-[#EDE9DF] rounded-2xl overflow-hidden select-none shadow-lg">
-      <div className="h-[150px] relative bg-gradient-to-br from-[#7C8D8C] to-[#2F3B3D] flex items-center justify-center">
-        <div className="text-6xl">{card.emoji}</div>
-        <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full text-xs text-[#2F3B3D]">
+    <div className="w-[210px] bg-[#FAFAF8] rounded-2xl overflow-hidden select-none shadow-lg border border-[#E5E4E1]">
+      <div className="h-[150px] relative bg-[#7C8D8C] flex items-center justify-center">
+        <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-4xl font-bold text-white">
+          {card.name.charAt(0)}
+        </div>
+        <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full text-xs text-[#2F3B3D] font-medium">
           {card.age} yrs
         </div>
       </div>
@@ -245,7 +247,7 @@ export function Hero() {
   const [cursorStyle, setCursorStyle] = useState<string>("default");
 
   return (
-    <section ref={sectionRef} className="relative overflow-hidden bg-gradient-to-br from-[#FAFAF8] via-[#F5F3EF] to-[#EDE9DF] pb-28">
+    <section ref={sectionRef} className="relative bg-white pb-28">
       {/* Parallax bg blobs */}
       <div ref={blobTR} className="absolute -top-40 -right-40 w-[700px] h-[700px] bg-[#7C8D8C] rounded-full blur-[140px] opacity-[0.06] pointer-events-none will-change-transform" />
       <div ref={blobBL} className="absolute -bottom-20 -left-20 w-[500px] h-[500px] bg-[#F59E0B] rounded-full blur-[120px] opacity-[0.06] pointer-events-none will-change-transform" />
@@ -254,9 +256,7 @@ export function Hero() {
       <nav className="relative z-10 px-8 py-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 bg-[#7C8D8C] rounded-xl flex items-center justify-center shadow-md">
-              <GraduationCap className="w-5 h-5 text-white" />
-            </div>
+            <img src="/favicon.svg" alt="TutorFinder Logo" className="w-9 h-9" />
             <h1 className="text-2xl font-semibold tracking-tight text-[#1A2035]">
               Tutor<span className="text-[#7C8D8C]">Finder</span>
             </h1>
@@ -300,7 +300,7 @@ export function Hero() {
               </button>
               <button
                 onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
-                className="px-8 py-4 bg-transparent text-[#1A2035] rounded-full border border-[#C8BFAE] hover:bg-[#EDE9DF] transition-all duration-300 font-medium"
+                className="px-8 py-4 bg-[#EDE9DF] text-[#1A2035] rounded-full border border-[#D6CFBF] hover:bg-[#F5F3EF] transition-all duration-300 font-medium"
               >
                 Learn More
               </button>
@@ -345,7 +345,7 @@ export function Hero() {
       {/* Wavy divider */}
       <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-[0] pointer-events-none">
         <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-[80px]">
-          <path fill="#ffffff" d="M0,40 C200,10 400,70 600,40 C800,10 1000,70 1200,40 C1320,20 1400,55 1440,45 L1440,80 L0,80 Z" />
+          <path fill="#fff" d="M0,40 Q180,20 360,40 T720,40 T1080,40 T1440,40 L1440,80 L0,80 Z" />
         </svg>
       </div>
 

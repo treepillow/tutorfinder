@@ -6,12 +6,11 @@ import { ImageWithFallback } from "./shared/ImageWithFallback";
 gsap.registerPlugin(ScrollTrigger);
 
 const steps = [
-  { emoji: "🙋", num: 1, title: "Create Your Profile",  desc: "Sign up as a tutor or student. Add your subjects, availability, and what you're looking for.", bg: "bg-[#EEF2FF]" },
-  { emoji: "🔍", num: 2, title: "Discover & Swipe",     desc: "Browse through curated profiles. Swipe right if you're interested, left to pass.", bg: "bg-[#FFF7ED]" },
-  { emoji: "💫", num: 3, title: "Match & Connect",      desc: "When both sides swipe right — it's a match! Start chatting and sort out the details.", bg: "bg-[#F0FDF4]" },
-  { emoji: "🚀", num: 4, title: "Book & Learn",         desc: "Schedule sessions, pay securely, and kick off your learning journey.", bg: "bg-[#FEF2F2]" },
+  { num: 1, title: "Create Your Profile",  desc: "Sign up as a tutor or student. Add your subjects, availability, and what you're looking for." },
+  { num: 2, title: "Discover & Swipe",     desc: "Browse through curated profiles. Swipe right if you're interested, left to pass." },
+  { num: 3, title: "Match & Connect",      desc: "When both sides swipe right — it's a match! Start chatting and sort out the details." },
+  { num: 4, title: "Book & Learn",         desc: "Schedule sessions, pay securely, and kick off your learning journey." },
 ];
-const numColors = ["bg-[#7C8D8C]", "bg-[#F59E0B]", "bg-[#10B981]", "bg-[#EF4444]"];
 
 export function HowItWorks() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -149,10 +148,7 @@ export function HowItWorks() {
               className="how-step flex flex-col items-center text-center gap-5 cursor-default will-change-transform"
             >
               <div className="relative z-10">
-                <div className={`w-[104px] h-[104px] ${step.bg} rounded-full flex items-center justify-center text-5xl border-4 border-white shadow-md`}>
-                  {step.emoji}
-                </div>
-                <div className={`step-num absolute -top-1 -right-1 w-7 h-7 ${numColors[i]} text-white text-xs font-black rounded-full flex items-center justify-center shadow-lg`}>
+                <div className="w-[104px] h-[104px] bg-[#EDE9DF] rounded-full flex items-center justify-center text-5xl font-black border-4 border-[#D6CFBF] shadow-md text-[#7C8D8C]">
                   {step.num}
                 </div>
               </div>
@@ -176,19 +172,21 @@ export function HowItWorks() {
             <p className="text-[#1A2035]/60 leading-relaxed">
               We believe every student deserves a tailored learning experience. Our platform uses smart matching to pair you with tutors who get your unique needs.
             </p>
-            <div className="why-list space-y-5">
+            <div className="why-list space-y-4">
               {[
-                { emoji: "✅", label: "Verified Tutors",  desc: "All tutors are background-checked and verified" },
-                { emoji: "📖", label: "All Subjects",     desc: "From math to music, find tutors for any subject" },
-                { emoji: "⭐", label: "Rated & Reviewed", desc: "Read honest reviews from real students" },
+                { label: "Verified Tutors",  desc: "All tutors are background-checked and verified" },
+                { label: "All Subjects",     desc: "From math to music, find tutors for any subject" },
+                { label: "Rated & Reviewed", desc: "Read honest reviews from real students" },
               ].map((item) => (
-                <div key={item.label} className="why-item flex items-center gap-4">
-                  <div className="w-11 h-11 rounded-2xl bg-white shadow-sm flex items-center justify-center text-xl flex-shrink-0">
-                    {item.emoji}
+                <div key={item.label} className="why-item flex items-start gap-4 p-4 rounded-2xl bg-[#FAFAF8] border border-[#E5E4E1] hover:border-[#7C8D8C]/30 transition-all duration-300">
+                  <div className="w-6 h-6 rounded-full bg-[#7C8D8C] flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path>
+                    </svg>
                   </div>
                   <div>
                     <p className="font-semibold text-[#1A2035] leading-tight">{item.label}</p>
-                    <p className="text-sm text-[#1A2035]/60">{item.desc}</p>
+                    <p className="text-sm text-[#1A2035]/60 mt-1">{item.desc}</p>
                   </div>
                 </div>
               ))}
@@ -210,7 +208,7 @@ export function HowItWorks() {
 
       <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-[0] pointer-events-none">
         <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-[80px]">
-          <path fill="#ffffff" d="M0,50 C180,10 360,75 540,40 C720,5 900,65 1080,38 C1260,12 1380,58 1440,42 L1440,80 L0,80 Z" />
+          <path fill="#ffffff" d="M0,40 Q180,20 360,40 T720,40 T1080,40 T1440,40 L1440,80 L0,80 Z" />
         </svg>
       </div>
     </section>

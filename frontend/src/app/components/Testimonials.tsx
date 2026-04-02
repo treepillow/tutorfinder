@@ -241,13 +241,13 @@ export function Testimonials() {
 
         <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-[0] pointer-events-none">
           <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-[80px]">
-            <path fill="#7C8D8C" d="M0,30 C240,70 480,10 720,40 C960,70 1200,15 1440,40 L1440,80 L0,80 Z" />
+            <path fill="#7C8D8C" d="M0,40 Q180,20 360,40 T720,40 T1080,40 T1440,40 L1440,80 L0,80 Z" />
           </svg>
         </div>
       </section>
 
       {/* CTA */}
-      <section ref={ctaRef} className="py-24 bg-gradient-to-br from-[#7C8D8C] via-[#7C8D8C] to-[#7C8D8C] relative overflow-hidden">
+      <section ref={ctaRef} className="py-24 bg-[#7C8D8C] relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="cta-blob-tr absolute top-0 right-0 w-[500px] h-[500px] bg-white rounded-full blur-[120px] opacity-[0.07]" />
           <div className="cta-blob-bl absolute bottom-0 left-0 w-[400px] h-[400px] bg-white rounded-full blur-[100px] opacity-[0.05]" />
@@ -263,15 +263,15 @@ export function Testimonials() {
           </p>
           <button
             onClick={() => setIsDialogOpen(true)}
-            className="cta-btn px-10 py-4 bg-white text-[#7C8D8C] rounded-full font-semibold hover:bg-[#F5F3EF] transition-all duration-300 shadow-xl shadow-black/20 text-lg"
+            className="cta-btn px-10 py-4 bg-[#FAFAF8] text-[#7C8D8C] rounded-full font-semibold hover:bg-[#F5F3EF] transition-all duration-300 shadow-xl shadow-black/20 text-lg border border-[#E5E4E1]"
           >
             Create Free Account →
           </button>
         </div>
 
         <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-[0] pointer-events-none">
-          <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-[60px]">
-            <path fill="#2F3B3D" d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z" />
+          <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-[80px]">
+            <path fill="#2F3B3D" d="M0,40 Q180,20 360,40 T720,40 T1080,40 T1440,40 L1440,80 L0,80 Z" />
           </svg>
         </div>
       </section>

@@ -353,7 +353,7 @@ const [loginErrors, setLoginErrors] = useState<{ email?: string; password?: stri
               </div>
 
               <button type="submit" disabled={loading}
-                className="w-full py-3.5 bg-[#2F3B3D] text-white rounded-full text-sm font-semibold hover:bg-[#7C8D8C] transition-all duration-300 shadow-lg shadow-[#2F3B3D]/20 disabled:opacity-50">
+                className="w-full py-3.5 bg-[#7C8D8C] text-white rounded-full text-sm font-semibold hover:bg-[#2F3B3D] transition-all duration-300 shadow-lg shadow-[#7C8D8C]/20 disabled:opacity-50">
                 {loading ? "Logging in..." : "Log In"}
               </button>
 
@@ -374,7 +374,7 @@ const [loginErrors, setLoginErrors] = useState<{ email?: string; password?: stri
             <p className="text-[#1A2035]/50 text-sm text-center mb-6">Please enter your details</p>
 
             {/* Role selector */}
-            <div className="relative flex mb-6 p-1 bg-[#F5F3EF] rounded-full">
+            <div className="relative flex mb-6 p-1 bg-[#EDE9DF] rounded-full">
               {/* sliding pill */}
               <div
                 className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-[#2F3B3D] rounded-full shadow transition-transform duration-300 ease-in-out"
@@ -486,7 +486,7 @@ const [loginErrors, setLoginErrors] = useState<{ email?: string; password?: stri
               </div>
 
               <button type="submit"
-                className="w-full py-3.5 bg-[#2F3B3D] text-white rounded-full text-sm font-semibold hover:bg-[#7C8D8C] transition-all duration-300 shadow-lg shadow-[#2F3B3D]/20 flex items-center justify-center gap-2 group mt-2">
+                className="w-full py-3.5 bg-[#7C8D8C] text-white rounded-full text-sm font-semibold hover:bg-[#2F3B3D] transition-all duration-300 shadow-lg shadow-[#7C8D8C]/20 flex items-center justify-center gap-2 group mt-2">
                 Continue
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
