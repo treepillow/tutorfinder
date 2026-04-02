@@ -21,8 +21,7 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [remember, setRemember] = useState(false);
-  const [loginErrors, setLoginErrors] = useState<{ email?: string; password?: string }>({});
+const [loginErrors, setLoginErrors] = useState<{ email?: string; password?: string }>({});
   const [loginTouched, setLoginTouched] = useState<{ email?: boolean; password?: boolean }>({});
 
   // Signup state
@@ -347,12 +346,7 @@ export function LoginPage() {
                 {loginTouched.password && loginErrors.password && <p className="text-red-500 text-xs mt-1">{loginErrors.password}</p>}
               </div>
 
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)}
-                    className="w-3.5 h-3.5 accent-[#7C8D8C] rounded" />
-                  <span className="text-xs text-[#1A2035]/60">Remember for 30 days</span>
-                </label>
+              <div className="flex items-center justify-end">
                 <button type="button" className="text-xs text-[#1A2035]/40 hover:text-[#7C8D8C] transition-colors">
                   Forgot password?
                 </button>
