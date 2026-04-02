@@ -20,18 +20,31 @@ export function HowItWorks() {
   const lineRef    = useRef<HTMLDivElement>(null);
   const whyRef     = useRef<HTMLDivElement>(null);
   const imageRef   = useRef<HTMLDivElement>(null);
+  const stepEls    = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Hover lift on step cards
+  useEffect(() => {
+    const cleanups: (() => void)[] = [];
+    stepEls.current.forEach((el) => {
+      if (!el) return;
+      const onEnter = () => gsap.to(el, { y: -8, scale: 1.03, duration: 0.35, ease: "power2.out" });
+      const onLeave = () => gsap.to(el, { y:  0, scale: 1,    duration: 0.5,  ease: "power3.out" });
+      el.addEventListener("mouseenter", onEnter);
+      el.addEventListener("mouseleave", onLeave);
+      cleanups.push(() => { el.removeEventListener("mouseenter", onEnter); el.removeEventListener("mouseleave", onLeave); });
+    });
+    return () => cleanups.forEach(fn => fn());
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
       const TA = "play none none reverse";
 
-      // Badge fades up
       gsap.from(".hiw-badge", {
         y: 20, opacity: 0, duration: 0.6, ease: "power3.out",
         scrollTrigger: { trigger: headingRef.current, start: "top 88%", toggleActions: TA },
       });
 
-      // Title — word by word
       gsap.from(".hiw-title-word", {
         y: 50, opacity: 0, duration: 0.6, stagger: 0.07, ease: "power3.out",
         scrollTrigger: { trigger: headingRef.current, start: "top 82%", toggleActions: TA },
@@ -42,37 +55,35 @@ export function HowItWorks() {
         scrollTrigger: { trigger: headingRef.current, start: "top 75%", toggleActions: TA },
       });
 
-      // Connector line draws left → right, scrubbed to scroll
+      // Connector line draws left → right
       gsap.fromTo(lineRef.current,
         { scaleX: 0 },
         {
           scaleX: 1, ease: "none",
-          scrollTrigger: {
-            trigger: stepsRef.current,
-            start: "top 72%",
-            end: "center 60%",
-            scrub: 1,
-          },
+          scrollTrigger: { trigger: stepsRef.current, start: "top 72%", end: "center 60%", scrub: 1 },
         }
       );
 
-      // Steps emerge as you scroll — scrubbed stagger
+      // Steps pop in with scrub
       gsap.fromTo(".how-step",
         { y: 50, scale: 0.8, opacity: 0 },
         {
           y: 0, scale: 1, opacity: 1,
-          ease: "back.out(1.6)",
-          stagger: 0.18,
-          scrollTrigger: {
-            trigger: stepsRef.current,
-            start: "top 72%",
-            end: "center 58%",
-            scrub: 0.8,
-          },
+          ease: "back.out(1.6)", stagger: 0.18,
+          scrollTrigger: { trigger: stepsRef.current, start: "top 72%", end: "center 58%", scrub: 0.8 },
         }
       );
 
-      // Why-choose-us: left text slides in
+      // Number badges pulse once after appearing
+      gsap.fromTo(".step-num",
+        { scale: 0, opacity: 0 },
+        {
+          scale: 1, opacity: 1,
+          ease: "back.out(3)", stagger: 0.18, duration: 0.5,
+          scrollTrigger: { trigger: stepsRef.current, start: "top 65%", toggleActions: TA },
+        }
+      );
+
       gsap.fromTo(".why-text",
         { x: -60, opacity: 0 },
         {
@@ -81,7 +92,6 @@ export function HowItWorks() {
         }
       );
 
-      // Why checklist items cascade in
       gsap.fromTo(".why-item",
         { x: -30, opacity: 0 },
         {
@@ -90,7 +100,6 @@ export function HowItWorks() {
         }
       );
 
-      // Image slides from right
       gsap.fromTo(".why-image",
         { x: 70, opacity: 0 },
         {
@@ -99,16 +108,9 @@ export function HowItWorks() {
         }
       );
 
-      // Image subtle parallax as you scroll past it
       gsap.to(imageRef.current, {
-        y: -40,
-        ease: "none",
-        scrollTrigger: {
-          trigger: whyRef.current,
-          start: "top bottom",
-          end: "bottom top",
-          scrub: true,
-        },
+        y: -40, ease: "none",
+        scrollTrigger: { trigger: whyRef.current, start: "top bottom", end: "bottom top", scrub: true },
       });
     }, sectionRef);
 
@@ -119,7 +121,6 @@ export function HowItWorks() {
     <section ref={sectionRef} id="how-it-works" className="relative bg-[#F5F3EF] pt-12 pb-36">
       <div className="max-w-7xl mx-auto px-8">
 
-        {/* Header */}
         <div ref={headingRef} className="text-center space-y-4 mb-20">
           <div className="hiw-badge inline-flex items-center px-4 py-1.5 bg-[#EDE9DF] border border-[#D6CFBF] text-[#1A2035]/80 text-sm rounded-full font-medium">
             How It Works
@@ -134,9 +135,7 @@ export function HowItWorks() {
           </p>
         </div>
 
-        {/* Steps */}
         <div ref={stepsRef} className="relative grid grid-cols-4 gap-8">
-          {/* Scrubbed connector line — transform-origin left so scaleX draws left→right */}
           <div
             ref={lineRef}
             className="absolute top-[52px] left-[12%] right-[12%] border-t-2 border-dashed border-[#C8BFAE] pointer-events-none"
@@ -144,12 +143,16 @@ export function HowItWorks() {
           />
 
           {steps.map((step, i) => (
-            <div key={i} className="how-step flex flex-col items-center text-center gap-5">
+            <div
+              key={i}
+              ref={(el) => { stepEls.current[i] = el; }}
+              className="how-step flex flex-col items-center text-center gap-5 cursor-default will-change-transform"
+            >
               <div className="relative z-10">
                 <div className={`w-[104px] h-[104px] ${step.bg} rounded-full flex items-center justify-center text-5xl border-4 border-white shadow-md`}>
                   {step.emoji}
                 </div>
-                <div className={`absolute -top-1 -right-1 w-7 h-7 ${numColors[i]} text-white text-xs font-black rounded-full flex items-center justify-center shadow-lg`}>
+                <div className={`step-num absolute -top-1 -right-1 w-7 h-7 ${numColors[i]} text-white text-xs font-black rounded-full flex items-center justify-center shadow-lg`}>
                   {step.num}
                 </div>
               </div>
@@ -205,7 +208,6 @@ export function HowItWorks() {
         </div>
       </div>
 
-      {/* Wavy divider → Testimonials (#ffffff) */}
       <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-[0] pointer-events-none">
         <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-[80px]">
           <path fill="#ffffff" d="M0,50 C180,10 360,75 540,40 C720,5 900,65 1080,38 C1260,12 1380,58 1440,42 L1440,80 L0,80 Z" />

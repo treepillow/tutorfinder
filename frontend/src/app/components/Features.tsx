@@ -10,7 +10,7 @@ const features = [
     title: "Intuitive Matching",
     description: "Swipe through profiles just like modern dating apps. Left to skip, right to match. It's that simple.",
     circleBg: "bg-[#EEF2FF]",
-    glow: "bg-[#818CF8]",
+    glow: "#818CF8",
     tag: "Most loved",
   },
   {
@@ -18,7 +18,7 @@ const features = [
     title: "Smart Scheduling",
     description: "Seamlessly coordinate availability with integrated scheduling. Book lessons at times that work for everyone.",
     circleBg: "bg-[#FFF7ED]",
-    glow: "bg-[#FB923C]",
+    glow: "#FB923C",
     tag: null,
   },
   {
@@ -26,7 +26,7 @@ const features = [
     title: "Verified Profiles",
     description: "All tutors are verified with their educational credentials. Learn with confidence and peace of mind.",
     circleBg: "bg-[#F0FDF4]",
-    glow: "bg-[#4ADE80]",
+    glow: "#4ADE80",
     tag: null,
   },
   {
@@ -34,57 +34,85 @@ const features = [
     title: "Instant Connections",
     description: "Get matched instantly when both parties swipe right. Start your learning journey without delays.",
     circleBg: "bg-[#FEFCE8]",
-    glow: "bg-[#FDE047]",
+    glow: "#FDE047",
     tag: "New",
   },
 ];
 
 export function Features() {
-  const sectionRef  = useRef<HTMLElement>(null);
-  const headingRef  = useRef<HTMLDivElement>(null);
-  const gridRef     = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const headingRef = useRef<HTMLDivElement>(null);
+  const gridRef    = useRef<HTMLDivElement>(null);
+  const cardEls    = useRef<(HTMLDivElement | null)[]>([]);
 
+  // Mouse-tracking spotlight per card
+  useEffect(() => {
+    const cleanups: (() => void)[] = [];
+
+    cardEls.current.forEach((card) => {
+      if (!card) return;
+      const onMove = (e: MouseEvent) => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        gsap.to(card.querySelector(".feat-spotlight"), {
+          x, y, duration: 0.4, ease: "power2.out",
+        });
+        // Subtle tilt
+        const rx = ((y / rect.height) - 0.5) * 8;
+        const ry = ((x / rect.width)  - 0.5) * -8;
+        gsap.to(card, { rotateX: rx, rotateY: ry, duration: 0.4, ease: "power2.out", transformPerspective: 800 });
+      };
+      const onLeave = () => {
+        gsap.to(card, { rotateX: 0, rotateY: 0, duration: 0.6, ease: "power3.out" });
+        gsap.to(card.querySelector(".feat-spotlight"), { opacity: 0, duration: 0.4 });
+      };
+      const onEnter = () => {
+        gsap.to(card.querySelector(".feat-spotlight"), { opacity: 1, duration: 0.3 });
+      };
+      card.addEventListener("mousemove",  onMove  as EventListener);
+      card.addEventListener("mouseleave", onLeave as EventListener);
+      card.addEventListener("mouseenter", onEnter as EventListener);
+      cleanups.push(() => {
+        card.removeEventListener("mousemove",  onMove  as EventListener);
+        card.removeEventListener("mouseleave", onLeave as EventListener);
+        card.removeEventListener("mouseenter", onEnter as EventListener);
+      });
+    });
+
+    return () => cleanups.forEach(fn => fn());
+  }, []);
+
+  // Scroll animations
   useEffect(() => {
     const ctx = gsap.context(() => {
       const TA = "play none none reverse";
 
-      // Badge fades up
       gsap.from(".feat-badge", {
         y: 20, opacity: 0, duration: 0.6, ease: "power3.out",
         scrollTrigger: { trigger: headingRef.current, start: "top 88%", toggleActions: TA },
       });
 
-      // Title — word by word
       gsap.from(".feat-title-word", {
         y: 50, opacity: 0, duration: 0.6, stagger: 0.07, ease: "power3.out",
         scrollTrigger: { trigger: headingRef.current, start: "top 82%", toggleActions: TA },
       });
 
-      // Subtitle slides up
       gsap.from(".feat-subtitle", {
         y: 24, opacity: 0, duration: 0.7, ease: "power3.out",
         scrollTrigger: { trigger: headingRef.current, start: "top 75%", toggleActions: TA },
       });
 
-      // Left-column items slide in from the left, staggered
-      gsap.fromTo(".feat-left",
-        { x: -70, opacity: 0 },
+      // Cards rise and fade in with stagger
+      gsap.fromTo(".feat-card",
+        { y: 60, opacity: 0, scale: 0.94 },
         {
-          x: 0, opacity: 1, duration: 0.85, stagger: 0.2, ease: "power3.out",
+          y: 0, opacity: 1, scale: 1,
+          duration: 0.7, stagger: 0.12, ease: "power3.out",
           scrollTrigger: { trigger: gridRef.current, start: "top 82%", toggleActions: TA },
         }
       );
 
-      // Right-column items slide in from the right, staggered
-      gsap.fromTo(".feat-right",
-        { x: 70, opacity: 0 },
-        {
-          x: 0, opacity: 1, duration: 0.85, stagger: 0.2, ease: "power3.out",
-          scrollTrigger: { trigger: gridRef.current, start: "top 82%", toggleActions: TA },
-        }
-      );
-
-      // Emoji circles scale + spin bounce, slightly delayed
       gsap.fromTo(".feat-emoji",
         { scale: 0, rotate: -25, opacity: 0 },
         {
@@ -116,16 +144,31 @@ export function Features() {
           </p>
         </div>
 
-        <div ref={gridRef} className="grid md:grid-cols-2 gap-x-20 gap-y-14 max-w-4xl mx-auto">
+        <div ref={gridRef} className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {features.map((feature, i) => (
-            <div key={i} className={`flex gap-6 items-start ${i % 2 === 0 ? "feat-left" : "feat-right"}`}>
+            <div
+              key={i}
+              ref={(el) => { cardEls.current[i] = el; }}
+              className="feat-card relative overflow-hidden rounded-3xl border border-[#EDE9DF] bg-[#FAFAF8] p-8 flex gap-6 items-start will-change-transform"
+              style={{ transformStyle: "preserve-3d" }}
+            >
+              {/* Spotlight blob that follows cursor */}
+              <div
+                className="feat-spotlight pointer-events-none absolute w-40 h-40 rounded-full blur-3xl opacity-0 -translate-x-1/2 -translate-y-1/2"
+                style={{ background: feature.glow, top: 0, left: 0 }}
+              />
+
               <div className="relative flex-shrink-0">
-                <div className={`absolute inset-0 ${feature.glow} rounded-full blur-2xl opacity-25 scale-[2] pointer-events-none`} />
+                <div
+                  className="absolute inset-0 rounded-full blur-2xl opacity-30 scale-[2] pointer-events-none"
+                  style={{ background: feature.glow }}
+                />
                 <div className={`feat-emoji relative w-[68px] h-[68px] ${feature.circleBg} rounded-full flex items-center justify-center text-[2rem] shadow-sm`}>
                   {feature.emoji}
                 </div>
               </div>
-              <div className="pt-1">
+
+              <div className="pt-1 relative z-10">
                 <div className="flex items-center gap-2 mb-2">
                   <h4 className="text-xl font-bold text-[#1A2035]">{feature.title}</h4>
                   {feature.tag && (
@@ -141,7 +184,6 @@ export function Features() {
         </div>
       </div>
 
-      {/* Wavy divider → HowItWorks (#F5F3EF) */}
       <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-[0] pointer-events-none">
         <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-[80px]">
           <path fill="#F5F3EF" d="M0,50 C180,10 360,75 540,40 C720,5 900,65 1080,38 C1260,12 1380,58 1440,42 L1440,80 L0,80 Z" />
