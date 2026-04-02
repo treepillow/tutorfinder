@@ -2,6 +2,9 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import gsap from "gsap";
+import Lottie from "lottie-react";
+import circleGuyData from "../assets/circleGuy.json";
+import circleGuyIdleData from "../assets/circleGuyIdle.json";
 import { profileApi, setToken, setCurrentUser, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
 
@@ -139,19 +142,77 @@ export function LoginPage() {
 
   const illustrationRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
+  const characterRef = useRef<HTMLDivElement>(null);
+  const lottieRef = useRef<any>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const idleTween = useRef<gsap.core.Timeline | null>(null);
   const animating = useRef(false);
+  const [isWalking, setIsWalking] = useState(false);
 
   useEffect(() => {
     if (initialMode === "signup") {
       gsap.set(illustrationRef.current, { xPercent: 100 });
       gsap.set(formRef.current, { xPercent: -100 });
+      gsap.set(characterRef.current, { x: window.innerWidth * 0.5 });
     }
   }, []);
+
+  // Idle bounce — body squashes down, shadow expands
+  useEffect(() => {
+    if (!isWalking && bodyRef.current) {
+      idleTween.current?.kill();
+      idleTween.current = gsap.timeline({ repeat: -1, yoyo: true })
+        .to(bodyRef.current, { y: 9, duration: 0.5, ease: "sine.inOut" }, 0);
+    } else {
+      idleTween.current?.kill();
+      if (bodyRef.current) gsap.set(bodyRef.current, { y: 0 });
+    }
+    return () => { idleTween.current?.kill(); };
+  }, [isWalking]);
 
   const switchMode = (newMode: Mode) => {
     if (newMode === mode || animating.current) return;
     animating.current = true;
     const toLogin = newMode === "login";
+
+    setIsWalking(true);
+    if (lottieRef.current) {
+      lottieRef.current.goToAndStop(0, true);
+      lottieRef.current.play();
+    }
+
+    if (!toLogin) {
+      // login → signup: face right, walk to center of right panel
+      gsap.fromTo(
+        characterRef.current,
+        { x: 0 },
+        {
+          x: window.innerWidth * 0.5,
+          duration: 0.75,
+          ease: "none",
+          onComplete: () => {
+            if (lottieRef.current) lottieRef.current.stop();
+            setIsWalking(false);
+          },
+        }
+      );
+    } else {
+      // signup → login: face left (scaleX -1), walk to center of left panel
+      gsap.fromTo(
+        characterRef.current,
+        { x: window.innerWidth * 0.5, scaleX: -1 },
+        {
+          x: 0,
+          duration: 0.75,
+          ease: "none",
+          onComplete: () => {
+            if (lottieRef.current) lottieRef.current.stop();
+            gsap.set(characterRef.current, { scaleX: 1 });
+            setIsWalking(false);
+          },
+        }
+      );
+    }
 
     const tl = gsap.timeline({
       defaults: { ease: "expo.inOut", duration: 0.7 },
@@ -191,10 +252,32 @@ export function LoginPage() {
         ref={illustrationRef}
         className="absolute top-0 left-0 h-full w-1/2 bg-[#EDE9DF] hidden lg:flex flex-col items-center justify-center p-16"
       >
-        <div className="w-48 h-48 rounded-full bg-[#D6CFBF]/40" />
-        <div className="mt-12 text-center">
+        <div className="mt-64 text-center">
           <h2 className="text-2xl font-bold text-[#1A2035] mb-2">Find your perfect tutor</h2>
           <p className="text-[#1A2035]/50 text-sm">Connect with top tutors across Singapore</p>
+        </div>
+      </div>
+
+      {/* Character — outside both panels so it walks independently */}
+      <div
+        ref={characterRef}
+        className="absolute hidden lg:block z-20 pointer-events-none"
+        style={{ top: "calc(50% - 110px)", left: "calc(25% - 110px)", width: 220, height: 220 }}
+      >
+        {/* Walking lottie — always mounted so lottieRef stays valid */}
+        <div style={{ position: "absolute", inset: 0, display: isWalking ? "block" : "none" }}>
+          <Lottie
+            lottieRef={lottieRef}
+            animationData={circleGuyData}
+            autoplay={false}
+            loop={true}
+            style={{ width: 220, height: 220 }}
+          />
+        </div>
+
+        {/* Standing idle — full character, bobs up and down */}
+        <div ref={bodyRef} style={{ position: "absolute", inset: 0, display: isWalking ? "none" : "block" }}>
+          <Lottie animationData={circleGuyIdleData} autoplay={false} loop={false} style={{ width: 220, height: 220 }} />
         </div>
       </div>
 
