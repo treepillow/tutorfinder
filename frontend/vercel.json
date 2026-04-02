@@ -5,6 +5,14 @@
       "dest": "https://personal-m9frao4j.outsystemscloud.com/TutorFinder_BookingProcess/rest/BookingProcess/$1"
     },
     {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/(.*\\.(js|css|ico|png|jpg|jpeg|svg|woff|woff2|ttf|map))",
+      "dest": "/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "/index.html"
     }
