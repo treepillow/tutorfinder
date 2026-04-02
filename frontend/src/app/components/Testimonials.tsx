@@ -38,7 +38,6 @@ const testimonials = [
   },
 ];
 
-// Stat counter values
 const stats = [
   { to: 10,  suffix: "K+", label: "Active Users" },
   { to: 50,  suffix: "K+", label: "Successful Matches" },
@@ -48,18 +47,39 @@ const stats = [
 export function Testimonials() {
   const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const sectionRef = useRef<HTMLElement>(null);
-  const headingRef = useRef<HTMLDivElement>(null);
-  const statsRef   = useRef<HTMLDivElement>(null);
-  const ctaRef     = useRef<HTMLElement>(null);
-  const statValRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const sectionRef   = useRef<HTMLElement>(null);
+  const headingRef   = useRef<HTMLDivElement>(null);
+  const statsRef     = useRef<HTMLDivElement>(null);
+  const ctaRef       = useRef<HTMLElement>(null);
+  const statValRefs  = useRef<(HTMLSpanElement | null)[]>([]);
+  const cardEls      = useRef<(HTMLDivElement | null)[]>([]);
+
+  // 3D tilt on testimonial cards
+  useEffect(() => {
+    const cleanups: (() => void)[] = [];
+    cardEls.current.forEach((card) => {
+      if (!card) return;
+      const onMove = (e: MouseEvent) => {
+        const rect = card.getBoundingClientRect();
+        const rx = ((e.clientY - rect.top)  / rect.height - 0.5) * 10;
+        const ry = ((e.clientX - rect.left) / rect.width  - 0.5) * -10;
+        gsap.to(card, { rotateX: rx, rotateY: ry, duration: 0.35, ease: "power2.out", transformPerspective: 900 });
+      };
+      const onLeave = () => gsap.to(card, { rotateX: 0, rotateY: 0, duration: 0.6, ease: "power3.out" });
+      card.addEventListener("mousemove",  onMove  as EventListener);
+      card.addEventListener("mouseleave", onLeave as EventListener);
+      cleanups.push(() => {
+        card.removeEventListener("mousemove",  onMove  as EventListener);
+        card.removeEventListener("mouseleave", onLeave as EventListener);
+      });
+    });
+    return () => cleanups.forEach(fn => fn());
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-
       const TA = "play none none reverse";
 
-      // ── Testimonials heading ──────────────────────────────────────────
       gsap.from(".test-badge", {
         y: 20, opacity: 0, duration: 0.6, ease: "power3.out",
         scrollTrigger: { trigger: headingRef.current, start: "top 88%", toggleActions: TA },
@@ -75,13 +95,12 @@ export function Testimonials() {
         scrollTrigger: { trigger: headingRef.current, start: "top 75%", toggleActions: TA },
       });
 
-      // ── Testimonial cards — dramatic entrance ─────────────────────────
       gsap.fromTo(".testimonial-card",
         (i) => ({
           y: 90 + i * 20,
-          rotate: i === 0 ? -4 : i === 1 ? 0 : 4,
+          rotate: i === 0 ? -3 : i === 1 ? 0 : 3,
           opacity: 0,
-          scale: 0.9,
+          scale: 0.92,
         }),
         {
           y: 0, rotate: 0, opacity: 1, scale: 1,
@@ -90,15 +109,13 @@ export function Testimonials() {
         }
       );
 
-      // ── Stats number counter ──────────────────────────────────────────
+      // Stat counters
       statValRefs.current.forEach((el, i) => {
         if (!el) return;
         const stat = stats[i];
         const proxy = { val: 0 };
         gsap.to(proxy, {
-          val: stat.to,
-          duration: 2,
-          ease: "power2.out",
+          val: stat.to, duration: 2, ease: "power2.out",
           scrollTrigger: { trigger: statsRef.current, start: "top 88%", toggleActions: TA },
           onUpdate() {
             el.textContent = stat.decimal
@@ -117,8 +134,7 @@ export function Testimonials() {
         }
       );
 
-      // ── CTA section ───────────────────────────────────────────────────
-      // Background blobs parallax
+      // CTA
       gsap.to(".cta-blob-tr", {
         y: -60, x: 30, ease: "none",
         scrollTrigger: { trigger: ctaRef.current, start: "top bottom", end: "bottom top", scrub: true },
@@ -128,17 +144,14 @@ export function Testimonials() {
         scrollTrigger: { trigger: ctaRef.current, start: "top bottom", end: "bottom top", scrub: true },
       });
 
-      // CTA title words slide up
       gsap.fromTo(".cta-word",
         { y: 60, opacity: 0 },
         {
-          y: 0, opacity: 1,
-          duration: 0.65, stagger: 0.06, ease: "power3.out",
+          y: 0, opacity: 1, duration: 0.65, stagger: 0.06, ease: "power3.out",
           scrollTrigger: { trigger: ctaRef.current, start: "top 80%", toggleActions: TA },
         }
       );
 
-      // CTA subtitle + button
       gsap.fromTo(".cta-sub",
         { y: 30, opacity: 0 },
         {
@@ -186,7 +199,12 @@ export function Testimonials() {
 
           <div className="test-cards grid md:grid-cols-3 gap-6 mb-20">
             {testimonials.map((t, i) => (
-              <div key={i} className="testimonial-card bg-[#F8F7F4] p-8 rounded-3xl hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 border border-[#EDE9DF]">
+              <div
+                key={i}
+                ref={(el) => { cardEls.current[i] = el; }}
+                className="testimonial-card bg-[#F8F7F4] p-8 rounded-3xl border border-[#EDE9DF] will-change-transform cursor-default"
+                style={{ transformStyle: "preserve-3d" }}
+              >
                 <div className="flex gap-1 mb-6">
                   {Array.from({ length: t.rating }).map((_, j) => (
                     <Star key={j} className="w-5 h-5 fill-[#F59E0B] text-[#F59E0B]" />
@@ -221,16 +239,15 @@ export function Testimonials() {
           </div>
         </div>
 
-        {/* Wavy into CTA */}
         <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-[0] pointer-events-none">
           <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-[80px]">
-            <path fill="#7C8D8C" d="M0,30 C240,70 480,10 720,40 C960,70 1200,15 1440,40 L1440,80 L0,80 Z" />
+            <path fill="#7C8D8C" d="M0,40 Q180,20 360,40 T720,40 T1080,40 T1440,40 L1440,80 L0,80 Z" />
           </svg>
         </div>
       </section>
 
       {/* CTA */}
-      <section ref={ctaRef} className="py-24 bg-gradient-to-br from-[#7C8D8C] via-[#7C8D8C] to-[#7C8D8C] relative overflow-hidden">
+      <section ref={ctaRef} className="py-24 bg-[#7C8D8C] relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="cta-blob-tr absolute top-0 right-0 w-[500px] h-[500px] bg-white rounded-full blur-[120px] opacity-[0.07]" />
           <div className="cta-blob-bl absolute bottom-0 left-0 w-[400px] h-[400px] bg-white rounded-full blur-[100px] opacity-[0.05]" />
@@ -246,16 +263,15 @@ export function Testimonials() {
           </p>
           <button
             onClick={() => setIsDialogOpen(true)}
-            className="cta-btn px-10 py-4 bg-white text-[#7C8D8C] rounded-full font-semibold hover:bg-[#F5F3EF] transition-all duration-300 shadow-xl shadow-black/20 text-lg"
+            className="cta-btn px-10 py-4 bg-[#FAFAF8] text-[#7C8D8C] rounded-full font-semibold hover:bg-[#F5F3EF] transition-all duration-300 shadow-xl shadow-black/20 text-lg border border-[#E5E4E1]"
           >
             Create Free Account →
           </button>
         </div>
 
-        {/* Wavy into footer */}
         <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-[0] pointer-events-none">
-          <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-[60px]">
-            <path fill="#2F3B3D" d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z" />
+          <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-[80px]">
+            <path fill="#2F3B3D" d="M0,40 Q180,20 360,40 T720,40 T1080,40 T1440,40 L1440,80 L0,80 Z" />
           </svg>
         </div>
       </section>

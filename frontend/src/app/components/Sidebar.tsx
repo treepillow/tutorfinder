@@ -87,12 +87,16 @@ export function Sidebar() {
       }`}
     >
       <div className="p-6">
-        <h1 className={`text-2xl tracking-tight transition-opacity duration-300 ${
-          isCollapsed ? "opacity-0" : "opacity-100"
+        <div className={`flex items-center gap-3 transition-opacity duration-300 ${
+          isCollapsed ? "justify-center" : ""
         }`}>
-          {!isCollapsed && "TutorFinder"}
-        </h1>
-        {isCollapsed && <div className="text-2xl text-center">T</div>}
+          <img src="/favicon.svg" alt="TutorFinder" className="w-8 h-8 flex-shrink-0" />
+          <h1 className={`text-2xl tracking-tight transition-opacity duration-300 ${
+            isCollapsed ? "hidden" : "opacity-100"
+          }`}>
+            TutorFinder
+          </h1>
+        </div>
       </div>
 
       <nav className="px-3 space-y-1 flex-1">
