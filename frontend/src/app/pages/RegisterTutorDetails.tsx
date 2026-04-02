@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { ArrowRight, Plus, Trash2, GraduationCap } from "lucide-react";
+import { ArrowRight, Plus, Trash2 } from "lucide-react";
 import { AvailabilitySelector } from "../components/AvailabilitySelector";
 import { profileApi, setToken, setCurrentUser, encodeProfileExtra, enrichProfile, syncAvailabilityToBackend } from "../utils/api";
 import { toast } from "sonner";
@@ -121,9 +121,7 @@ export function RegisterTutorDetails() {
       {/* Logo header */}
       <nav className="relative z-10 px-8 py-6">
         <a href="/" className="inline-flex items-center gap-2.5">
-          <div className="w-9 h-9 bg-[#7C8D8C] rounded-xl flex items-center justify-center shadow-md">
-            <GraduationCap className="w-5 h-5 text-white" />
-          </div>
+          <img src="/favicon.svg" alt="TutorFinder Logo" className="w-9 h-9" />
           <span className="text-2xl font-semibold tracking-tight text-[#1A2035]">
             Tutor<span className="text-[#7C8D8C]">Finder</span>
           </span>

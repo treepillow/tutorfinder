@@ -1,4 +1,4 @@
-import { Facebook, Twitter, Instagram, Linkedin, GraduationCap } from "lucide-react";
+import { Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -51,9 +51,7 @@ export function Footer() {
         <div className="grid md:grid-cols-4 gap-12 mb-12">
           <div className="footer-col">
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-8 h-8 bg-[#7C8D8C] rounded-lg flex items-center justify-center">
-                <GraduationCap className="w-4 h-4 text-white" />
-              </div>
+              <img src="/favicon.svg" alt="TutorFinder" className="w-8 h-8" />
               <h4 className="text-xl font-semibold">
                 Tutor<span className="text-[#7C8D8C]">Finder</span>
               </h4>
