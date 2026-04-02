@@ -172,7 +172,7 @@ export function Hero() {
     gsap.to(posRef, { current: target, duration: 0.65, ease: "power2.inOut" });
   };
 
-  const handleGetStarted = () => navigate("/register?mode=signup");
+  const handleGetStarted = () => navigate("/register");
   const handleUserTypeSelect = (type: "student" | "tutor") => {
     setIsDialogOpen(false);
     sessionStorage.setItem("userType", type);
@@ -210,7 +210,7 @@ export function Hero() {
             <a href="#how-it-works" className="text-sm text-[#1A2035]/70 hover:text-[#7C8D8C] transition-colors font-medium">How It Works</a>
             <a href="#reviews"      className="text-sm text-[#1A2035]/70 hover:text-[#7C8D8C] transition-colors font-medium">Reviews</a>
             <button
-              onClick={() => navigate("/register")}
+              onClick={() => navigate("/login")}
               className="px-5 py-2 bg-transparent text-[#1A2035] text-sm rounded-full border border-[#C8BFAE] hover:bg-[#EDE9DF] transition-all duration-300 font-medium"
             >
               Log In
