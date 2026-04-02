@@ -348,21 +348,29 @@ export const bookingProcessApi = {
   }) {
     return apiFetch(`${BOOKING_PROCESS_SERVICE}/initiate`, {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        TuteeId: data.tutee_id,
+        TutorId: data.tutor_id,
+        AvailabilityId: data.availability_id,
+        LessonDate: data.lesson_date,
+        StartTime: data.start_time,
+        EndTime: data.end_time,
+        Amount: data.amount,
+      }),
     });
   },
 
   confirm(bookingId: number) {
     return apiFetch(`${BOOKING_PROCESS_SERVICE}/confirm`, {
       method: "POST",
-      body: JSON.stringify({ booking_id: bookingId }),
+      body: JSON.stringify({ BookingId: bookingId }),
     });
   },
 
   reject(bookingId: number) {
     return apiFetch(`${BOOKING_PROCESS_SERVICE}/reject`, {
       method: "POST",
-      body: JSON.stringify({ booking_id: bookingId }),
+      body: JSON.stringify({ BookingId: bookingId }),
     });
   },
 
@@ -370,8 +378,8 @@ export const bookingProcessApi = {
     return apiFetch(`${BOOKING_PROCESS_SERVICE}/payment-captured`, {
       method: "POST",
       body: JSON.stringify({
-        booking_id: bookingId,
-        stripe_payment_intent_id: stripePaymentIntentId,
+        BookingId: bookingId,
+        StripePaymentIntentId: stripePaymentIntentId,
       }),
     });
   },
@@ -379,7 +387,7 @@ export const bookingProcessApi = {
   complete(bookingId: number) {
     return apiFetch(`${BOOKING_PROCESS_SERVICE}/complete`, {
       method: "POST",
-      body: JSON.stringify({ booking_id: bookingId }),
+      body: JSON.stringify({ BookingId: bookingId }),
     });
   },
 
@@ -387,8 +395,8 @@ export const bookingProcessApi = {
     return apiFetch(`${BOOKING_PROCESS_SERVICE}/cancel`, {
       method: "POST",
       body: JSON.stringify({
-        booking_id: bookingId,
-        initiated_by: initiatedBy,
+        BookingId: bookingId,
+        InitiatedBy: initiatedBy,
       }),
     });
   },
