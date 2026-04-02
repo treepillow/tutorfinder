@@ -1,10 +1,5 @@
 {
-  "redirects": [],
   "rewrites": [
-    {
-      "source": "/outsystems/:path*",
-      "destination": "https://personal-m9frao4j.outsystemscloud.com/TutorFinder_BookingProcess/rest/BookingProcess/:path*"
-    },
     {
       "source": "/:path*",
       "destination": "/index.html"
