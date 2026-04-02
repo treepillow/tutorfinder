@@ -1,12 +1,12 @@
 {
-  "rewrites": [
+  "routes": [
     {
-      "source": "/outsystems/:path*",
-      "destination": "https://personal-m9frao4j.outsystemscloud.com/TutorFinder_BookingProcess/rest/BookingProcess/:path*"
+      "src": "/outsystems/(.*)",
+      "dest": "https://personal-m9frao4j.outsystemscloud.com/TutorFinder_BookingProcess/rest/BookingProcess/$1"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
