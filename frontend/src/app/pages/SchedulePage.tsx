@@ -32,30 +32,36 @@ export function SchedulePage() {
       ))] as number[];
 
       const profileMap: Record<number, any> = {};
-      await Promise.all(uniqueIds.map(async (id) => {
-        try {
-          const p = await profileApi.getProfile(id);
-          profileMap[id] = enrichProfile(p);
-        } catch {
-          profileMap[id] = { name: `User #${id}` };
-        }
-      }));
+      let myProfile: any = null;
+      await Promise.all([
+        ...uniqueIds.map(async (id) => {
+          try {
+            const p = await profileApi.getProfile(id);
+            profileMap[id] = enrichProfile(p);
+          } catch {
+            profileMap[id] = { name: `User #${id}` };
+          }
+        }),
+        profileApi.getProfile(user.id).then((p) => { myProfile = enrichProfile(p); }).catch(() => {}),
+      ]);
 
       const enriched = bookings.map((booking: any) => {
         const otherUserId = user.userType === "student" ? booking.tutor_id : booking.tutee_id;
         const otherProfile = profileMap[otherUserId] || { name: `User #${otherUserId}` };
+        // Subject/level/price come from the tutor's profile, not the student's
+        const infoProfile = user.userType === "tutor" && myProfile ? myProfile : otherProfile;
         return {
           ...booking,
           date: booking.lesson_date,
           dateObj: new Date(booking.lesson_date + "T00:00:00"),
           startHour: parseInt(booking.start_time?.split(":")[0] || "0"),
           endHour: parseInt(booking.end_time?.split(":")[0] || "0"),
-          subject: otherProfile.subjects?.[0]?.subject || "Lesson",
-          level: otherProfile.subjects?.[0]?.level || "",
+          subject: infoProfile.subjects?.[0]?.subject || "Lesson",
+          level: infoProfile.subjects?.[0]?.level || "",
           tutorName: user.userType === "student" ? otherProfile.name : user.name,
           studentName: user.userType === "tutor" ? otherProfile.name : user.name,
           otherName: otherProfile.name,
-          price: otherProfile.subjects?.[0]?.hourlyRate || otherProfile.price_rate || 0,
+          price: infoProfile.subjects?.[0]?.hourlyRate || infoProfile.price_rate || 0,
           slots: [`${booking.start_time?.slice(0, 5)}-${booking.end_time?.slice(0, 5)}`],
         };
       });
