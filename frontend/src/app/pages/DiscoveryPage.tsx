@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { SwipeableCard } from "../components/SwipeableCard";
 import { ProfileDetailDialog } from "../components/ProfileDetailDialog";
 import { MatchDialog } from "../components/MatchDialog";
 import { getCurrentUser, profileApi, matchApi, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
+import { io, Socket } from "socket.io-client";
 
 export function DiscoveryPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -15,23 +16,45 @@ export function DiscoveryPage() {
   const [loading, setLoading] = useState(true);
   const [likedByIds, setLikedByIds] = useState<Set<number>>(new Set());
   const [keySwipe, setKeySwipe] = useState<"left" | "right" | null>(null);
+  const swipedIdsRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     const user = getCurrentUser();
-    if (user) {
-      setCurrentUser(user);
-      loadProfiles(user);
+    if (!user) return;
 
-      // Refresh likedByIds every 5 seconds so the optimistic match path
-      // works even when the other user swipes after page load
-      const interval = setInterval(async () => {
-        try {
-          const res = await matchApi.getLikedMe(user.id);
-          setLikedByIds(new Set(res.liked_by_ids || []));
-        } catch {}
-      }, 5000);
-      return () => clearInterval(interval);
-    }
+    setCurrentUser(user);
+    loadProfiles(user);
+
+    // WebSocket: append newly registered profiles in real time
+    const socket: Socket = io(import.meta.env.VITE_PROFILE_SERVICE, {
+      transports: ["websocket"],
+    });
+
+    socket.on("new_profile", (raw: any) => {
+      const profile = enrichProfile(raw);
+      const oppositeRole = user.userType === "student" ? "tutor" : "student";
+      if (profile.userType !== oppositeRole) return;
+      if (swipedIdsRef.current.has(profile.id)) return;
+      setProfiles((prev) => {
+        if (prev.some((p) => p.id === profile.id)) return prev;
+        return [...prev, profile];
+      });
+      toast(`New ${oppositeRole} joined!`, { description: profile.name });
+    });
+
+    // Refresh likedByIds every 5 seconds so the optimistic match path
+    // works even when the other user swipes after page load
+    const interval = setInterval(async () => {
+      try {
+        const res = await matchApi.getLikedMe(user.id);
+        setLikedByIds(new Set(res.liked_by_ids || []));
+      } catch {}
+    }, 5000);
+
+    return () => {
+      clearInterval(interval);
+      socket.disconnect();
+    };
   }, []);
 
   const loadProfiles = async (user: any) => {
@@ -44,7 +67,8 @@ export function DiscoveryPage() {
         matchApi.getLikedMe(user.id),
       ]);
 
-      const swipedIds = new Set(swipedRes.swiped_ids || []);
+      const swipedIds = new Set<number>(swipedRes.swiped_ids || []);
+      swipedIdsRef.current = swipedIds;
       setLikedByIds(new Set(likedMeRes.liked_by_ids || []));
 
       const unswiped = (searchRes.profiles || [])

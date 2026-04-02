@@ -8,9 +8,11 @@ from datetime import datetime, timedelta, timezone
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+from flask_socketio import SocketIO
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 
 JWT_SECRET            = os.environ.get('JWT_SECRET', 'esd-jwt-secret-2024')
 MATCH_SERVICE_URL     = os.environ.get('MATCH_SERVICE_URL', 'http://match-service:5002')
@@ -143,6 +145,8 @@ def register():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'Database error: {str(e)}'}), 500
+
+    socketio.emit('new_profile', profile.to_public_dict())
     return jsonify({'message': 'Profile created', 'user_id': profile.user_id}), 201
 
 
@@ -279,4 +283,4 @@ if __name__ == '__main__':
             conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {DB_SCHEMA}'))
             conn.commit()
         db.create_all()
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5001)), debug=False)
+    socketio.run(app, host='0.0.0.0', port=int(os.environ.get('PORT', 5001)), debug=False)
