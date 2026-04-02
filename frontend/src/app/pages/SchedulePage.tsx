@@ -106,6 +106,21 @@ export function SchedulePage() {
     }
   };
 
+  const handleCompleteBooking = async (lesson: any) => {
+    try {
+      try {
+        await bookingProcessApi.complete(lesson.booking_id);
+      } catch {
+        await bookingApi.complete(lesson.booking_id);
+      }
+      toast.success("Booking marked as completed");
+      setSelectedLesson(null);
+      loadSchedule(currentUser);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to complete booking");
+    }
+  };
+
   // ── Calendar helpers ──
 
   const prevMonth = () => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
@@ -392,12 +407,20 @@ export function SchedulePage() {
                 </div>
               )}
 
-              <button
-                onClick={() => handleCancelBooking(selectedLesson)}
-                className="w-full px-4 py-2 bg-white text-[#2F3B3D] rounded-full border-2 border-[#D6CFBF] hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all duration-300"
-              >
-                Cancel Booking
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleCancelBooking(selectedLesson)}
+                  className="flex-1 px-4 py-2 bg-white text-[#2F3B3D] rounded-full border-2 border-[#D6CFBF] hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all duration-300"
+                >
+                  Cancel Booking
+                </button>
+                <button
+                  onClick={() => handleCompleteBooking(selectedLesson)}
+                  className="flex-1 px-4 py-2 bg-[#2F3B3D] text-white rounded-full border-2 border-[#2F3B3D] hover:bg-[#7C8D8C] hover:border-[#7C8D8C] transition-all duration-300"
+                >
+                  Complete Booking
+                </button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
