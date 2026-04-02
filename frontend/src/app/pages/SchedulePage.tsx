@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
-import { Calendar, Clock, BookOpen, User, ChevronLeft, ChevronRight, List } from "lucide-react";
+import { Calendar, Clock, BookOpen, User, ChevronLeft, ChevronRight, List, Phone, Mail } from "lucide-react";
 import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, availabilityApi, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
 
@@ -52,6 +52,7 @@ export function SchedulePage() {
         const infoProfile = user.userType === "tutor" && myProfile ? myProfile : otherProfile;
         return {
           ...booking,
+          otherProfile,
           date: booking.lesson_date,
           dateObj: new Date(booking.lesson_date + "T00:00:00"),
           startHour: parseInt(booking.start_time?.split(":")[0] || "0"),
@@ -331,6 +332,26 @@ export function SchedulePage() {
                   <div className="text-[#2F3B3D]">{selectedLesson.otherName}</div>
                 </div>
               </div>
+
+              {selectedLesson.otherProfile?.contactNumber && (
+                <div className="flex items-center gap-3">
+                  <Phone className="w-5 h-5 text-[#7C8D8C]" />
+                  <div>
+                    <div className="text-sm text-[#2F3B3D]/70">Phone</div>
+                    <div className="text-[#2F3B3D]">{selectedLesson.otherProfile.contactNumber}</div>
+                  </div>
+                </div>
+              )}
+
+              {selectedLesson.otherProfile?.email && (
+                <div className="flex items-center gap-3">
+                  <Mail className="w-5 h-5 text-[#7C8D8C]" />
+                  <div>
+                    <div className="text-sm text-[#2F3B3D]/70">Email</div>
+                    <div className="text-[#2F3B3D]">{selectedLesson.otherProfile.email}</div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center gap-3">
                 <BookOpen className="w-5 h-5 text-[#7C8D8C]" />
