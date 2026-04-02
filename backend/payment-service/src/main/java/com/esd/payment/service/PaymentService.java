@@ -269,7 +269,7 @@ public class PaymentService {
      * Called by webhook or OutSystems after frontend confirms payment.
      */
     public Payment capturePayment(String stripePaymentIntentId,
-                                  String tuteePhonenumber) throws StripeException {
+                                  String tuteeEmail) throws StripeException {
         Payment payment = paymentRepository.findByStripePaymentIntentId(stripePaymentIntentId)
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + stripePaymentIntentId));
 
@@ -285,10 +285,10 @@ public class PaymentService {
 
         // Notify tutee that payment was received
         publishEvent("payment.success", Map.of(
-                "booking_id",   payment.getBookingId(),
-                "tutee_id",     payment.getTuteeId(),
-                "tutee_phone",  tuteePhonenumber != null ? tuteePhonenumber : "",
-                "amount",       payment.getAmount().toPlainString()
+                "booking_id",  payment.getBookingId(),
+                "tutee_id",    payment.getTuteeId(),
+                "tutee_email", tuteeEmail != null ? tuteeEmail : "",
+                "amount",      payment.getAmount().toPlainString()
         ));
 
         return payment;
@@ -299,7 +299,7 @@ public class PaymentService {
      */
     public Payment releaseToTutor(Long paymentId,
                                    String tutorStripeAccountId,
-                                   String tutorPhone) throws StripeException {
+                                   String tutorEmail) throws StripeException {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + paymentId));
 
@@ -331,7 +331,7 @@ public class PaymentService {
         publishEvent("deposit.released", Map.of(
                 "booking_id",  payment.getBookingId(),
                 "tutor_id",    payment.getTutorId(),
-                "tutor_phone", tutorPhone != null ? tutorPhone : "",
+                "tutor_email", tutorEmail != null ? tutorEmail : "",
                 "amount",      payment.getAmount().toPlainString()
         ));
 
@@ -341,7 +341,7 @@ public class PaymentService {
     /**
      * Refund deposit back to tutee (e.g. tutor cancelled or dispute resolved).
      */
-    public Payment refundToTutee(Long paymentId, String tuteePhone) throws StripeException {
+    public Payment refundToTutee(Long paymentId, String tuteeEmail) throws StripeException {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + paymentId));
 
@@ -365,7 +365,7 @@ public class PaymentService {
         publishEvent("deposit.refunded", Map.of(
                 "booking_id",  payment.getBookingId(),
                 "tutee_id",    payment.getTuteeId(),
-                "tutee_phone", tuteePhone != null ? tuteePhone : "",
+                "tutee_email", tuteeEmail != null ? tuteeEmail : "",
                 "amount",      payment.getAmount().toPlainString()
         ));
 

@@ -104,17 +104,17 @@ public class PaymentController {
     /**
      * POST /payment/capture
      * Called after the tutee's frontend confirms the Stripe payment.
-     * Body: { stripe_payment_intent_id, tutee_phone? }
+     * Body: { stripe_payment_intent_id, tutee_email? }
      */
     @PostMapping("/payment/capture")
     public ResponseEntity<?> capture(@RequestBody Map<String, Object> body) {
         try {
             String intentId  = (String) body.get("stripe_payment_intent_id");
-            String tuteePhone = (String) body.getOrDefault("tutee_phone", "");
+            String tuteeEmail = (String) body.getOrDefault("tutee_email", "");
             if (intentId == null || intentId.isBlank()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "stripe_payment_intent_id is required"));
             }
-            Payment payment = paymentService.capturePayment(intentId, tuteePhone);
+            Payment payment = paymentService.capturePayment(intentId, tuteeEmail);
             return ResponseEntity.ok(toMap(payment));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
@@ -126,7 +126,7 @@ public class PaymentController {
     /**
      * POST /payment/{paymentId}/release
      * Called by OutSystems Booking Process when lesson is marked complete.
-     * Body: { tutor_stripe_account_id?, tutor_phone? }
+     * Body: { tutor_stripe_account_id?, tutor_email? }
      */
     @PostMapping("/payment/{paymentId}/release")
     public ResponseEntity<?> release(@PathVariable Long paymentId,
@@ -134,8 +134,8 @@ public class PaymentController {
         if (body == null) body = new HashMap<>();
         try {
             String tutorAccountId = (String) body.getOrDefault("tutor_stripe_account_id", "");
-            String tutorPhone     = (String) body.getOrDefault("tutor_phone", "");
-            Payment payment = paymentService.releaseToTutor(paymentId, tutorAccountId, tutorPhone);
+            String tutorEmail     = (String) body.getOrDefault("tutor_email", "");
+            Payment payment = paymentService.releaseToTutor(paymentId, tutorAccountId, tutorEmail);
             return ResponseEntity.ok(toMap(payment));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
@@ -149,15 +149,15 @@ public class PaymentController {
     /**
      * POST /payment/{paymentId}/refund
      * Called by OutSystems Booking Process when booking is cancelled post-payment.
-     * Body: { tutee_phone? }
+     * Body: { tutee_email? }
      */
     @PostMapping("/payment/{paymentId}/refund")
     public ResponseEntity<?> refund(@PathVariable Long paymentId,
                                     @RequestBody(required = false) Map<String, Object> body) {
         if (body == null) body = new HashMap<>();
         try {
-            String tuteePhone = (String) body.getOrDefault("tutee_phone", "");
-            Payment payment = paymentService.refundToTutee(paymentId, tuteePhone);
+            String tuteeEmail = (String) body.getOrDefault("tutee_email", "");
+            Payment payment = paymentService.refundToTutee(paymentId, tuteeEmail);
             return ResponseEntity.ok(toMap(payment));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));

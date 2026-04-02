@@ -127,9 +127,8 @@ services:
       DATABASE_URL: ${SUPABASE_URL}
       DB_SCHEMA: notification_schema
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
-      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
-      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
-      TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@tutorfinder.com}
     ports:
       - "5007:5007"
     networks:
