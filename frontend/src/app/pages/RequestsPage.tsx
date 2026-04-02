@@ -203,8 +203,8 @@ export function RequestsPage() {
   };
 
   const tabs = [
-    { key: "awaiting" as const, label: "Awaiting Response" },
-    { key: "payment" as const, label: "Awaiting Payment" },
+    { key: "awaiting" as const, label: "Awaiting Response", count: pendingRequests.length },
+    { key: "payment" as const, label: "Awaiting Payment", count: paymentRequests.length },
   ];
 
   return (
@@ -235,11 +235,18 @@ export function RequestsPage() {
                 <button
                   key={tab.key}
                   onClick={() => switchTab(tab.key)}
-                  className={`relative z-10 flex-1 py-2 rounded-full text-sm font-medium transition-colors duration-300 ${
+                  className={`relative z-10 flex-1 py-2 rounded-full text-sm font-medium transition-colors duration-300 flex items-center justify-center gap-2 ${
                     activeTab === tab.key ? "text-white" : "text-[#2F3B3D]/60 hover:text-[#2F3B3D]"
                   }`}
                 >
                   {tab.label}
+                  {tab.count > 0 && (
+                    <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-semibold flex items-center justify-center leading-none transition-colors duration-300 ${
+                      activeTab === tab.key ? "bg-white/20 text-white" : "bg-[#2F3B3D]/10 text-[#2F3B3D]/70"
+                    }`}>
+                      {tab.count}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
