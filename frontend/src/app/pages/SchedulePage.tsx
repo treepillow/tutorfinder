@@ -108,11 +108,7 @@ export function SchedulePage() {
 
   const handleCompleteBooking = async (lesson: any) => {
     try {
-      try {
-        await bookingProcessApi.complete(lesson.booking_id);
-      } catch {
-        await bookingApi.complete(lesson.booking_id);
-      }
+      await bookingProcessApi.complete(lesson.booking_id);
       toast.success("Booking marked as completed");
       setSelectedLesson(null);
       loadSchedule(currentUser);
