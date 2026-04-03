@@ -286,28 +286,41 @@ public class PaymentService {
      */
     public Payment capturePayment(String stripePaymentIntentId,
                                   String tuteeEmail) throws StripeException {
-        Payment payment = paymentRepository.findByStripePaymentIntentId(stripePaymentIntentId)
-                .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + stripePaymentIntentId));
+        try {
+            System.out.printf("[PAYMENT] capturePayment called with intentId=%s%n", stripePaymentIntentId);
+            Payment payment = paymentRepository.findByStripePaymentIntentId(stripePaymentIntentId)
+                    .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + stripePaymentIntentId));
+            System.out.printf("[PAYMENT] Found payment: %d%n", payment.getPaymentId());
 
-        if (stripeEnabled()) {
-            PaymentIntent intent = PaymentIntent.retrieve(stripePaymentIntentId);
-            intent.capture();
-        } else {
-            System.out.printf("[PAYMENT MOCK] Captured %s%n", stripePaymentIntentId);
+            if (stripeEnabled()) {
+                System.out.printf("[PAYMENT] Retrieving intent to capture: %s%n", stripePaymentIntentId);
+                PaymentIntent intent = PaymentIntent.retrieve(stripePaymentIntentId);
+                System.out.printf("[PAYMENT] Intent status: %s%n", intent.getStatus());
+                intent.capture();
+                System.out.printf("[PAYMENT] Intent captured%n");
+            } else {
+                System.out.printf("[PAYMENT MOCK] Captured %s%n", stripePaymentIntentId);
+            }
+
+            payment.setStatus(Payment.PaymentStatus.HELD);
+            paymentRepository.save(payment);
+            System.out.printf("[PAYMENT] Payment status set to HELD%n");
+
+            // Notify tutee that payment was received
+            publishEvent("payment.success", Map.of(
+                    "booking_id",  payment.getBookingId(),
+                    "tutee_id",    payment.getTuteeId(),
+                    "tutee_email", tuteeEmail != null ? tuteeEmail : "",
+                    "amount",      payment.getAmount().toPlainString()
+            ));
+            System.out.printf("[PAYMENT] Published payment.success event%n");
+
+            return payment;
+        } catch (Exception e) {
+            System.err.printf("[PAYMENT] Error in capturePayment: %s%n", e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
-
-        payment.setStatus(Payment.PaymentStatus.HELD);
-        paymentRepository.save(payment);
-
-        // Notify tutee that payment was received
-        publishEvent("payment.success", Map.of(
-                "booking_id",  payment.getBookingId(),
-                "tutee_id",    payment.getTuteeId(),
-                "tutee_email", tuteeEmail != null ? tuteeEmail : "",
-                "amount",      payment.getAmount().toPlainString()
-        ));
-
-        return payment;
     }
 
     /**

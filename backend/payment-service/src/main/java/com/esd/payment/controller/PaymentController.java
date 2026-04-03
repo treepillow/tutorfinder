@@ -115,15 +115,20 @@ public class PaymentController {
         try {
             String intentId  = (String) body.get("stripe_payment_intent_id");
             String tuteeEmail = (String) body.getOrDefault("tutee_email", "");
+            System.out.printf("[PAYMENT] capture called with intentId=%s, tuteeEmail=%s%n", intentId, tuteeEmail);
             if (intentId == null || intentId.isBlank()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "stripe_payment_intent_id is required"));
             }
             Payment payment = paymentService.capturePayment(intentId, tuteeEmail);
             return ResponseEntity.ok(toMap(payment));
         } catch (IllegalArgumentException e) {
+            System.err.printf("[PAYMENT] IllegalArgumentException in capture: %s%n", e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+            System.err.printf("[PAYMENT] Exception in capture: %s%n", e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getClass().getSimpleName() + ": " + e.getMessage()));
         }
     }
 
