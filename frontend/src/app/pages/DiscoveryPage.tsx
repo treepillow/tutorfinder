@@ -6,7 +6,9 @@ import { getCurrentUser, profileApi, matchApi, enrichProfile } from "../utils/ap
 import { toast } from "sonner";
 import { io, Socket } from "socket.io-client";
 import { useRefreshNavCounts } from "../context/NavCountsContext";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import Lottie from "lottie-react";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import circleGuyLoadingData from "../assets/circleGuyLoading.json";
 
 export function DiscoveryPage() {
