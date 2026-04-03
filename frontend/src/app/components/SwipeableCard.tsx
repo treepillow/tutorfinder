@@ -116,7 +116,9 @@ export function SwipeableCard({ profile, onSwipe, onClick, isTop, userType, forc
 
         {/* Image area */}
         <div className="aspect-[3/2] relative bg-gradient-to-br from-[#7C8D8C] to-[#2F3B3D] flex items-center justify-center">
-          <div className="text-7xl">{profile.gender === "Female" ? "👩" : "👨"}</div>
+          <div className="w-28 h-28 bg-white/20 rounded-full flex items-center justify-center text-6xl font-bold text-white">
+            {profile.name.charAt(0).toUpperCase()}
+          </div>
 
         </div>
 

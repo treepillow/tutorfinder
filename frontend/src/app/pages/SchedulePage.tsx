@@ -5,8 +5,10 @@ import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, 
 import { toast } from "sonner";
 import Lottie from "lottie-react";
 import circleGuyLoadingData from "../assets/circleGuyLoading.json";
+import { useRefreshNavCounts } from "../context/NavCountsContext";
 
 export function SchedulePage() {
+  const refreshNavCounts = useRefreshNavCounts();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [schedule, setSchedule] = useState<any[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
@@ -105,6 +107,7 @@ export function SchedulePage() {
       toast.success("Booking cancelled and deposit refunded");
       setSelectedLesson(null);
       loadSchedule(currentUser);
+      refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to cancel booking");
     } finally {
@@ -119,6 +122,7 @@ export function SchedulePage() {
       toast.success("Booking marked as completed");
       setSelectedLesson(null);
       loadSchedule(currentUser);
+      refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to complete booking");
     } finally {

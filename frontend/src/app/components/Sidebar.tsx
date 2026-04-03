@@ -1,9 +1,99 @@
 import { NavLink, useNavigate } from "react-router";
 import { useState, useRef, useEffect } from "react";
-import { Home, Heart, Inbox, Calendar, User, ChevronLeft, ChevronRight, LogOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 import { clearAuth, getCurrentUser } from "../utils/api";
-import { useNavCounts } from "../hooks/useNavCounts";
-import circleGrad from "../assets/circleGrad.png";
+import { useNavCounts } from "../context/NavCountsContext";
+
+// Cute filled SVG icons
+function IconDiscover({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      {/* Compass circle */}
+      <circle cx="12" cy="12" r="10" fill={active ? "#F5C842" : "none"} stroke={active ? "#E6A800" : "white"} strokeWidth="2" strokeLinejoin="round"/>
+      {/* North/South arrow — pointing NE */}
+      <polygon points="12,4 14.5,12 12,10.5 9.5,12" fill={active ? "#E53935" : "white"} />
+      <polygon points="12,20 9.5,12 12,13.5 14.5,12" fill={active ? "#E0E0E0" : "white"} opacity={active ? 1 : 0.5} />
+      <circle cx="12" cy="12" r="1.5" fill={active ? "#E6A800" : "white"} />
+    </svg>
+  );
+}
+
+function IconMatched({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 21C12 21 3 14.5 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 13 5.08C14.09 3.81 15.76 3 17.5 3C20.58 3 23 5.42 23 8.5C23 14.5 12 21 12 21Z"
+        fill={active ? "#F44336" : "none"}
+        stroke={active ? "#C62828" : "white"}
+        strokeWidth="2"
+        strokeLinejoin="round"
+        transform="translate(-1,0)"
+      />
+      {/* Shine spot */}
+      {active && <ellipse cx="8.5" cy="8" rx="2" ry="1.2" fill="white" opacity="0.35" transform="translate(-1,0)"/>}
+    </svg>
+  );
+}
+
+function IconRequests({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      {/* Tray body */}
+      <rect x="2" y="13" width="20" height="8" rx="3" fill={active ? "#7C8D8C" : "none"} stroke={active ? "#4A6163" : "white"} strokeWidth="2"/>
+      {/* Tray opening arc */}
+      <path d="M6 13 Q6 8 12 8 Q18 8 18 13" fill={active ? "#A8BFBE" : "none"} stroke={active ? "#4A6163" : "white"} strokeWidth="2" strokeLinecap="round"/>
+      {/* Arrow down into tray */}
+      <path d="M12 3 L12 9 M9.5 6.5 L12 9 L14.5 6.5" stroke={active ? "#E6A800" : "white"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+function IconSchedule({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      {/* Calendar body */}
+      <rect x="3" y="5" width="18" height="17" rx="3" fill={active ? "#7EC8E3" : "none"} stroke={active ? "#0077A8" : "white"} strokeWidth="2"/>
+      {/* Header band */}
+      <rect x="3" y="5" width="18" height="6" rx="3" fill={active ? "#0099CC" : "none"} stroke="none"/>
+      {active && <rect x="3" y="8" width="18" height="3" fill="#0099CC"/>}
+      {/* Binding pegs */}
+      <line x1="8" y1="3" x2="8" y2="8" stroke={active ? "#0077A8" : "white"} strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1="16" y1="3" x2="16" y2="8" stroke={active ? "#0077A8" : "white"} strokeWidth="2.5" strokeLinecap="round"/>
+      {/* Date dots */}
+      {active && <>
+        <circle cx="8" cy="15" r="1.5" fill="white"/>
+        <circle cx="12" cy="15" r="1.5" fill="white"/>
+        <circle cx="16" cy="15" r="1.5" fill="white"/>
+        <circle cx="8" cy="19" r="1.5" fill="white"/>
+        <circle cx="12" cy="19" r="1.5" fill="white"/>
+      </>}
+      {!active && <>
+        <circle cx="8" cy="15" r="1.5" fill="white"/>
+        <circle cx="12" cy="15" r="1.5" fill="white"/>
+        <circle cx="16" cy="15" r="1.5" fill="white"/>
+        <circle cx="8" cy="19" r="1.5" fill="white"/>
+        <circle cx="12" cy="19" r="1.5" fill="white"/>
+      </>}
+    </svg>
+  );
+}
+
+function IconProfile({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      {/* Head */}
+      <circle cx="12" cy="8" r="4.5" fill={active ? "#FFCC80" : "none"} stroke={active ? "#E65100" : "white"} strokeWidth="2"/>
+      {/* Eyes */}
+      {active && <>
+        <circle cx="10.5" cy="7.5" r="0.8" fill="#5D4037"/>
+        <circle cx="13.5" cy="7.5" r="0.8" fill="#5D4037"/>
+        <path d="M10.5 9.5 Q12 10.8 13.5 9.5" stroke="#5D4037" strokeWidth="0.8" strokeLinecap="round" fill="none"/>
+      </>}
+      {/* Body / shoulders */}
+      <path d="M4 21 C4 17 7.58 14 12 14 C16.42 14 20 17 20 21" fill={active ? "#FFCC80" : "none"} stroke={active ? "#E65100" : "white"} strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+}
 
 function Badge({ count }: { count: number }) {
   if (count === 0) return null;
@@ -53,28 +143,28 @@ export function Sidebar() {
   const navItems = [
     {
       path: "/app/discover",
-      icon: Home,
+      Icon: IconDiscover,
       label: "Discover",
       badge: 0,
       subBadges: null,
     },
     {
       path: "/app/matched",
-      icon: Heart,
+      Icon: IconMatched,
       label: "Matched",
       badge: counts.matched,
       subBadges: null,
     },
     {
       path: "/app/requests",
-      icon: Inbox,
+      Icon: IconRequests,
       label: "Requests",
       badge: requestsTotal,
       subBadges: null,
     },
     {
       path: "/app/schedule",
-      icon: Calendar,
+      Icon: IconSchedule,
       label: "Schedule",
       badge: counts.scheduled,
       subBadges: null,
@@ -87,12 +177,16 @@ export function Sidebar() {
         isCollapsed ? "w-20" : "w-64"
       }`}
     >
-      <div className="py-4 px-4">
-        <div className="flex items-center gap-1 overflow-hidden">
-          <img src={circleGrad} alt="TutorFinder" className="w-12 h-12 object-contain flex-shrink-0" />
-          {!isCollapsed && (
-            <h1 className="text-2xl tracking-tight">TutorFinder</h1>
-          )}
+      <div className="p-6">
+        <div className={`flex items-center gap-3 transition-opacity duration-300 ${
+          isCollapsed ? "justify-center" : ""
+        }`}>
+          <img src="/favicon.svg" alt="TutorFinder" className="w-8 h-8 flex-shrink-0" />
+          <h1 className={`text-2xl tracking-tight transition-opacity duration-300 ${
+            isCollapsed ? "hidden" : "opacity-100"
+          }`}>
+            TutorFinder
+          </h1>
         </div>
       </div>
 
@@ -112,7 +206,7 @@ export function Sidebar() {
               {({ isActive }) => (
                 <>
                   <span className="relative flex-shrink-0">
-                    <item.icon className="w-5 h-5" />
+                    <item.Icon active={isActive} />
                     {isCollapsed && <CollapsedBadge count={item.badge} />}
                   </span>
                   {!isCollapsed && (
@@ -165,7 +259,7 @@ export function Sidebar() {
               onClick={() => { navigate("/app/profile"); setShowUserMenu(false); }}
               className="flex items-center gap-3 px-4 py-3 w-full text-[#2F3B3D] hover:bg-[#EDE9DF] transition-colors"
             >
-              <User className="w-4 h-4" />
+              <IconProfile active={true} />
               <span className="text-sm">View Profile</span>
             </button>
             <button
@@ -184,7 +278,7 @@ export function Sidebar() {
             isCollapsed ? "justify-center" : ""
           }`}
         >
-          <User className="w-5 h-5 flex-shrink-0" />
+          <IconProfile active={false} />
           {!isCollapsed && (
             <span className="truncate text-sm">
               {currentUser?.name || "Account"}

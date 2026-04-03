@@ -6,8 +6,10 @@ import { toast } from "sonner";
 import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, enrichProfile, availabilityApi } from "../utils/api";
 import Lottie from "lottie-react";
 import circleGuyLoadingData from "../assets/circleGuyLoading.json";
+import { useRefreshNavCounts } from "../context/NavCountsContext";
 
 export function RequestsPage() {
+  const refreshNavCounts = useRefreshNavCounts();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [paymentRequests, setPaymentRequests] = useState<any[]>([]);
@@ -116,6 +118,7 @@ export function RequestsPage() {
       }
       toast.success("Request cancelled");
       loadRequests(currentUser);
+      refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to cancel");
     }
@@ -130,6 +133,7 @@ export function RequestsPage() {
       }
       toast.success("Request accepted! Student will be notified to pay.");
       loadRequests(currentUser);
+      refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to accept");
     }
@@ -144,6 +148,7 @@ export function RequestsPage() {
       }
       toast.success("Request rejected");
       loadRequests(currentUser);
+      refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to reject");
     }
@@ -178,6 +183,7 @@ export function RequestsPage() {
         }
         toast.success("Payment processed (mock mode)");
         loadRequests(currentUser);
+        refreshNavCounts();
       }
     } catch (err: any) {
       toast.error(err.message || "Payment failed");

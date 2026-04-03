@@ -5,10 +5,10 @@ import { MatchDialog } from "../components/MatchDialog";
 import { getCurrentUser, profileApi, matchApi, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
 import { io, Socket } from "socket.io-client";
-import Lottie from "lottie-react";
-import circleGuyLoadingData from "../assets/circleGuyLoading.json";
+import { useRefreshNavCounts } from "../context/NavCountsContext";
 
 export function DiscoveryPage() {
+  const refreshNavCounts = useRefreshNavCounts();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -96,6 +96,7 @@ export function DiscoveryPage() {
       setTimeout(() => {
         setMatchedProfile(profile);
         setShowMatchDialog(true);
+        refreshNavCounts();
       }, 400);
     }
 
@@ -106,6 +107,7 @@ export function DiscoveryPage() {
         if (res.matched && !likedByIds.has(profile.id)) {
           setMatchedProfile(profile);
           setShowMatchDialog(true);
+          refreshNavCounts();
         }
       })
       .catch((err: any) => {
