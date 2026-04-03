@@ -184,7 +184,7 @@ export function DiscoveryPage() {
 
       {loading && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm bg-white/30">
-          <Lottie animationData={circleGuyLoadingData} loop autoplay style={{ width: 500, height: 500, transform: 'translateY(-80px)' }} />
+          <div className="w-12 h-12 rounded-full border-4 border-[#7C8D8C] border-t-transparent animate-spin" />
         </div>
       )}
 
