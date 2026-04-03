@@ -366,7 +366,10 @@ export function ProfilePage() {
               ) : (
                 currentUser.availability && Object.keys(currentUser.availability).length > 0 ? (
                   <div className="space-y-3">
-                    {Object.entries(currentUser.availability).map(([day, slots]: [string, any]) => (
+                    {Object.entries(currentUser.availability).sort(([a], [b]) => {
+                        const order = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+                        return order.indexOf(a) - order.indexOf(b);
+                      }).map(([day, slots]: [string, any]) => (
                       <div key={day} className="bg-[#F5F3EF] p-4 rounded-xl">
                         <div className="text-[#2F3B3D] mb-2">{day}</div>
                         <div className="flex flex-wrap gap-2">
