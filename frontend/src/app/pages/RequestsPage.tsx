@@ -25,15 +25,10 @@ export function RequestsPage() {
     if (paymentStatus === "success" && bookingId) {
       setSearchParams({});
       setActiveTab("payment");
-      // Complete checkout first, then reload
+      // Complete payment through OutSystems orchestrator
       (async () => {
         try {
-          const paymentRes = await paymentApi.completeCheckout(parseInt(bookingId));
-          try {
-            await bookingProcessApi.paymentCaptured(parseInt(bookingId), paymentRes.stripe_payment_intent_id);
-          } catch {
-            await bookingApi.updateStatus(parseInt(bookingId), "Confirmed");
-          }
+          await bookingProcessApi.completePayment(parseInt(bookingId));
           toast.success("Payment successful! Lesson confirmed.");
         } catch (err: any) {
           toast.error(err.message || "Failed to confirm payment");

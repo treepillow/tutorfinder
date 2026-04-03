@@ -374,6 +374,13 @@ export const bookingProcessApi = {
     });
   },
 
+  completePayment(bookingId: number) {
+    return apiFetch(`${BOOKING_PROCESS_SERVICE}/complete-payment`, {
+      method: "POST",
+      body: JSON.stringify({ BookingId: bookingId }),
+    });
+  },
+
   paymentCaptured(bookingId: number, stripePaymentIntentId: string) {
     return apiFetch(`${BOOKING_PROCESS_SERVICE}/payment-captured`, {
       method: "POST",
