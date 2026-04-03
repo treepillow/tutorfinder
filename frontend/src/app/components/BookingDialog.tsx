@@ -8,6 +8,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { toast } from "sonner";
 import { availabilityApi, bookingProcessApi, bookingApi } from "../utils/api";
+import { useRefreshNavCounts } from "../context/NavCountsContext";
 
 interface BookingDialogProps {
   profile: any;
@@ -16,6 +17,7 @@ interface BookingDialogProps {
 }
 
 export function BookingDialog({ profile, currentUser, onClose }: BookingDialogProps) {
+  const refreshNavCounts = useRefreshNavCounts();
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedLevel, setSelectedLevel] = useState("");
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
@@ -100,6 +102,7 @@ export function BookingDialog({ profile, currentUser, onClose }: BookingDialogPr
       }
 
       toast.success("Booking request sent!");
+      refreshNavCounts();
       onClose();
     } catch (err: any) {
       toast.error(err.message || "Failed to send booking request");

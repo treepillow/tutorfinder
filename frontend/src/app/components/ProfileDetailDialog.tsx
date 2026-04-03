@@ -38,7 +38,9 @@ export function ProfileDetailDialog({
         <div className="space-y-6">
           {/* Profile Picture */}
           <div className="aspect-[3/2] relative bg-gradient-to-br from-[#D6CFBF] to-[#7C8D8C] rounded-2xl flex items-center justify-center">
-            <div className="text-9xl">{profile.gender === "Female" ? "👩" : "👨"}</div>
+            <div className="w-36 h-36 bg-white/20 rounded-full flex items-center justify-center text-7xl font-bold text-white">
+              {profile.name.charAt(0).toUpperCase()}
+            </div>
           </div>
 
           {/* Basic Info */}

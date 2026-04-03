@@ -3,8 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/
 import { Calendar, Clock, BookOpen, User, ChevronLeft, ChevronRight, List, Phone, Mail } from "lucide-react";
 import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, availabilityApi, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
+import { useRefreshNavCounts } from "../context/NavCountsContext";
 
 export function SchedulePage() {
+  const refreshNavCounts = useRefreshNavCounts();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [schedule, setSchedule] = useState<any[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
@@ -101,6 +103,7 @@ export function SchedulePage() {
       toast.success("Booking cancelled and deposit refunded");
       setSelectedLesson(null);
       loadSchedule(currentUser);
+      refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to cancel booking");
     }
@@ -116,6 +119,7 @@ export function SchedulePage() {
       toast.success("Booking marked as completed");
       setSelectedLesson(null);
       loadSchedule(currentUser);
+      refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to complete booking");
     }
