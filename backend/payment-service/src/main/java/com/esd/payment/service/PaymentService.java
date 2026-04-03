@@ -227,10 +227,11 @@ public class PaymentService {
      * Complete a Checkout Session: retrieve the PaymentIntent, capture it, update DB.
      * Called by the frontend after Stripe redirects back on success.
      */
-    @Transactional
     public Payment completeCheckout(Integer bookingId) throws StripeException {
         try {
             System.out.printf("[PAYMENT] completeCheckout called for booking %d%n", bookingId);
+
+            // Get payment record (without transaction)
             Payment payment = paymentRepository.findByBookingId(bookingId)
                     .orElseThrow(() -> new IllegalArgumentException("Payment not found for booking: " + bookingId));
             System.out.printf("[PAYMENT] Found payment record: %s%n", payment.getPaymentId());
@@ -246,15 +247,15 @@ public class PaymentService {
                 throw new IllegalStateException("No checkout session for this payment");
             }
 
+            String intentId = null;
             if (stripeEnabled()) {
                 System.out.printf("[PAYMENT] Retrieving Stripe session: %s%n", sessionId);
                 Session session = Session.retrieve(sessionId);
-                String intentId = session.getPaymentIntent();
+                intentId = session.getPaymentIntent();
                 System.out.printf("[PAYMENT] Payment Intent ID from session: %s%n", intentId);
                 if (intentId == null) {
                     throw new IllegalStateException("Checkout session has no PaymentIntent — payment may not be complete");
                 }
-                payment.setStripePaymentIntentId(intentId);
 
                 // Capture the payment (manual capture mode)
                 System.out.printf("[PAYMENT] Retrieving PaymentIntent: %s%n", intentId);
@@ -266,18 +267,30 @@ public class PaymentService {
                 }
             } else {
                 System.out.printf("[PAYMENT MOCK] Mock mode for booking %d%n", bookingId);
-                payment.setStripePaymentIntentId("mock_pi_" + bookingId);
+                intentId = "mock_pi_" + bookingId;
             }
 
-            payment.setStatus(Payment.PaymentStatus.HELD);
-            paymentRepository.save(payment);
-            System.out.printf("[PAYMENT] Payment updated to HELD status%n");
-            return payment;
+            // Now save to database in a separate transaction
+            return savePaymentAsHeld(payment.getPaymentId(), intentId);
         } catch (Exception e) {
             System.err.printf("[PAYMENT] Error in completeCheckout: %s%n", e.getMessage());
             e.printStackTrace();
             throw e;
         }
+    }
+
+    /**
+     * Save payment as HELD status in a separate transaction.
+     */
+    @Transactional
+    private Payment savePaymentAsHeld(Long paymentId, String intentId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + paymentId));
+        payment.setStripePaymentIntentId(intentId);
+        payment.setStatus(Payment.PaymentStatus.HELD);
+        paymentRepository.save(payment);
+        System.out.printf("[PAYMENT] Payment %d updated to HELD status%n", paymentId);
+        return payment;
     }
 
     /**
