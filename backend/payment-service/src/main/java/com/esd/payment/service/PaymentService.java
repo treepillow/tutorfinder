@@ -224,8 +224,9 @@ public class PaymentService {
     }
 
     /**
-     * Complete a Checkout Session: retrieve the PaymentIntent, capture it, update DB.
+     * Complete a Checkout Session: retrieve the PaymentIntent ID from the session and save it to DB.
      * Called by the frontend after Stripe redirects back on success.
+     * NOTE: Does NOT capture yet — OutSystems PaymentCaptured workflow will call /payment/capture
      */
     public Payment completeCheckout(Integer bookingId) throws StripeException {
         try {
@@ -256,22 +257,13 @@ public class PaymentService {
                 if (intentId == null) {
                     throw new IllegalStateException("Checkout session has no PaymentIntent — payment may not be complete");
                 }
-
-                // Capture the payment (manual capture mode)
-                System.out.printf("[PAYMENT] Retrieving PaymentIntent: %s%n", intentId);
-                PaymentIntent intent = PaymentIntent.retrieve(intentId);
-                System.out.printf("[PAYMENT] PaymentIntent status: %s%n", intent.getStatus());
-                if ("requires_capture".equals(intent.getStatus())) {
-                    System.out.printf("[PAYMENT] Capturing PaymentIntent: %s%n", intentId);
-                    intent.capture();
-                }
             } else {
                 System.out.printf("[PAYMENT MOCK] Mock mode for booking %d%n", bookingId);
                 intentId = "mock_pi_" + bookingId;
             }
 
             // Now save to database in a separate transaction
-            return savePaymentAsHeld(payment.getPaymentId(), intentId);
+            return savePaymentIntentId(payment.getPaymentId(), intentId);
         } catch (Exception e) {
             System.err.printf("[PAYMENT] Error in completeCheckout: %s%n", e.getMessage());
             e.printStackTrace();
@@ -280,22 +272,24 @@ public class PaymentService {
     }
 
     /**
-     * Save payment as HELD status in a separate transaction.
+     * Save payment intent ID to database in a separate transaction.
+     * Status stays PENDING until OutSystems calls /payment/capture
      */
     @Transactional
-    private Payment savePaymentAsHeld(Long paymentId, String intentId) {
+    private Payment savePaymentIntentId(Long paymentId, String intentId) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + paymentId));
         payment.setStripePaymentIntentId(intentId);
-        payment.setStatus(Payment.PaymentStatus.HELD);
+        // Keep status as PENDING — will be updated to HELD when /payment/capture is called
         paymentRepository.save(payment);
-        System.out.printf("[PAYMENT] Payment %d updated to HELD status%n", paymentId);
+        System.out.printf("[PAYMENT] Payment %d intent ID saved, status still PENDING%n", paymentId);
         return payment;
     }
 
     /**
      * Capture a previously authorised PaymentIntent (funds now held).
-     * Called by webhook or OutSystems after frontend confirms payment.
+     * Called by OutSystems PaymentCaptured workflow.
+     * Idempotent: if already captured, just marks as HELD in DB.
      */
     public Payment capturePayment(String stripePaymentIntentId,
                                   String tuteeEmail) throws StripeException {
@@ -305,12 +299,23 @@ public class PaymentService {
                     .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + stripePaymentIntentId));
             System.out.printf("[PAYMENT] Found payment: %d%n", payment.getPaymentId());
 
+            // If already captured, just update status and return
+            if (payment.getStatus() == Payment.PaymentStatus.HELD) {
+                System.out.printf("[PAYMENT] Payment already HELD, skipping capture%n");
+                return payment;
+            }
+
             if (stripeEnabled()) {
                 System.out.printf("[PAYMENT] Retrieving intent to capture: %s%n", stripePaymentIntentId);
                 PaymentIntent intent = PaymentIntent.retrieve(stripePaymentIntentId);
                 System.out.printf("[PAYMENT] Intent status: %s%n", intent.getStatus());
-                intent.capture();
-                System.out.printf("[PAYMENT] Intent captured%n");
+                if ("requires_capture".equals(intent.getStatus())) {
+                    System.out.printf("[PAYMENT] Capturing PaymentIntent: %s%n", stripePaymentIntentId);
+                    intent.capture();
+                    System.out.printf("[PAYMENT] Intent captured%n");
+                } else {
+                    System.out.printf("[PAYMENT] Intent already in status: %s, skipping capture%n", intent.getStatus());
+                }
             } else {
                 System.out.printf("[PAYMENT MOCK] Captured %s%n", stripePaymentIntentId);
             }
