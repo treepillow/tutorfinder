@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { ImageWithFallback } from "./shared/ImageWithFallback";
+import Lottie from "lottie-react";
+import circleClassData from "../assets/circleClass.json";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -193,12 +194,8 @@ export function HowItWorks() {
           </div>
 
           <div className="why-image relative">
-            <div ref={imageRef} className="aspect-[4/3] rounded-3xl overflow-hidden shadow-xl will-change-transform">
-              <ImageWithFallback
-                src="https://images.unsplash.com/photo-1701627091488-027ddbf45dfc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdHVkZW50JTIwc3R1ZHlpbmclMjBjb2ZmZWUlMjBzaG9wfGVufDF8fHx8MTc3NDM1NDA2OXww&ixlib=rb-4.1.0&q=80&w=1080"
-                alt="Student studying"
-                className="w-full h-full object-cover"
-              />
+            <div ref={imageRef} className="aspect-[4/3] rounded-3xl overflow-hidden shadow-xl will-change-transform flex items-center justify-center bg-[#EDE9DF]">
+              <Lottie animationData={circleClassData} loop autoplay style={{ width: "140%", height: "140%" }} />
             </div>
             <div className="absolute -bottom-6 -right-6 w-40 h-40 bg-[#7C8D8C] rounded-full blur-3xl opacity-10 pointer-events-none" />
           </div>

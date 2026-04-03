@@ -1,4 +1,5 @@
-import { ArrowRight, GraduationCap, Star } from "lucide-react";
+import { ArrowRight, Star } from "lucide-react";
+import circleGrad from "../assets/circleGrad.png";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { gsap } from "gsap";
@@ -197,10 +198,8 @@ export function Hero() {
       {/* Nav */}
       <nav className="relative z-10 px-8 py-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 bg-[#7C8D8C] rounded-xl flex items-center justify-center shadow-md">
-              <GraduationCap className="w-5 h-5 text-white" />
-            </div>
+          <div className="flex items-center gap-1">
+            <img src={circleGrad} alt="TutorFinder" className="w-16 h-16 object-contain" />
             <h1 className="text-2xl font-semibold tracking-tight text-[#1A2035]">
               Tutor<span className="text-[#7C8D8C]">Finder</span>
             </h1>

@@ -4,6 +4,8 @@ import { BookingDialog } from "../components/BookingDialog";
 import { ProfileDetailDialog } from "../components/ProfileDetailDialog";
 import { getCurrentUser, matchApi, profileApi, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
+import Lottie from "lottie-react";
+import circleGuyLoadingData from "../assets/circleGuyLoading.json";
 
 export function MatchedPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -73,11 +75,7 @@ export function MatchedPage() {
           </p>
         </div>
 
-        {loading ? (
-          <div className="bg-[#EDE9DF] rounded-3xl p-16 text-center">
-            <p className="text-[#2F3B3D]/70 animate-pulse">Loading matches...</p>
-          </div>
-        ) : matches.length === 0 ? (
+        {matches.length === 0 && !loading ? (
           <div className="bg-[#EDE9DF] rounded-3xl p-16 text-center">
             <div className="text-6xl mb-4">💬</div>
             <h3 className="text-2xl text-[#2F3B3D] mb-2">
@@ -100,6 +98,12 @@ export function MatchedPage() {
           </div>
         )}
       </div>
+
+      {loading && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm bg-white/30">
+          <Lottie animationData={circleGuyLoadingData} loop autoplay style={{ width: 500, height: 500, transform: 'translateY(-80px)' }} />
+        </div>
+      )}
 
       {selectedProfile && currentUser.userType === "student" && showBooking && (
         <BookingDialog

@@ -1,16 +1,9 @@
 import { Star } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ImageWithFallback } from "./shared/ImageWithFallback";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "./ui/dialog";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -47,7 +40,6 @@ const stats = [
 
 export function Testimonials() {
   const navigate = useNavigate();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLDivElement>(null);
   const statsRef   = useRef<HTMLDivElement>(null);
@@ -159,11 +151,6 @@ export function Testimonials() {
     return () => ctx.revert();
   }, []);
 
-  const handleUserTypeSelect = (type: "student" | "tutor") => {
-    setIsDialogOpen(false);
-    sessionStorage.setItem("userType", type);
-    navigate("/register?mode=signup");
-  };
 
   return (
     <>
@@ -245,7 +232,7 @@ export function Testimonials() {
             Join thousands of students and tutors on TutorFinder today.
           </p>
           <button
-            onClick={() => setIsDialogOpen(true)}
+            onClick={() => navigate("/register")}
             className="cta-btn px-10 py-4 bg-white text-[#7C8D8C] rounded-full font-semibold hover:bg-[#F5F3EF] transition-all duration-300 shadow-xl shadow-black/20 text-lg"
           >
             Create Free Account →
@@ -260,26 +247,6 @@ export function Testimonials() {
         </div>
       </section>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-white border-[#E8E4DC]">
-          <DialogHeader>
-            <DialogTitle className="text-2xl text-[#1A2035] font-bold">Get Started with TutorFinder</DialogTitle>
-            <DialogDescription className="text-[#1A2035]/60">Choose your account type to continue</DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 mt-6">
-            <button onClick={() => handleUserTypeSelect("student")} className="p-8 bg-[#F5F3EF] rounded-2xl hover:bg-[#7C8D8C] hover:text-white transition-all duration-300 group border border-[#E8E4DC]">
-              <div className="text-4xl mb-2">🎓</div>
-              <h4 className="text-lg mb-2 text-[#1A2035] group-hover:text-white font-semibold">I'm a Student</h4>
-              <p className="text-sm text-[#1A2035]/60 group-hover:text-white/80">Find the perfect tutor for your learning needs</p>
-            </button>
-            <button onClick={() => handleUserTypeSelect("tutor")} className="p-8 bg-[#F5F3EF] rounded-2xl hover:bg-[#7C8D8C] hover:text-white transition-all duration-300 group border border-[#E8E4DC]">
-              <div className="text-4xl mb-2">👨‍🏫</div>
-              <h4 className="text-lg mb-2 text-[#1A2035] group-hover:text-white font-semibold">I'm a Tutor</h4>
-              <p className="text-sm text-[#1A2035]/60 group-hover:text-white/80">Connect with students and share your expertise</p>
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
