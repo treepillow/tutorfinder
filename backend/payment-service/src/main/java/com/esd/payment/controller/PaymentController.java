@@ -95,9 +95,13 @@ public class PaymentController {
             Payment payment = paymentService.completeCheckout(bookingId);
             return ResponseEntity.ok(toMap(payment));
         } catch (IllegalArgumentException e) {
+            System.err.printf("[PAYMENT] IllegalArgumentException in completeCheckout: %s%n", e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+            System.err.printf("[PAYMENT] Exception in completeCheckout: %s%n", e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getClass().getSimpleName() + ": " + e.getMessage()));
         }
     }
 

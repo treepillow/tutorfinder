@@ -229,39 +229,55 @@ public class PaymentService {
      */
     @Transactional
     public Payment completeCheckout(Integer bookingId) throws StripeException {
-        Payment payment = paymentRepository.findByBookingId(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Payment not found for booking: " + bookingId));
+        try {
+            System.out.printf("[PAYMENT] completeCheckout called for booking %d%n", bookingId);
+            Payment payment = paymentRepository.findByBookingId(bookingId)
+                    .orElseThrow(() -> new IllegalArgumentException("Payment not found for booking: " + bookingId));
+            System.out.printf("[PAYMENT] Found payment record: %s%n", payment.getPaymentId());
 
-        if (payment.getStatus() != Payment.PaymentStatus.PENDING) {
-            // Already completed
+            if (payment.getStatus() != Payment.PaymentStatus.PENDING) {
+                System.out.printf("[PAYMENT] Payment already completed, status: %s%n", payment.getStatus());
+                return payment;
+            }
+
+            String sessionId = payment.getStripeSessionId();
+            System.out.printf("[PAYMENT] Session ID: %s%n", sessionId);
+            if (sessionId == null || sessionId.isBlank()) {
+                throw new IllegalStateException("No checkout session for this payment");
+            }
+
+            if (stripeEnabled()) {
+                System.out.printf("[PAYMENT] Retrieving Stripe session: %s%n", sessionId);
+                Session session = Session.retrieve(sessionId);
+                String intentId = session.getPaymentIntent();
+                System.out.printf("[PAYMENT] Payment Intent ID from session: %s%n", intentId);
+                if (intentId == null) {
+                    throw new IllegalStateException("Checkout session has no PaymentIntent — payment may not be complete");
+                }
+                payment.setStripePaymentIntentId(intentId);
+
+                // Capture the payment (manual capture mode)
+                System.out.printf("[PAYMENT] Retrieving PaymentIntent: %s%n", intentId);
+                PaymentIntent intent = PaymentIntent.retrieve(intentId);
+                System.out.printf("[PAYMENT] PaymentIntent status: %s%n", intent.getStatus());
+                if ("requires_capture".equals(intent.getStatus())) {
+                    System.out.printf("[PAYMENT] Capturing PaymentIntent: %s%n", intentId);
+                    intent.capture();
+                }
+            } else {
+                System.out.printf("[PAYMENT MOCK] Mock mode for booking %d%n", bookingId);
+                payment.setStripePaymentIntentId("mock_pi_" + bookingId);
+            }
+
+            payment.setStatus(Payment.PaymentStatus.HELD);
+            paymentRepository.save(payment);
+            System.out.printf("[PAYMENT] Payment updated to HELD status%n");
             return payment;
+        } catch (Exception e) {
+            System.err.printf("[PAYMENT] Error in completeCheckout: %s%n", e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
-
-        String sessionId = payment.getStripeSessionId();
-        if (sessionId == null || sessionId.isBlank()) {
-            throw new IllegalStateException("No checkout session for this payment");
-        }
-
-        if (stripeEnabled()) {
-            Session session = Session.retrieve(sessionId);
-            String intentId = session.getPaymentIntent();
-            if (intentId == null) {
-                throw new IllegalStateException("Checkout session has no PaymentIntent — payment may not be complete");
-            }
-            payment.setStripePaymentIntentId(intentId);
-
-            // Capture the payment (manual capture mode)
-            PaymentIntent intent = PaymentIntent.retrieve(intentId);
-            if ("requires_capture".equals(intent.getStatus())) {
-                intent.capture();
-            }
-        } else {
-            payment.setStripePaymentIntentId("mock_pi_" + bookingId);
-        }
-
-        payment.setStatus(Payment.PaymentStatus.HELD);
-        paymentRepository.save(payment);
-        return payment;
     }
 
     /**
