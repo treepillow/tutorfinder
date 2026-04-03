@@ -3,12 +3,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/
 import { Calendar, Clock, BookOpen, User, ChevronLeft, ChevronRight, List, Phone, Mail } from "lucide-react";
 import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, availabilityApi, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
+import Lottie from "lottie-react";
+import circleGuyLoadingData from "../assets/circleGuyLoading.json";
 
 export function SchedulePage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [schedule, setSchedule] = useState<any[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [view, setView] = useState<"list" | "calendar">("list");
   const [calendarDate, setCalendarDate] = useState(new Date());
 
@@ -79,6 +82,7 @@ export function SchedulePage() {
   };
 
   const handleCancelBooking = async (lesson: any) => {
+    setActionLoading(true);
     try {
       // Refund the deposit
       try {
@@ -103,10 +107,13 @@ export function SchedulePage() {
       loadSchedule(currentUser);
     } catch (err: any) {
       toast.error(err.message || "Failed to cancel booking");
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleCompleteBooking = async (lesson: any) => {
+    setActionLoading(true);
     try {
       await bookingProcessApi.complete(lesson.booking_id);
       toast.success("Booking marked as completed");
@@ -114,6 +121,8 @@ export function SchedulePage() {
       loadSchedule(currentUser);
     } catch (err: any) {
       toast.error(err.message || "Failed to complete booking");
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -193,11 +202,7 @@ export function SchedulePage() {
           </div>
         </div>
 
-        {loading ? (
-          <div className="bg-[#EDE9DF] rounded-3xl p-16 text-center">
-            <p className="text-[#2F3B3D]/70 animate-pulse">Loading schedule...</p>
-          </div>
-        ) : view === "list" ? (
+        {!loading && view === "list" ? (
           schedule.length === 0 ? (
             <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
               <div className="text-5xl mb-3">📅</div>
@@ -324,6 +329,13 @@ export function SchedulePage() {
           </div>
         )}
       </div>
+
+      {/* Loading overlay */}
+      {(loading || actionLoading) && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm bg-white/30">
+          <Lottie animationData={circleGuyLoadingData} loop autoplay style={{ width: 500, height: 500, transform: 'translateY(-80px)' }} />
+        </div>
+      )}
 
       {/* Lesson detail dialog */}
       {selectedLesson && (

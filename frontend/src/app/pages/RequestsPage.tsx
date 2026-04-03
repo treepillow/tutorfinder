@@ -4,6 +4,8 @@ import { RequestCard } from "../components/RequestCard";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, enrichProfile, availabilityApi } from "../utils/api";
+import Lottie from "lottie-react";
+import circleGuyLoadingData from "../assets/circleGuyLoading.json";
 
 export function RequestsPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -214,11 +216,7 @@ export function RequestsPage() {
           </p>
         </div>
 
-        {loading ? (
-          <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
-            <p className="text-[#2F3B3D]/70 animate-pulse">Loading requests...</p>
-          </div>
-        ) : (
+        {!loading && (
           <div className="w-full">
             {/* Tab bar */}
             <div className="relative flex p-1 bg-[#EDE9DF] rounded-full mb-6">
@@ -301,6 +299,11 @@ export function RequestsPage() {
         )}
       </div>
 
+      {loading && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm bg-white/30">
+          <Lottie animationData={circleGuyLoadingData} loop autoplay style={{ width: 500, height: 500, transform: 'translateY(-80px)' }} />
+        </div>
+      )}
     </div>
   );
 }

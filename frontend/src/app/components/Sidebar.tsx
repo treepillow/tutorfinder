@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { Home, Heart, Inbox, Calendar, User, ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 import { clearAuth, getCurrentUser } from "../utils/api";
 import { useNavCounts } from "../hooks/useNavCounts";
+import circleGrad from "../assets/circleGrad.png";
 
 function Badge({ count }: { count: number }) {
   if (count === 0) return null;
@@ -86,16 +87,12 @@ export function Sidebar() {
         isCollapsed ? "w-20" : "w-64"
       }`}
     >
-      <div className="p-6">
-        <div className={`flex items-center gap-3 transition-opacity duration-300 ${
-          isCollapsed ? "justify-center" : ""
-        }`}>
-          <img src="/favicon.svg" alt="TutorFinder" className="w-8 h-8 flex-shrink-0" />
-          <h1 className={`text-2xl tracking-tight transition-opacity duration-300 ${
-            isCollapsed ? "hidden" : "opacity-100"
-          }`}>
-            TutorFinder
-          </h1>
+      <div className="py-4 px-4">
+        <div className="flex items-center gap-1 overflow-hidden">
+          <img src={circleGrad} alt="TutorFinder" className="w-12 h-12 object-contain flex-shrink-0" />
+          {!isCollapsed && (
+            <h1 className="text-2xl tracking-tight">TutorFinder</h1>
+          )}
         </div>
       </div>
 

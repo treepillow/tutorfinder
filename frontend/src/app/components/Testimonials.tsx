@@ -4,13 +4,6 @@ import { useNavigate } from "react-router";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ImageWithFallback } from "./shared/ImageWithFallback";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "./ui/dialog";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -172,11 +165,6 @@ export function Testimonials() {
     return () => ctx.revert();
   }, []);
 
-  const handleUserTypeSelect = (type: "student" | "tutor") => {
-    setIsDialogOpen(false);
-    sessionStorage.setItem("userType", type);
-    navigate("/register?mode=signup");
-  };
 
   return (
     <>
@@ -276,26 +264,6 @@ export function Testimonials() {
         </div>
       </section>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-white border-[#E8E4DC]">
-          <DialogHeader>
-            <DialogTitle className="text-2xl text-[#1A2035] font-bold">Get Started with TutorFinder</DialogTitle>
-            <DialogDescription className="text-[#1A2035]/60">Choose your account type to continue</DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 mt-6">
-            <button onClick={() => handleUserTypeSelect("student")} className="p-8 bg-[#F5F3EF] rounded-2xl hover:bg-[#7C8D8C] hover:text-white transition-all duration-300 group border border-[#E8E4DC]">
-              <div className="text-4xl mb-2">🎓</div>
-              <h4 className="text-lg mb-2 text-[#1A2035] group-hover:text-white font-semibold">I'm a Student</h4>
-              <p className="text-sm text-[#1A2035]/60 group-hover:text-white/80">Find the perfect tutor for your learning needs</p>
-            </button>
-            <button onClick={() => handleUserTypeSelect("tutor")} className="p-8 bg-[#F5F3EF] rounded-2xl hover:bg-[#7C8D8C] hover:text-white transition-all duration-300 group border border-[#E8E4DC]">
-              <div className="text-4xl mb-2">👨‍🏫</div>
-              <h4 className="text-lg mb-2 text-[#1A2035] group-hover:text-white font-semibold">I'm a Tutor</h4>
-              <p className="text-sm text-[#1A2035]/60 group-hover:text-white/80">Connect with students and share your expertise</p>
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

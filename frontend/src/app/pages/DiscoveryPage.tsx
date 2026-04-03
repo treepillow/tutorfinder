@@ -5,6 +5,8 @@ import { MatchDialog } from "../components/MatchDialog";
 import { getCurrentUser, profileApi, matchApi, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
 import { io, Socket } from "socket.io-client";
+import Lottie from "lottie-react";
+import circleGuyLoadingData from "../assets/circleGuyLoading.json";
 
 export function DiscoveryPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -147,12 +149,7 @@ export function DiscoveryPage() {
           </p>
         </div>
 
-        {loading ? (
-          <div className="bg-[#EDE9DF] rounded-3xl p-16 text-center">
-            <div className="text-4xl mb-4 animate-pulse">...</div>
-            <p className="text-[#2F3B3D]/70">Loading profiles...</p>
-          </div>
-        ) : currentIndex < profiles.length ? (
+        {!loading && currentIndex < profiles.length ? (
           <div className="relative">
             {profiles.slice(currentIndex, currentIndex + 2).map((profile, idx) => (
               <SwipeableCard
@@ -182,6 +179,12 @@ export function DiscoveryPage() {
           </div>
         )}
       </div>
+
+      {loading && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm bg-white/30">
+          <Lottie animationData={circleGuyLoadingData} loop autoplay style={{ width: 500, height: 500, transform: 'translateY(-80px)' }} />
+        </div>
+      )}
 
       {selectedProfile && (
         <ProfileDetailDialog

@@ -1,4 +1,5 @@
-import { ArrowRight, MapPin } from "lucide-react";
+import { ArrowRight, Star, MapPin } from "lucide-react";
+import circleGrad from "../assets/circleGrad.png";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { gsap } from "gsap";
@@ -247,7 +248,7 @@ export function Hero() {
   const [cursorStyle, setCursorStyle] = useState<string>("default");
 
   return (
-    <section ref={sectionRef} className="relative bg-white pb-28">
+    <section ref={sectionRef} className="relative bg-[#F5F3EF] pb-28">
       {/* Parallax bg blobs */}
       <div ref={blobTR} className="absolute -top-40 -right-40 w-[700px] h-[700px] bg-[#7C8D8C] rounded-full blur-[140px] opacity-[0.06] pointer-events-none will-change-transform" />
       <div ref={blobBL} className="absolute -bottom-20 -left-20 w-[500px] h-[500px] bg-[#F59E0B] rounded-full blur-[120px] opacity-[0.06] pointer-events-none will-change-transform" />
@@ -255,8 +256,8 @@ export function Hero() {
       {/* Nav */}
       <nav className="relative z-10 px-8 py-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <img src="/favicon.svg" alt="TutorFinder Logo" className="w-9 h-9" />
+          <div className="flex items-center gap-1">
+            <img src={circleGrad} alt="TutorFinder" className="w-16 h-16 object-contain" />
             <h1 className="text-2xl font-semibold tracking-tight text-[#1A2035]">
               Tutor<span className="text-[#7C8D8C]">Finder</span>
             </h1>
