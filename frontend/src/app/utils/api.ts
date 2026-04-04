@@ -545,7 +545,7 @@ export function enrichProfile(backendProfile: any): any {
   return {
     ...backendProfile,
     id: backendProfile.user_id,
-    userType: backendProfile.role?.toLowerCase() === "tutor" ? "tutor" : "student",
+    userType: backendProfile.role?.toLowerCase() === "admin" ? "admin" : backendProfile.role?.toLowerCase() === "tutor" ? "tutor" : "student",
     name: backendProfile.name,
     subjects: extra.subjects || [],
     qualification: extra.qualification,

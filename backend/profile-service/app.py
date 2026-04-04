@@ -38,7 +38,7 @@ class Profile(db.Model):
     email         = db.Column(db.String(100), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     phone         = db.Column(db.String(20), nullable=False)
-    role          = db.Column(db.Enum('Tutor', 'Student', native_enum=False), nullable=False)
+    role          = db.Column(db.Enum('Tutor', 'Student', 'Admin', native_enum=False), nullable=False)
     subject       = db.Column(db.String(100))
     price_rate    = db.Column(db.Numeric(10, 2))
     latitude      = db.Column(db.Float)
