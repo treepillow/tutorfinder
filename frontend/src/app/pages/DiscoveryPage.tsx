@@ -22,6 +22,7 @@ export function DiscoveryPage() {
   const [showMatchDialog, setShowMatchDialog] = useState(false);
   const [matchedProfile, setMatchedProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [hasSwipedAll, setHasSwipedAll] = useState(false);
   const [likedByIds, setLikedByIds] = useState<Set<number>>(new Set());
   const [keySwipe, setKeySwipe] = useState<"left" | "right" | null>(null);
   const swipedIdsRef = useRef<Set<number>>(new Set());
@@ -79,9 +80,9 @@ export function DiscoveryPage() {
       swipedIdsRef.current = swipedIds;
       setLikedByIds(new Set(likedMeRes.liked_by_ids || []));
 
-      const unswiped = (searchRes.profiles || [])
-        .map(enrichProfile)
-        .filter((p: any) => !swipedIds.has(p.id));
+      const allProfiles = (searchRes.profiles || []).map(enrichProfile);
+      const unswiped = allProfiles.filter((p: any) => !swipedIds.has(p.id));
+      if (allProfiles.length > 0 && unswiped.length === 0) setHasSwipedAll(true);
       setProfiles(unswiped);
     } catch (err: any) {
       console.error("Failed to load profiles:", err);
@@ -173,12 +174,12 @@ export function DiscoveryPage() {
           </div>
         ) : (
           <div className="bg-[#EDE9DF] rounded-3xl p-12 text-center flex flex-col items-center">
-            {profiles.length === 0 ? <CircleGuySearching size={130} /> : <CircleGuyParty size={130} />}
+            {(profiles.length === 0 && !hasSwipedAll) ? <CircleGuySearching size={130} /> : <CircleGuyParty size={130} />}
             <h3 className="text-2xl text-[#2F3B3D] mt-4 mb-2">
-              {profiles.length === 0 ? "No profiles found" : "You've seen everyone!"}
+              {(profiles.length === 0 && !hasSwipedAll) ? "No profiles found" : "You've seen everyone!"}
             </h3>
             <p className="text-[#2F3B3D]/70 text-sm">
-              {profiles.length === 0 ? "Try expanding your search area" : "Check back later for new profiles"}
+              {(profiles.length === 0 && !hasSwipedAll) ? "Try expanding your search area" : "Check back later for new profiles"}
             </p>
           </div>
         )}
