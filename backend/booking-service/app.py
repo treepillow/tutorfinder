@@ -152,6 +152,14 @@ def get_bookings_by_user(user_id):
     return jsonify({'bookings': [b.to_dict() for b in bookings], 'count': len(bookings)}), 200
 
 
+@app.route('/booking/status/<string:status>', methods=['GET'])
+def get_bookings_by_status(status):
+    if status not in VALID_STATUSES:
+        return jsonify({'error': f'Invalid status: {status}'}), 400
+    bookings = Booking.query.filter(Booking.status == status).order_by(Booking.created_at.desc()).all()
+    return jsonify({'bookings': [b.to_dict() for b in bookings], 'count': len(bookings)}), 200
+
+
 @app.route('/booking/<int:booking_id>/confirm', methods=['PUT'])
 def confirm_booking(booking_id):
     booking = Booking.query.get(booking_id)

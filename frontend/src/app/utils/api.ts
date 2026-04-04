@@ -259,6 +259,10 @@ export const bookingApi = {
     });
   },
 
+  getByStatus(status: string) {
+    return apiFetch(`${BOOKING_SERVICE}/booking/status/${status}`);
+  },
+
   dispute(bookingId: number) {
     return apiFetch(`${BOOKING_SERVICE}/booking/${bookingId}/dispute`, {
       method: "PUT",
@@ -404,6 +408,27 @@ export const bookingProcessApi = {
       body: JSON.stringify({
         BookingId: bookingId,
         InitiatedBy: initiatedBy,
+      }),
+    });
+  },
+
+  reportDispute(bookingId: number, reportedBy: string, reason: string) {
+    return apiFetch(`${BOOKING_PROCESS_SERVICE}/ReportDispute`, {
+      method: "POST",
+      body: JSON.stringify({
+        BookingId: bookingId,
+        ReportedBy: reportedBy,
+        Reason: reason,
+      }),
+    });
+  },
+
+  resolveDispute(bookingId: number, resolution: "refund" | "release") {
+    return apiFetch(`${BOOKING_PROCESS_SERVICE}/ResolveDispute`, {
+      method: "POST",
+      body: JSON.stringify({
+        BookingId: bookingId,
+        Resolution: resolution,
       }),
     });
   },

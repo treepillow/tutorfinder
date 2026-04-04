@@ -115,6 +115,23 @@ export function SchedulePage() {
     }
   };
 
+  const handleReportNoShow = async (lesson: any) => {
+    setActionLoading(true);
+    try {
+      const reportedBy = currentUser.userType === "student" ? "tutee" : "tutor";
+      const reason = currentUser.userType === "student" ? "Tutor no-show" : "Tutee no-show";
+      await bookingProcessApi.reportDispute(lesson.booking_id, reportedBy, reason);
+      toast.success("No-show reported. An admin will review the dispute.");
+      setSelectedLesson(null);
+      loadSchedule(currentUser);
+      refreshNavCounts();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to report no-show");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // ── Calendar helpers ──
 
   const prevMonth = () => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
@@ -410,6 +427,12 @@ export function SchedulePage() {
                   className="flex-1 px-4 py-2 bg-white text-[#2F3B3D] rounded-full border-2 border-[#D6CFBF] hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all duration-300"
                 >
                   Cancel Booking
+                </button>
+                <button
+                  onClick={() => handleReportNoShow(selectedLesson)}
+                  className="flex-1 px-4 py-2 bg-white text-[#2F3B3D] rounded-full border-2 border-[#D6CFBF] hover:bg-amber-50 hover:border-amber-200 hover:text-amber-600 transition-all duration-300"
+                >
+                  Report No-Show
                 </button>
                 <button
                   onClick={() => handleCompleteBooking(selectedLesson)}
