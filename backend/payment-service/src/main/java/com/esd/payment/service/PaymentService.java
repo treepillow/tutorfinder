@@ -49,7 +49,6 @@ public class PaymentService {
      * Create a Stripe PaymentIntent (deposit hold) and save a PENDING payment record.
      * Returns client_secret so the frontend can confirm the payment.
      */
-    @Transactional
     public Map<String, Object> createPaymentIntent(
             Integer bookingId, Integer tuteeId, Integer tutorId,
             BigDecimal amount, String currency) throws StripeException {
@@ -135,7 +134,6 @@ public class PaymentService {
     /**
      * Create a Stripe Checkout Session that redirects the user to Stripe's hosted page.
      */
-    @Transactional
     public Map<String, Object> createCheckoutSession(
             Integer bookingId, Integer tuteeId, Integer tutorId,
             BigDecimal amount, String currency) throws StripeException {
