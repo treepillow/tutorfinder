@@ -39,7 +39,6 @@ function slotsToWeeklyAvailability(slots: any[]): Record<string, string[]> {
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const result: Record<string, string[]> = {};
   for (const slot of slots) {
-    if (slot.status !== "Available") continue;
     const date = new Date(slot.date + "T00:00:00");
     const day = dayNames[date.getDay()];
     const start = slot.start_time.slice(0, 5);
@@ -124,6 +123,23 @@ export function ProfilePage() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Snapshot original profile for rollback
+      const originalBio = encodeProfileExtra({
+        subjects: currentUser.subjects,
+        qualification: currentUser.qualification,
+        location: currentUser.location,
+        gender: currentUser.gender,
+        birthday: currentUser.birthday,
+        contactNumber: currentUser.contactNumber,
+      });
+      const rollbackProfile = {
+        name: currentUser.name,
+        phone: currentUser.contactNumber || currentUser.phone,
+        subject: (currentUser.subjects || []).map((s: any) => s.subject).filter(Boolean).join(", "),
+        price_rate: parseFloat(currentUser.subjects?.[0]?.hourlyRate || currentUser.subjects?.[0]?.budget) || 0,
+        bio: originalBio,
+      };
+
       const bio = encodeProfileExtra({
         subjects: formData.subjects,
         qualification: formData.qualification,
@@ -142,7 +158,13 @@ export function ProfilePage() {
       });
 
       if (currentUser.userType === "tutor" && formData.availability && Object.keys(formData.availability).length > 0) {
-        await syncAvailabilityToBackend(currentUser.id, formData.availability);
+        try {
+          await syncAvailabilityToBackend(currentUser.id, formData.availability);
+        } catch (availErr: any) {
+          // Roll back the profile update so both services stay in sync
+          await profileApi.updateProfile(currentUser.id, rollbackProfile).catch(console.error);
+          throw new Error("Availability sync failed — profile changes have been rolled back.");
+        }
       }
 
       const profile = await profileApi.getProfile(currentUser.id);

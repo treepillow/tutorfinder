@@ -462,20 +462,6 @@ export async function syncAvailabilityToBackend(
     Friday: 5, Saturday: 6, Sunday: 0,
   };
 
-  // Delete all existing Available slots for this user before re-creating them.
-  // Reserved slots are left untouched (backend will reject their deletion).
-  try {
-    const res = await availabilityApi.getSlots(userId);
-    const existingAvailable = (res.availability || []).filter(
-      (s: any) => s.status === "Available"
-    );
-    await Promise.allSettled(
-      existingAvailable.map((s: any) => availabilityApi.deleteSlot(s.availability_id))
-    );
-  } catch (err) {
-    console.error("Failed to clear old availability slots:", err);
-  }
-
   const today = new Date();
   const slots: { date: string; start_time: string; end_time: string }[] = [];
 
@@ -485,11 +471,9 @@ export async function syncAvailabilityToBackend(
       const targetDay = dayMap[dayName];
       if (targetDay === undefined || !timeSlots?.length) continue;
 
-      // Find the next occurrence of this day
       const date = new Date(today);
       date.setDate(today.getDate() + ((targetDay - today.getDay() + 7) % 7) + week * 7);
 
-      // Skip dates in the past
       if (date <= today && week === 0) {
         date.setDate(date.getDate() + 7);
       }
@@ -500,7 +484,6 @@ export async function syncAvailabilityToBackend(
         const [startStr, endStr] = timeSlot.split("-");
         if (!startStr || !endStr) continue;
 
-        // Normalize to HH:MM:SS format
         const startTime = startStr.includes(":") && startStr.split(":").length === 2
           ? startStr + ":00" : startStr;
         const endTime = endStr.includes(":") && endStr.split(":").length === 2
@@ -511,16 +494,24 @@ export async function syncAvailabilityToBackend(
     }
   }
 
-  // Create all new slots
-  const results = await Promise.allSettled(
-    slots.map((slot) =>
-      availabilityApi.addSlot({ user_id: userId, ...slot })
-    )
+  // Create new slots first — if this fails, old slots are untouched (atomic)
+  await Promise.all(
+    slots.map((slot) => availabilityApi.addSlot({ user_id: userId, ...slot }))
   );
 
-  const created = results.filter((r) => r.status === "fulfilled").length;
-  console.log(`Created ${created}/${slots.length} availability slots`);
-  return created;
+  // Only delete old Available slots after new ones are successfully created
+  const res = await availabilityApi.getSlots(userId);
+  const newSlotDates = new Set(slots.map((s) => `${s.date}|${s.start_time}|${s.end_time}`));
+  const toDelete = (res.availability || []).filter(
+    (s: any) => s.status === "Available" &&
+      !newSlotDates.has(`${s.date}|${s.start_time}|${s.end_time}`)
+  );
+  await Promise.allSettled(
+    toDelete.map((s: any) => availabilityApi.deleteSlot(s.availability_id))
+  );
+
+  console.log(`Created ${slots.length} availability slots`);
+  return slots.length;
 }
 
 // Enrich a backend profile with decoded bio data for frontend display
