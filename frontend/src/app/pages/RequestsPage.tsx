@@ -7,6 +7,7 @@ import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, 
 import Lottie from "lottie-react";
 import circleGuyLoadingData from "../assets/circleGuyLoading.json";
 import { useRefreshNavCounts } from "../context/NavCountsContext";
+import { CircleGuyShrug, CircleGuySleeping } from "../components/EmptyState";
 
 export function RequestsPage() {
   const refreshNavCounts = useRefreshNavCounts();
@@ -264,9 +265,10 @@ export function RequestsPage() {
                 >
                   {activeTab === "awaiting" ? (
                     pendingRequests.length === 0 ? (
-                      <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
-                        <div className="text-5xl mb-3">📫</div>
-                        <p className="text-[#2F3B3D]/70">No pending requests</p>
+                      <div className="bg-[#EDE9DF] rounded-2xl p-10 text-center flex flex-col items-center">
+                        <CircleGuyShrug size={120} />
+                        <p className="text-[#2F3B3D] font-medium mt-3">No pending requests</p>
+                        <p className="text-[#2F3B3D]/60 text-sm mt-1">Nothing here yet — check back soon!</p>
                       </div>
                     ) : (
                       pendingRequests.map((request) => (
@@ -282,9 +284,10 @@ export function RequestsPage() {
                     )
                   ) : (
                     paymentRequests.length === 0 ? (
-                      <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
-                        <div className="text-5xl mb-3">💳</div>
-                        <p className="text-[#2F3B3D]/70">No payments pending</p>
+                      <div className="bg-[#EDE9DF] rounded-2xl p-10 text-center flex flex-col items-center">
+                        <CircleGuySleeping size={120} />
+                        <p className="text-[#2F3B3D] font-medium mt-3">No payments pending</p>
+                        <p className="text-[#2F3B3D]/60 text-sm mt-1">All quiet on the payment front!</p>
                       </div>
                     ) : (
                       paymentRequests.map((request) => (

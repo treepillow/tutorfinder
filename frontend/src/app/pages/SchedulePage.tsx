@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/
 import { Calendar, Clock, BookOpen, User, ChevronLeft, ChevronRight, List, Phone, Mail } from "lucide-react";
 import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, availabilityApi, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
+import { CircleGuyCalendar } from "../components/EmptyState";
 import Lottie from "lottie-react";
 import circleGuyLoadingData from "../assets/circleGuyLoading.json";
 import { useRefreshNavCounts } from "../context/NavCountsContext";
@@ -14,7 +15,7 @@ export function SchedulePage() {
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [view, setView] = useState<"list" | "calendar">("list");
+  const [view, setView] = useState<"list" | "calendar">("calendar");
   const [calendarDate, setCalendarDate] = useState(new Date());
 
   useEffect(() => {
@@ -208,10 +209,10 @@ export function SchedulePage() {
 
         {!loading && view === "list" ? (
           schedule.length === 0 ? (
-            <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
-              <div className="text-5xl mb-3">📅</div>
-              <h3 className="text-xl text-[#2F3B3D] mb-2">No lessons scheduled yet</h3>
-              <p className="text-[#2F3B3D]/70">
+            <div className="bg-[#EDE9DF] rounded-2xl p-10 text-center flex flex-col items-center">
+              <CircleGuyCalendar size={120} />
+              <h3 className="text-xl text-[#2F3B3D] font-medium mt-3 mb-1">No lessons scheduled yet</h3>
+              <p className="text-[#2F3B3D]/60 text-sm">
                 {currentUser.userType === "student"
                   ? "Book lessons with your matched tutors to see them here"
                   : "Accept student requests to see scheduled lessons"}

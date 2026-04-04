@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 import { clearAuth, getCurrentUser } from "../utils/api";
 import { useNavCounts } from "../context/NavCountsContext";
+import circleGrad from "../assets/circleGrad.png";
 
 // Cute filled SVG icons
 function IconDiscover({ active }: { active: boolean }) {
@@ -181,7 +182,7 @@ export function Sidebar() {
         <div className={`flex items-center gap-3 transition-opacity duration-300 ${
           isCollapsed ? "justify-center" : ""
         }`}>
-          <img src="/favicon.svg" alt="TutorFinder" className="w-8 h-8 flex-shrink-0" />
+          <img src={circleGrad} alt="TutorFinder" className="w-8 h-8 flex-shrink-0" />
           <h1 className={`text-2xl tracking-tight transition-opacity duration-300 ${
             isCollapsed ? "hidden" : "opacity-100"
           }`}>
