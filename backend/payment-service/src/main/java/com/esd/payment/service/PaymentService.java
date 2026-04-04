@@ -255,7 +255,7 @@ public class PaymentService {
                     if (intentId != null) break;
                     if (attempt < 3) {
                         System.out.printf("[PAYMENT] PaymentIntent not ready, waiting 2s...%n");
-                        Thread.sleep(2000);
+                        try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
                     }
                 }
                 if (intentId == null) {
