@@ -246,10 +246,18 @@ public class PaymentService {
 
             String intentId = null;
             if (stripeEnabled()) {
-                System.out.printf("[PAYMENT] Retrieving Stripe session: %s%n", sessionId);
-                Session session = Session.retrieve(sessionId);
-                intentId = session.getPaymentIntent();
-                System.out.printf("[PAYMENT] Payment Intent ID from session: %s%n", intentId);
+                // Retry up to 3 times — Stripe may not have attached the PaymentIntent yet
+                for (int attempt = 1; attempt <= 3; attempt++) {
+                    System.out.printf("[PAYMENT] Retrieving Stripe session (attempt %d): %s%n", attempt, sessionId);
+                    Session session = Session.retrieve(sessionId);
+                    intentId = session.getPaymentIntent();
+                    System.out.printf("[PAYMENT] Payment Intent ID from session: %s%n", intentId);
+                    if (intentId != null) break;
+                    if (attempt < 3) {
+                        System.out.printf("[PAYMENT] PaymentIntent not ready, waiting 2s...%n");
+                        Thread.sleep(2000);
+                    }
+                }
                 if (intentId == null) {
                     throw new IllegalStateException("Checkout session has no PaymentIntent — payment may not be complete");
                 }
