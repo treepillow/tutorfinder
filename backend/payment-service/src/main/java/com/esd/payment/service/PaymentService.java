@@ -385,6 +385,12 @@ public class PaymentService {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + paymentId));
 
+        // Already refunded — return as-is
+        if (payment.getStatus() == Payment.PaymentStatus.REFUNDED) {
+            System.out.printf("[PAYMENT] Payment %d already REFUNDED, skipping%n", paymentId);
+            return payment;
+        }
+
         if (payment.getStatus() != Payment.PaymentStatus.HELD) {
             throw new IllegalStateException("Payment is not in HELD state: " + payment.getStatus());
         }

@@ -109,14 +109,7 @@ export function RequestsPage() {
 
   const handleCancelRequest = async (bookingId: number, availabilityId: number) => {
     try {
-      try {
-        await bookingProcessApi.cancel(bookingId, currentUser.userType === "student" ? "tutee" : "tutor");
-      } catch {
-        await bookingApi.cancel(bookingId);
-        if (availabilityId) {
-          await availabilityApi.updateSlot(availabilityId, "Available").catch(() => {});
-        }
-      }
+      await bookingProcessApi.cancel(bookingId, currentUser.userType === "student" ? "tutee" : "tutor");
       toast.success("Request cancelled");
       loadRequests(currentUser);
       refreshNavCounts();
@@ -127,11 +120,7 @@ export function RequestsPage() {
 
   const handleAcceptRequest = async (bookingId: number) => {
     try {
-      try {
-        await bookingProcessApi.confirm(bookingId);
-      } catch {
-        await bookingApi.confirm(bookingId);
-      }
+      await bookingProcessApi.confirm(bookingId);
       toast.success("Request accepted! Student will be notified to pay.");
       loadRequests(currentUser);
       refreshNavCounts();
@@ -142,11 +131,7 @@ export function RequestsPage() {
 
   const handleRejectRequest = async (bookingId: number) => {
     try {
-      try {
-        await bookingProcessApi.reject(bookingId);
-      } catch {
-        await bookingApi.reject(bookingId);
-      }
+      await bookingProcessApi.reject(bookingId);
       toast.success("Request rejected");
       loadRequests(currentUser);
       refreshNavCounts();
@@ -170,18 +155,10 @@ export function RequestsPage() {
         window.location.href = checkoutRes.checkout_url;
       } else {
         // Mock mode — no Stripe key, auto-confirm
-        try {
-          await bookingProcessApi.paymentCaptured(
-            request.booking_id,
-            checkoutRes.stripe_payment_intent_id
-          );
-        } catch {
-          await paymentApi.capture({
-            booking_id: request.booking_id,
-            stripe_payment_intent_id: checkoutRes.stripe_payment_intent_id,
-          });
-          await bookingApi.updateStatus(request.booking_id, "Confirmed");
-        }
+        await bookingProcessApi.paymentCaptured(
+          request.booking_id,
+          checkoutRes.stripe_payment_intent_id
+        );
         toast.success("Payment processed (mock mode)");
         loadRequests(currentUser);
         refreshNavCounts();

@@ -87,24 +87,8 @@ export function SchedulePage() {
   const handleCancelBooking = async (lesson: any) => {
     setActionLoading(true);
     try {
-      // Refund the deposit
-      try {
-        const paymentRes = await paymentApi.getByBooking(lesson.booking_id);
-        if (paymentRes.payment_id) {
-          await paymentApi.refund(paymentRes.payment_id);
-        }
-      } catch {}
-
-      // Cancel the booking
-      try {
-        await bookingProcessApi.cancel(lesson.booking_id, currentUser.userType === "student" ? "tutee" : "tutor");
-      } catch {
-        await bookingApi.cancel(lesson.booking_id);
-        if (lesson.availability_id) {
-          await availabilityApi.updateSlot(lesson.availability_id, "Available").catch(() => {});
-        }
-      }
-
+      // Cancel through OutSystems orchestrator (handles refund, slot update, and status change)
+      await bookingProcessApi.cancel(lesson.booking_id, currentUser.userType === "student" ? "tutee" : "tutor");
       toast.success("Booking cancelled and deposit refunded");
       setSelectedLesson(null);
       loadSchedule(currentUser);
