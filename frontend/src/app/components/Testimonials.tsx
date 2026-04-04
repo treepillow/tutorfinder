@@ -3,14 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import Lottie from "lottie-react";
+import circleGuyData from "../assets/circleGuy.json";
+import circleGuyIdleData from "../assets/circleGuyIdle.json";
 import { ImageWithFallback } from "./shared/ImageWithFallback";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "./ui/dialog";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -53,6 +49,9 @@ export function Testimonials() {
   const ctaRef       = useRef<HTMLElement>(null);
   const statValRefs  = useRef<(HTMLSpanElement | null)[]>([]);
   const cardEls      = useRef<(HTMLDivElement | null)[]>([]);
+  const ctaMascotRef = useRef<HTMLDivElement>(null);
+  const ctaLottieRef = useRef<any>(null);
+  const [ctaWalking, setCtaWalking] = useState(false);
 
   // 3D tilt on testimonial cards
   useEffect(() => {
@@ -167,16 +166,48 @@ export function Testimonials() {
           scrollTrigger: { trigger: ctaRef.current, start: "top 72%", toggleActions: TA },
         }
       );
+
+      // Mascot: walk across then idle-blink beside button
+      gsap.fromTo(ctaMascotRef.current,
+        { x: -120, opacity: 0 },
+        {
+          x: 0, opacity: 1, duration: 1.1, ease: "power2.out",
+          scrollTrigger: {
+            trigger: ctaRef.current, start: "top 72%", toggleActions: TA,
+            onEnter: () => {
+              setCtaWalking(true);
+              if (ctaLottieRef.current) { ctaLottieRef.current.goToAndStop(0, true); ctaLottieRef.current.play(); }
+              gsap.delayedCall(1.1, () => {
+                setCtaWalking(false);
+                if (ctaLottieRef.current) ctaLottieRef.current.stop();
+              });
+            },
+          },
+        }
+      );
     });
 
     return () => ctx.revert();
   }, []);
 
-  const handleUserTypeSelect = (type: "student" | "tutor") => {
-    setIsDialogOpen(false);
-    sessionStorage.setItem("userType", type);
-    navigate("/register?mode=signup");
-  };
+  // Idle bob when not walking
+  useEffect(() => {
+    if (ctaWalking || !ctaMascotRef.current) return;
+    const tween = gsap.to(ctaMascotRef.current, {
+      y: -6, duration: 0.5, ease: "sine.inOut", yoyo: true, repeat: -1,
+    });
+    return () => { tween.kill(); gsap.set(ctaMascotRef.current, { y: 0 }); };
+  }, [ctaWalking]);
+
+  // Idle bob when not walking
+  useEffect(() => {
+    if (ctaWalking || !ctaMascotRef.current) return;
+    const tween = gsap.to(ctaMascotRef.current, {
+      y: -6, duration: 0.5, ease: "sine.inOut", yoyo: true, repeat: -1,
+    });
+    return () => { tween.kill(); gsap.set(ctaMascotRef.current, { y: 0 }); };
+  }, [ctaWalking]);
+
 
   return (
     <>
@@ -261,12 +292,23 @@ export function Testimonials() {
           <p className="cta-sub text-xl text-white/70 mb-10">
             Join thousands of students and tutors on TutorFinder today.
           </p>
-          <button
-            onClick={() => setIsDialogOpen(true)}
-            className="cta-btn px-10 py-4 bg-[#FAFAF8] text-[#7C8D8C] rounded-full font-semibold hover:bg-[#F5F3EF] transition-all duration-300 shadow-xl shadow-black/20 text-lg border border-[#E5E4E1]"
-          >
-            Create Free Account →
-          </button>
+          <div className="cta-btn inline-flex items-end justify-center gap-3">
+            <button
+              onClick={() => setIsDialogOpen(true)}
+              className="px-10 py-4 bg-[#FAFAF8] text-[#7C8D8C] rounded-full font-semibold hover:bg-[#F5F3EF] transition-all duration-300 shadow-xl shadow-black/20 text-lg border border-[#E5E4E1]"
+            >
+              Create Free Account →
+            </button>
+            {/* Walking / idle mascot beside the button */}
+            <div ref={ctaMascotRef} style={{ width: 64, height: 64, opacity: 0, flexShrink: 0 }}>
+              <div style={{ display: ctaWalking ? "block" : "none", width: "100%", height: "100%" }}>
+                <Lottie lottieRef={ctaLottieRef} animationData={circleGuyData} autoplay={false} loop={true} style={{ width: "100%", height: "100%" }} />
+              </div>
+              <div style={{ display: ctaWalking ? "none" : "block", width: "100%", height: "100%" }}>
+                <Lottie animationData={circleGuyIdleData} autoplay={true} loop={true} style={{ width: "100%", height: "100%" }} />
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-[0] pointer-events-none">
@@ -276,26 +318,6 @@ export function Testimonials() {
         </div>
       </section>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-white border-[#E8E4DC]">
-          <DialogHeader>
-            <DialogTitle className="text-2xl text-[#1A2035] font-bold">Get Started with TutorFinder</DialogTitle>
-            <DialogDescription className="text-[#1A2035]/60">Choose your account type to continue</DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 mt-6">
-            <button onClick={() => handleUserTypeSelect("student")} className="p-8 bg-[#F5F3EF] rounded-2xl hover:bg-[#7C8D8C] hover:text-white transition-all duration-300 group border border-[#E8E4DC]">
-              <div className="text-4xl mb-2">🎓</div>
-              <h4 className="text-lg mb-2 text-[#1A2035] group-hover:text-white font-semibold">I'm a Student</h4>
-              <p className="text-sm text-[#1A2035]/60 group-hover:text-white/80">Find the perfect tutor for your learning needs</p>
-            </button>
-            <button onClick={() => handleUserTypeSelect("tutor")} className="p-8 bg-[#F5F3EF] rounded-2xl hover:bg-[#7C8D8C] hover:text-white transition-all duration-300 group border border-[#E8E4DC]">
-              <div className="text-4xl mb-2">👨‍🏫</div>
-              <h4 className="text-lg mb-2 text-[#1A2035] group-hover:text-white font-semibold">I'm a Tutor</h4>
-              <p className="text-sm text-[#1A2035]/60 group-hover:text-white/80">Connect with students and share your expertise</p>
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

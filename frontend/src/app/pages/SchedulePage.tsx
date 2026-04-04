@@ -3,13 +3,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/
 import { Calendar, Clock, BookOpen, User, ChevronLeft, ChevronRight, List, Phone, Mail } from "lucide-react";
 import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, availabilityApi, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
+import { CircleGuyCalendar } from "../components/EmptyState";
+import Lottie from "lottie-react";
+import circleGuyLoadingData from "../assets/circleGuyLoading.json";
+import { useRefreshNavCounts } from "../context/NavCountsContext";
 
 export function SchedulePage() {
+  const refreshNavCounts = useRefreshNavCounts();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [schedule, setSchedule] = useState<any[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<"list" | "calendar">("list");
+  const [actionLoading, setActionLoading] = useState(false);
+  const [view, setView] = useState<"list" | "calendar">("calendar");
   const [calendarDate, setCalendarDate] = useState(new Date());
 
   useEffect(() => {
@@ -79,45 +85,33 @@ export function SchedulePage() {
   };
 
   const handleCancelBooking = async (lesson: any) => {
+    setActionLoading(true);
     try {
-      // Refund the deposit
-      try {
-        const paymentRes = await paymentApi.getByBooking(lesson.booking_id);
-        if (paymentRes.payment_id) {
-          await paymentApi.refund(paymentRes.payment_id);
-        }
-      } catch {}
-
-      // Cancel the booking
-      try {
-        await bookingProcessApi.cancel(lesson.booking_id, currentUser.userType === "student" ? "tutee" : "tutor");
-      } catch {
-        await bookingApi.cancel(lesson.booking_id);
-        if (lesson.availability_id) {
-          await availabilityApi.updateSlot(lesson.availability_id, "Available").catch(() => {});
-        }
-      }
-
+      // Cancel through OutSystems orchestrator (handles refund, slot update, and status change)
+      await bookingProcessApi.cancel(lesson.booking_id, currentUser.userType === "student" ? "tutee" : "tutor");
       toast.success("Booking cancelled and deposit refunded");
       setSelectedLesson(null);
       loadSchedule(currentUser);
+      refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to cancel booking");
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleCompleteBooking = async (lesson: any) => {
+    setActionLoading(true);
     try {
-      try {
-        await bookingProcessApi.complete(lesson.booking_id);
-      } catch {
-        await bookingApi.complete(lesson.booking_id);
-      }
+      await bookingProcessApi.complete(lesson.booking_id);
       toast.success("Booking marked as completed");
       setSelectedLesson(null);
       loadSchedule(currentUser);
+      refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to complete booking");
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -197,16 +191,12 @@ export function SchedulePage() {
           </div>
         </div>
 
-        {loading ? (
-          <div className="bg-[#EDE9DF] rounded-3xl p-16 text-center">
-            <p className="text-[#2F3B3D]/70 animate-pulse">Loading schedule...</p>
-          </div>
-        ) : view === "list" ? (
+        {!loading && view === "list" ? (
           schedule.length === 0 ? (
-            <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
-              <div className="text-5xl mb-3">📅</div>
-              <h3 className="text-xl text-[#2F3B3D] mb-2">No lessons scheduled yet</h3>
-              <p className="text-[#2F3B3D]/70">
+            <div className="bg-[#EDE9DF] rounded-2xl p-10 text-center flex flex-col items-center">
+              <CircleGuyCalendar size={120} />
+              <h3 className="text-xl text-[#2F3B3D] font-medium mt-3 mb-1">No lessons scheduled yet</h3>
+              <p className="text-[#2F3B3D]/60 text-sm">
                 {currentUser.userType === "student"
                   ? "Book lessons with your matched tutors to see them here"
                   : "Accept student requests to see scheduled lessons"}
@@ -328,6 +318,13 @@ export function SchedulePage() {
           </div>
         )}
       </div>
+
+      {/* Loading overlay */}
+      {(loading || actionLoading) && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm bg-white/30">
+          <Lottie animationData={circleGuyLoadingData} loop autoplay style={{ width: 500, height: 500, transform: 'translateY(-80px)' }} />
+        </div>
+      )}
 
       {/* Lesson detail dialog */}
       {selectedLesson && (

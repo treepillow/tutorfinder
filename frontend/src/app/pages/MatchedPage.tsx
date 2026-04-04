@@ -4,6 +4,9 @@ import { BookingDialog } from "../components/BookingDialog";
 import { ProfileDetailDialog } from "../components/ProfileDetailDialog";
 import { getCurrentUser, matchApi, profileApi, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
+import { CircleGuyLonely } from "../components/EmptyState";
+import Lottie from "lottie-react";
+import circleGuyLoadingData from "../assets/circleGuyLoading.json";
 
 export function MatchedPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -73,19 +76,11 @@ export function MatchedPage() {
           </p>
         </div>
 
-        {loading ? (
-          <div className="bg-[#EDE9DF] rounded-3xl p-16 text-center">
-            <p className="text-[#2F3B3D]/70 animate-pulse">Loading matches...</p>
-          </div>
-        ) : matches.length === 0 ? (
-          <div className="bg-[#EDE9DF] rounded-3xl p-16 text-center">
-            <div className="text-6xl mb-4">💬</div>
-            <h3 className="text-2xl text-[#2F3B3D] mb-2">
-              No matches yet
-            </h3>
-            <p className="text-[#2F3B3D]/70">
-              Keep swiping to find your perfect match!
-            </p>
+        {matches.length === 0 && !loading ? (
+          <div className="bg-[#EDE9DF] rounded-3xl p-12 text-center flex flex-col items-center">
+            <CircleGuyLonely size={130} />
+            <h3 className="text-2xl text-[#2F3B3D] mt-4 mb-2">No matches yet</h3>
+            <p className="text-[#2F3B3D]/70 text-sm">Keep swiping to find your perfect match!</p>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -100,6 +95,12 @@ export function MatchedPage() {
           </div>
         )}
       </div>
+
+      {loading && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm bg-white/30">
+          <Lottie animationData={circleGuyLoadingData} loop autoplay style={{ width: 500, height: 500, transform: 'translateY(-80px)' }} />
+        </div>
+      )}
 
       {selectedProfile && currentUser.userType === "student" && showBooking && (
         <BookingDialog

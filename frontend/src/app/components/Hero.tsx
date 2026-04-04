@@ -1,7 +1,10 @@
-import { ArrowRight, MapPin } from "lucide-react";
+import { ArrowRight, Star, MapPin } from "lucide-react";
+import circleGrad from "../assets/circleGrad.png";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { gsap } from "gsap";
+import Lottie from "lottie-react";
+import circleGuyIdleData from "../assets/circleGuyIdle.json";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +12,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
+
+// Warm complementary header colours — terracotta, amber, sage, dusty rose, ochre
+const CARD_COLORS = ["#C2714F", "#D4956A", "#7C8D8C", "#B87B6E", "#C9956C", "#8FA68E", "#C47E5A"];
 
 const cardData = [
   { emoji: "👨", name: "James L.", age: 34, location: "Bishan",    subject: "Physics (A-Level)",    rate: "$45/hr",  isTutor: true  },
@@ -27,10 +33,11 @@ function wrap(offset: number) {
   return ((offset + HALF) % N + N) % N - HALF;
 }
 
-function ProfileCard({ card }: { card: typeof cardData[0] }) {
+function ProfileCard({ card, colorIndex }: { card: typeof cardData[0]; colorIndex: number }) {
+  const headerColor = CARD_COLORS[colorIndex % CARD_COLORS.length];
   return (
     <div className="w-[210px] bg-[#FAFAF8] rounded-2xl overflow-hidden select-none shadow-lg border border-[#E5E4E1]">
-      <div className="h-[150px] relative bg-[#7C8D8C] flex items-center justify-center">
+      <div className="h-[150px] relative flex items-center justify-center" style={{ backgroundColor: headerColor }}>
         <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-4xl font-bold text-white">
           {card.name.charAt(0)}
         </div>
@@ -49,7 +56,7 @@ function ProfileCard({ card }: { card: typeof cardData[0] }) {
         <p className="text-xs text-[#2F3B3D]/70">{card.subject}</p>
         <div className="flex items-center justify-between py-1.5 px-2.5 bg-[#F5F3EF] rounded-lg">
           <span className="text-xs text-[#2F3B3D]/60">{card.isTutor ? "Rate" : "Budget"}</span>
-          <span className="text-xs font-semibold text-[#7C8D8C]">{card.rate}</span>
+          <span className="text-xs font-semibold" style={{ color: headerColor }}>{card.rate}</span>
         </div>
       </div>
     </div>
@@ -60,6 +67,7 @@ export function Hero() {
   const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  const mascotRef      = useRef<HTMLSpanElement>(null);
   const tagRef      = useRef<HTMLDivElement>(null);
   const titleRef    = useRef<HTMLHeadingElement>(null);
   const subtitleRef = useRef<HTMLParagraphElement>(null);
@@ -144,7 +152,17 @@ export function Hero() {
       fanTl.to(card, finalState(cardIndex), i === 0 ? 0 : `<+=0.12`);
     });
 
-    return () => { tl.kill(); fanTl.kill(); tickerActiveRef.current = false; };
+    // Swipe action: whole mascot lunges right fast, squashes, bounces back
+    const swipeTl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    swipeTl
+      // wind-up: lean back left and squash slightly
+      .to(mascotRef.current, { x: "-0.2em", scaleX: 0.85, scaleY: 1.1, duration: 0.2, ease: "power2.in" })
+      // lunge right fast — the swipe
+      .to(mascotRef.current, { x: "0.55em", scaleX: 1.2, scaleY: 0.85, rotation: 15, duration: 0.22, ease: "power4.out" })
+      // snap back to rest with a little overshoot bounce
+      .to(mascotRef.current, { x: 0, scaleX: 1, scaleY: 1, rotation: 0, duration: 0.5, ease: "elastic.out(1, 0.4)" });
+
+    return () => { tl.kill(); fanTl.kill(); swipeTl.kill(); tickerActiveRef.current = false; };
   }, []);
 
   // ── Physics ticker ──
@@ -247,7 +265,7 @@ export function Hero() {
   const [cursorStyle, setCursorStyle] = useState<string>("default");
 
   return (
-    <section ref={sectionRef} className="relative bg-white pb-28">
+    <section ref={sectionRef} className="relative bg-[#F5F3EF] pb-28">
       {/* Parallax bg blobs */}
       <div ref={blobTR} className="absolute -top-40 -right-40 w-[700px] h-[700px] bg-[#7C8D8C] rounded-full blur-[140px] opacity-[0.06] pointer-events-none will-change-transform" />
       <div ref={blobBL} className="absolute -bottom-20 -left-20 w-[500px] h-[500px] bg-[#F59E0B] rounded-full blur-[120px] opacity-[0.06] pointer-events-none will-change-transform" />
@@ -255,8 +273,8 @@ export function Hero() {
       {/* Nav */}
       <nav className="relative z-10 px-8 py-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <img src="/favicon.svg" alt="TutorFinder Logo" className="w-9 h-9" />
+          <div className="flex items-center gap-1">
+            <img src={circleGrad} alt="TutorFinder" className="w-16 h-16 object-contain" />
             <h1 className="text-2xl font-semibold tracking-tight text-[#1A2035]">
               Tutor<span className="text-[#7C8D8C]">Finder</span>
             </h1>
@@ -285,7 +303,23 @@ export function Hero() {
               Swipe. Match. Learn. ✨
             </div>
             <h2 ref={titleRef} className="text-6xl font-bold tracking-tight text-[#1A2035] leading-[1.1]">
-              Find your perfect tutor with a swipe
+              Find your perfect tutor with a{" "}
+              <span className="inline-flex items-center gap-2">
+                swipe
+                {/* Mascot doing swipe gesture */}
+                <span
+                  ref={mascotRef}
+                  className="inline-flex items-center justify-center relative"
+                  style={{ width: "2em", height: "2em", verticalAlign: "middle" }}
+                >
+                  <Lottie
+                    animationData={circleGuyIdleData}
+                    autoplay={true}
+                    loop={true}
+                    style={{ width: "100%", height: "100%" }}
+                  />
+                </span>
+              </span>
             </h2>
             <p ref={subtitleRef} className="text-lg text-[#1A2035]/60 leading-relaxed max-w-lg">
               Discover qualified tutors and eager students through an intuitive matching experience. Built for modern learners and educators.
@@ -322,7 +356,7 @@ export function Hero() {
                   className="absolute left-1/2 top-4 rounded-2xl will-change-transform"
                   style={{ visibility: "hidden" }}
                 >
-                  <ProfileCard card={card} />
+                  <ProfileCard card={card} colorIndex={index} />
                 </div>
               ))}
             </div>

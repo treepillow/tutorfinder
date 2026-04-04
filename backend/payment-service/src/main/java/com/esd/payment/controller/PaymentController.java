@@ -33,11 +33,22 @@ public class PaymentController {
     @PostMapping("/payment/create-intent")
     public ResponseEntity<?> createIntent(@RequestBody Map<String, Object> body) {
         try {
+            // Handle both snake_case and PascalCase field names
             Integer bookingId = intVal(body, "booking_id");
-            Integer tuteeId   = intVal(body, "tutee_id");
-            Integer tutorId   = intVal(body, "tutor_id");
-            BigDecimal amount = new BigDecimal(body.get("amount").toString());
-            String currency   = body.getOrDefault("currency", "sgd").toString();
+            if (bookingId == null) bookingId = intVal(body, "BookingId");
+            Integer tuteeId = intVal(body, "tutee_id");
+            if (tuteeId == null) tuteeId = intVal(body, "TuteeId");
+            Integer tutorId = intVal(body, "tutor_id");
+            if (tutorId == null) tutorId = intVal(body, "TutorId");
+
+            Object amountObj = body.get("amount");
+            if (amountObj == null) amountObj = body.get("Amount");
+            BigDecimal amount = new BigDecimal(amountObj.toString());
+
+            String currency = body.getOrDefault("currency", body.getOrDefault("Currency", "sgd")).toString();
+
+            System.out.printf("[PAYMENT] createIntent called: bookingId=%d, tuteeId=%d, tutorId=%d, amount=%s, currency=%s%n",
+                    bookingId, tuteeId, tutorId, amount, currency);
 
             if (bookingId == null || tuteeId == null || tutorId == null) {
                 return ResponseEntity.badRequest().body(Map.of("error", "booking_id, tutee_id, tutor_id are required"));
@@ -47,6 +58,8 @@ public class PaymentController {
                     bookingId, tuteeId, tutorId, amount, currency);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            System.err.printf("[PAYMENT] Exception in createIntent: %s%n", e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.internalServerError()
                     .body(Map.of("error", e.getMessage()));
         }
@@ -60,11 +73,22 @@ public class PaymentController {
     @PostMapping("/payment/checkout")
     public ResponseEntity<?> checkout(@RequestBody Map<String, Object> body) {
         try {
+            // Handle both snake_case and PascalCase field names
             Integer bookingId = intVal(body, "booking_id");
-            Integer tuteeId   = intVal(body, "tutee_id");
-            Integer tutorId   = intVal(body, "tutor_id");
-            BigDecimal amount = new BigDecimal(body.get("amount").toString());
-            String currency   = body.getOrDefault("currency", "sgd").toString();
+            if (bookingId == null) bookingId = intVal(body, "BookingId");
+            Integer tuteeId = intVal(body, "tutee_id");
+            if (tuteeId == null) tuteeId = intVal(body, "TuteeId");
+            Integer tutorId = intVal(body, "tutor_id");
+            if (tutorId == null) tutorId = intVal(body, "TutorId");
+
+            Object amountObj = body.get("amount");
+            if (amountObj == null) amountObj = body.get("Amount");
+            BigDecimal amount = new BigDecimal(amountObj.toString());
+
+            String currency = body.getOrDefault("currency", body.getOrDefault("Currency", "sgd")).toString();
+
+            System.out.printf("[PAYMENT] checkout called: bookingId=%d, tuteeId=%d, tutorId=%d, amount=%s, currency=%s%n",
+                    bookingId, tuteeId, tutorId, amount, currency);
 
             if (bookingId == null || tuteeId == null || tutorId == null) {
                 return ResponseEntity.badRequest().body(Map.of("error", "booking_id, tutee_id, tutor_id are required"));
@@ -74,6 +98,8 @@ public class PaymentController {
                     bookingId, tuteeId, tutorId, amount, currency);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            System.err.printf("[PAYMENT] Exception in checkout: %s%n", e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.internalServerError()
                     .body(Map.of("error", e.getMessage()));
         }
@@ -90,14 +116,22 @@ public class PaymentController {
         try {
             Integer bookingId = intVal(body, "booking_id");
             if (bookingId == null) {
+                bookingId = intVal(body, "BookingId");
+            }
+            System.out.printf("[PAYMENT] completeCheckout called with bookingId=%d%n", bookingId);
+            if (bookingId == null) {
                 return ResponseEntity.badRequest().body(Map.of("error", "booking_id is required"));
             }
             Payment payment = paymentService.completeCheckout(bookingId);
             return ResponseEntity.ok(toMap(payment));
         } catch (IllegalArgumentException e) {
+            System.err.printf("[PAYMENT] IllegalArgumentException in completeCheckout: %s%n", e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+            System.err.printf("[PAYMENT] Exception in completeCheckout: %s%n", e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getClass().getSimpleName() + ": " + e.getMessage()));
         }
     }
 
@@ -109,17 +143,29 @@ public class PaymentController {
     @PostMapping("/payment/capture")
     public ResponseEntity<?> capture(@RequestBody Map<String, Object> body) {
         try {
-            String intentId  = (String) body.get("stripe_payment_intent_id");
+            // Handle both snake_case and PascalCase field names
+            String intentId = (String) body.get("stripe_payment_intent_id");
+            if (intentId == null) {
+                intentId = (String) body.get("StripePaymentIntentId");
+            }
             String tuteeEmail = (String) body.getOrDefault("tutee_email", "");
+            if (tuteeEmail == null || tuteeEmail.isEmpty()) {
+                tuteeEmail = (String) body.getOrDefault("TuteeEmail", "");
+            }
+            System.out.printf("[PAYMENT] capture called with intentId=%s, tuteeEmail=%s, body keys=%s%n", intentId, tuteeEmail, body.keySet());
             if (intentId == null || intentId.isBlank()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "stripe_payment_intent_id is required"));
             }
             Payment payment = paymentService.capturePayment(intentId, tuteeEmail);
             return ResponseEntity.ok(toMap(payment));
         } catch (IllegalArgumentException e) {
+            System.err.printf("[PAYMENT] IllegalArgumentException in capture: %s%n", e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+            System.err.printf("[PAYMENT] Exception in capture: %s%n", e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getClass().getSimpleName() + ": " + e.getMessage()));
         }
     }
 
@@ -133,15 +179,27 @@ public class PaymentController {
                                      @RequestBody(required = false) Map<String, Object> body) {
         if (body == null) body = new HashMap<>();
         try {
+            // Handle both snake_case and PascalCase field names
             String tutorAccountId = (String) body.getOrDefault("tutor_stripe_account_id", "");
-            String tutorEmail     = (String) body.getOrDefault("tutor_email", "");
+            if (tutorAccountId == null || tutorAccountId.isEmpty()) {
+                tutorAccountId = (String) body.getOrDefault("TutorStripeAccountId", "");
+            }
+            String tutorEmail = (String) body.getOrDefault("tutor_email", "");
+            if (tutorEmail == null || tutorEmail.isEmpty()) {
+                tutorEmail = (String) body.getOrDefault("TutorEmail", "");
+            }
+            System.out.printf("[PAYMENT] release called for paymentId=%d, tutorEmail=%s%n", paymentId, tutorEmail);
             Payment payment = paymentService.releaseToTutor(paymentId, tutorAccountId, tutorEmail);
             return ResponseEntity.ok(toMap(payment));
         } catch (IllegalArgumentException e) {
+            System.err.printf("[PAYMENT] IllegalArgumentException in release: %s%n", e.getMessage());
             return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
         } catch (IllegalStateException e) {
+            System.err.printf("[PAYMENT] IllegalStateException in release: %s%n", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
+            System.err.printf("[PAYMENT] Exception in release: %s%n", e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
     }
@@ -156,14 +214,23 @@ public class PaymentController {
                                     @RequestBody(required = false) Map<String, Object> body) {
         if (body == null) body = new HashMap<>();
         try {
+            // Handle both snake_case and PascalCase field names
             String tuteeEmail = (String) body.getOrDefault("tutee_email", "");
+            if (tuteeEmail == null || tuteeEmail.isEmpty()) {
+                tuteeEmail = (String) body.getOrDefault("TuteeEmail", "");
+            }
+            System.out.printf("[PAYMENT] refund called for paymentId=%d, tuteeEmail=%s%n", paymentId, tuteeEmail);
             Payment payment = paymentService.refundToTutee(paymentId, tuteeEmail);
             return ResponseEntity.ok(toMap(payment));
         } catch (IllegalArgumentException e) {
+            System.err.printf("[PAYMENT] IllegalArgumentException in refund: %s%n", e.getMessage());
             return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
         } catch (IllegalStateException e) {
+            System.err.printf("[PAYMENT] IllegalStateException in refund: %s%n", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
+            System.err.printf("[PAYMENT] Exception in refund: %s%n", e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
     }

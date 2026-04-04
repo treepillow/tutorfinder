@@ -4,8 +4,13 @@ import { RequestCard } from "../components/RequestCard";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, enrichProfile, availabilityApi } from "../utils/api";
+import Lottie from "lottie-react";
+import circleGuyLoadingData from "../assets/circleGuyLoading.json";
+import { useRefreshNavCounts } from "../context/NavCountsContext";
+import { CircleGuyShrug, CircleGuySleeping } from "../components/EmptyState";
 
 export function RequestsPage() {
+  const refreshNavCounts = useRefreshNavCounts();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [paymentRequests, setPaymentRequests] = useState<any[]>([]);
@@ -25,15 +30,10 @@ export function RequestsPage() {
     if (paymentStatus === "success" && bookingId) {
       setSearchParams({});
       setActiveTab("payment");
-      // Complete checkout first, then reload
+      // Complete payment through OutSystems orchestrator
       (async () => {
         try {
-          const paymentRes = await paymentApi.completeCheckout(parseInt(bookingId));
-          try {
-            await bookingProcessApi.paymentCaptured(parseInt(bookingId), paymentRes.stripe_payment_intent_id);
-          } catch {
-            await bookingApi.updateStatus(parseInt(bookingId), "Confirmed");
-          }
+          await bookingProcessApi.completePayment(parseInt(bookingId));
           toast.success("Payment successful! Lesson confirmed.");
         } catch (err: any) {
           toast.error(err.message || "Failed to confirm payment");
@@ -109,16 +109,10 @@ export function RequestsPage() {
 
   const handleCancelRequest = async (bookingId: number, availabilityId: number) => {
     try {
-      try {
-        await bookingProcessApi.cancel(bookingId, currentUser.userType === "student" ? "tutee" : "tutor");
-      } catch {
-        await bookingApi.cancel(bookingId);
-        if (availabilityId) {
-          await availabilityApi.updateSlot(availabilityId, "Available").catch(() => {});
-        }
-      }
+      await bookingProcessApi.cancel(bookingId, currentUser.userType === "student" ? "tutee" : "tutor");
       toast.success("Request cancelled");
       loadRequests(currentUser);
+      refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to cancel");
     }
@@ -126,13 +120,10 @@ export function RequestsPage() {
 
   const handleAcceptRequest = async (bookingId: number) => {
     try {
-      try {
-        await bookingProcessApi.confirm(bookingId);
-      } catch {
-        await bookingApi.confirm(bookingId);
-      }
+      await bookingProcessApi.confirm(bookingId);
       toast.success("Request accepted! Student will be notified to pay.");
       loadRequests(currentUser);
+      refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to accept");
     }
@@ -140,13 +131,10 @@ export function RequestsPage() {
 
   const handleRejectRequest = async (bookingId: number) => {
     try {
-      try {
-        await bookingProcessApi.reject(bookingId);
-      } catch {
-        await bookingApi.reject(bookingId);
-      }
+      await bookingProcessApi.reject(bookingId);
       toast.success("Request rejected");
       loadRequests(currentUser);
+      refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to reject");
     }
@@ -167,20 +155,13 @@ export function RequestsPage() {
         window.location.href = checkoutRes.checkout_url;
       } else {
         // Mock mode — no Stripe key, auto-confirm
-        try {
-          await bookingProcessApi.paymentCaptured(
-            request.booking_id,
-            checkoutRes.stripe_payment_intent_id
-          );
-        } catch {
-          await paymentApi.capture({
-            booking_id: request.booking_id,
-            stripe_payment_intent_id: checkoutRes.stripe_payment_intent_id,
-          });
-          await bookingApi.updateStatus(request.booking_id, "Confirmed");
-        }
+        await bookingProcessApi.paymentCaptured(
+          request.booking_id,
+          checkoutRes.stripe_payment_intent_id
+        );
         toast.success("Payment processed (mock mode)");
         loadRequests(currentUser);
+        refreshNavCounts();
       }
     } catch (err: any) {
       toast.error(err.message || "Payment failed");
@@ -219,11 +200,7 @@ export function RequestsPage() {
           </p>
         </div>
 
-        {loading ? (
-          <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
-            <p className="text-[#2F3B3D]/70 animate-pulse">Loading requests...</p>
-          </div>
-        ) : (
+        {!loading && (
           <div className="w-full">
             {/* Tab bar */}
             <div className="relative flex p-1 bg-[#EDE9DF] rounded-full mb-6">
@@ -265,9 +242,10 @@ export function RequestsPage() {
                 >
                   {activeTab === "awaiting" ? (
                     pendingRequests.length === 0 ? (
-                      <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
-                        <div className="text-5xl mb-3">📫</div>
-                        <p className="text-[#2F3B3D]/70">No pending requests</p>
+                      <div className="bg-[#EDE9DF] rounded-2xl p-10 text-center flex flex-col items-center">
+                        <CircleGuyShrug size={120} />
+                        <p className="text-[#2F3B3D] font-medium mt-3">No pending requests</p>
+                        <p className="text-[#2F3B3D]/60 text-sm mt-1">Nothing here yet — check back soon!</p>
                       </div>
                     ) : (
                       pendingRequests.map((request) => (
@@ -283,9 +261,10 @@ export function RequestsPage() {
                     )
                   ) : (
                     paymentRequests.length === 0 ? (
-                      <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
-                        <div className="text-5xl mb-3">💳</div>
-                        <p className="text-[#2F3B3D]/70">No payments pending</p>
+                      <div className="bg-[#EDE9DF] rounded-2xl p-10 text-center flex flex-col items-center">
+                        <CircleGuySleeping size={120} />
+                        <p className="text-[#2F3B3D] font-medium mt-3">No payments pending</p>
+                        <p className="text-[#2F3B3D]/60 text-sm mt-1">All quiet on the payment front!</p>
                       </div>
                     ) : (
                       paymentRequests.map((request) => (
@@ -306,6 +285,11 @@ export function RequestsPage() {
         )}
       </div>
 
+      {loading && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm bg-white/30">
+          <Lottie animationData={circleGuyLoadingData} loop autoplay style={{ width: 500, height: 500, transform: 'translateY(-80px)' }} />
+        </div>
+      )}
     </div>
   );
 }

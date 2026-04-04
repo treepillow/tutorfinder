@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import Lottie from "lottie-react";
+import circleGuyIdleData from "../assets/circleGuyIdle.json";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -36,10 +38,12 @@ const features = [
 ];
 
 export function Features() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const headingRef = useRef<HTMLDivElement>(null);
-  const gridRef    = useRef<HTMLDivElement>(null);
-  const cardEls    = useRef<(HTMLDivElement | null)[]>([]);
+  const sectionRef   = useRef<HTMLElement>(null);
+  const headingRef   = useRef<HTMLDivElement>(null);
+  const gridRef      = useRef<HTMLDivElement>(null);
+  const cardEls      = useRef<(HTMLDivElement | null)[]>([]);
+  const mascotRef    = useRef<HTMLDivElement>(null);
+  const confettiRef  = useRef<HTMLDivElement>(null);
 
 
 
@@ -81,13 +85,67 @@ export function Features() {
           scrollTrigger: { trigger: gridRef.current, start: "top 78%", toggleActions: TA },
         }
       );
+
+      // Mascot entrance + confetti burst on scroll
+      gsap.fromTo(mascotRef.current,
+        { y: 40, opacity: 0, scale: 0.6 },
+        {
+          y: 0, opacity: 1, scale: 1, duration: 0.7, ease: "back.out(2)",
+          scrollTrigger: {
+            trigger: headingRef.current, start: "top 80%", toggleActions: TA,
+            onEnter: () => burstConfetti(),
+          },
+        }
+      );
+
+      // Wave animation — rocks side to side from bottom pivot
+      gsap.to(mascotRef.current, {
+        rotation: 20, duration: 0.4, ease: "sine.inOut", yoyo: true, repeat: -1,
+        transformOrigin: "bottom center",
+      });
+
     }, sectionRef);
 
     return () => ctx.revert();
   }, []);
 
+  const CONFETTI_COLORS = ["#7C8D8C", "#F59E0B", "#EF4444", "#3B82F6", "#10B981", "#F472B6", "#A78BFA", "#FF6B35", "#FFD700"];
+
+  const burstConfetti = () => {
+    const container = confettiRef.current;
+    if (!container) return;
+    container.innerHTML = "";
+    for (let i = 0; i < 48; i++) {
+      const el = document.createElement("div");
+      const size = 7 + Math.random() * 10;
+      const shape = Math.random();
+      el.style.cssText = `
+        position:absolute; width:${size}px; height:${shape > 0.66 ? size * 0.4 : size}px;
+        background:${CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)]};
+        border-radius:${shape > 0.33 ? "50%" : "2px"};
+        top:50%; left:50%; pointer-events:none;
+      `;
+      container.appendChild(el);
+      const angle = Math.random() * Math.PI * 2;
+      const dist  = 50 + Math.random() * 120;
+      gsap.fromTo(el,
+        { x: 0, y: 0, opacity: 1, scale: 1, rotation: 0 },
+        {
+          x: Math.cos(angle) * dist,
+          y: Math.sin(angle) * dist,
+          opacity: 0,
+          scale: 0.2,
+          rotation: Math.random() * 720 - 360,
+          duration: 1.4 + Math.random() * 0.8,
+          ease: "power1.out",
+          delay: Math.random() * 0.25,
+        }
+      );
+    }
+  };
+
   return (
-    <section ref={sectionRef} id="features" className="relative bg-white pt-12 pb-36">
+    <section ref={sectionRef} id="features" className="relative bg-white pt-12 pb-36 overflow-hidden">
       <div className="max-w-7xl mx-auto px-8">
 
         <div ref={headingRef} className="text-center space-y-4 mb-20">
@@ -95,9 +153,18 @@ export function Features() {
             Key Features
           </div>
           <h3 className="text-5xl font-bold tracking-tight text-[#1A2035]">
-            {"Everything you need to succeed".split(" ").map((word, i) => (
+            {["Everything", "you", "need", "to"].map((word, i) => (
               <span key={i} className="feat-title-word inline-block mr-[0.3em]">{word}</span>
             ))}
+            <span className="feat-title-word inline-flex items-center gap-2">
+              succeed
+              <span className="relative inline-flex items-center justify-center" style={{ width: "1.4em", height: "1.4em", verticalAlign: "middle" }}>
+                <span ref={confettiRef} className="absolute inset-0 pointer-events-none" style={{ zIndex: 11 }} />
+                <span ref={mascotRef} className="inline-flex" style={{ width: "100%", height: "100%", opacity: 0, transformOrigin: "bottom center" }}>
+                  <Lottie animationData={circleGuyIdleData} autoplay={true} loop={true} style={{ width: "100%", height: "100%" }} />
+                </span>
+              </span>
+            </span>
           </h3>
           <p className="feat-subtitle text-lg text-[#1A2035]/60 max-w-2xl mx-auto">
             Powerful features designed to make finding and booking tutors effortless
