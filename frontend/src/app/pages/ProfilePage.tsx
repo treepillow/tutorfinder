@@ -32,8 +32,24 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { AvailabilitySelector } from "../components/AvailabilitySelector";
-import { getCurrentUser, setCurrentUser, profileApi, enrichProfile, encodeProfileExtra, syncAvailabilityToBackend } from "../utils/api";
+import { getCurrentUser, setCurrentUser, profileApi, availabilityApi, enrichProfile, encodeProfileExtra, syncAvailabilityToBackend } from "../utils/api";
 import { toast } from "sonner";
+
+function slotsToWeeklyAvailability(slots: any[]): Record<string, string[]> {
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const result: Record<string, string[]> = {};
+  for (const slot of slots) {
+    if (slot.status !== "Available") continue;
+    const date = new Date(slot.date + "T00:00:00");
+    const day = dayNames[date.getDay()];
+    const start = slot.start_time.slice(0, 5);
+    const end = slot.end_time.slice(0, 5);
+    const timeSlot = `${start}-${end}`;
+    if (!result[day]) result[day] = [];
+    if (!result[day].includes(timeSlot)) result[day].push(timeSlot);
+  }
+  return result;
+}
 
 const SUBJECTS = ["Mathematics", "English", "Science", "Physics", "Chemistry", "Biology", "History", "Geography", "Chinese", "Malay", "Tamil"];
 const EDUCATION_LEVELS = ["Primary 1-3", "Primary 4-6", "Secondary 1-2", "Secondary 3-4", "Junior College", "University"];
@@ -53,9 +69,18 @@ export function ProfilePage() {
     const user = getCurrentUser();
     if (!user) return;
     try {
-      const profile = await profileApi.getProfile(user.id);
+      const isTutorUser = user.role?.toLowerCase() === "tutor" || user.userType === "tutor";
+      const [profile, availabilityRes] = await Promise.all([
+        profileApi.getProfile(user.id),
+        isTutorUser
+          ? availabilityApi.getSlots(user.id).catch(() => ({ availability: [] }))
+          : Promise.resolve({ availability: [] }),
+      ]);
       const enriched = enrichProfile(profile);
-      enriched.availability = user.availability || enriched.availability;
+      const slots = availabilityRes.availability || [];
+      enriched.availability = slots.length > 0
+        ? slotsToWeeklyAvailability(slots)
+        : (user.availability || {});
       setCurrentUserState(enriched);
     } catch {
       setCurrentUserState(user);
@@ -117,7 +142,7 @@ export function ProfilePage() {
       });
 
       if (currentUser.userType === "tutor" && formData.availability && Object.keys(formData.availability).length > 0) {
-        syncAvailabilityToBackend(currentUser.id, formData.availability).catch(console.error);
+        await syncAvailabilityToBackend(currentUser.id, formData.availability);
       }
 
       const profile = await profileApi.getProfile(currentUser.id);
