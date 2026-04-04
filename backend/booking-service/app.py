@@ -45,6 +45,8 @@ class Booking(db.Model):
         default='AwaitingConfirmation', nullable=False)
     created_at      = db.Column(db.DateTime, default=datetime.utcnow)
     confirmed_at    = db.Column(db.DateTime, nullable=True)
+    disputed_by     = db.Column(db.String(50), nullable=True)
+    dispute_reason  = db.Column(db.String(500), nullable=True)
 
     def to_dict(self):
         return {
@@ -58,6 +60,8 @@ class Booking(db.Model):
             'status':          self.status,
             'created_at':      self.created_at.isoformat() if self.created_at else None,
             'confirmed_at':    self.confirmed_at.isoformat() if self.confirmed_at else None,
+            'disputed_by':     self.disputed_by,
+            'dispute_reason':  self.dispute_reason,
         }
 
 
@@ -234,7 +238,10 @@ def dispute_booking(booking_id):
         return jsonify({'error': 'Booking not found'}), 404
     if booking.status not in ['Confirmed', 'Completed']:
         return jsonify({'error': f'Cannot dispute booking with status: {booking.status}'}), 400
+    data = request.get_json(force=True) or {}
     booking.status = 'Disputed'
+    booking.disputed_by = data.get('reported_by') or data.get('ReportedBy')
+    booking.dispute_reason = data.get('reason') or data.get('Reason')
     db.session.commit()
     return jsonify(booking.to_dict()), 200
 

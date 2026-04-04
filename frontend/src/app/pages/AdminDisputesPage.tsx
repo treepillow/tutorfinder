@@ -116,6 +116,18 @@ export function AdminDisputesPage() {
                 </span>
               </div>
 
+              {/* Who reported */}
+              {d.disputed_by && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
+                  <p className="text-sm font-medium text-red-700">
+                    Reported by: {d.disputed_by === "tutee" ? `Student — ${d.tutee?.name}` : `Tutor — ${d.tutor?.name}`}
+                  </p>
+                  {d.dispute_reason && (
+                    <p className="text-sm text-red-600 mt-1">Reason: {d.dispute_reason}</p>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="bg-[#F5F2EB] rounded-xl p-3">
                   <p className="text-xs text-[#7C8D8C]">Student</p>
