@@ -91,7 +91,7 @@ export function BookingDialog({ profile, currentUser, onClose }: BookingDialogPr
         });
       } catch {
         // If OutSystems is unavailable, fall back to direct booking service
-        await bookingApi.create({
+        const booking = await bookingApi.create({
           tutor_id: profile.id,
           tutee_id: currentUser.id,
           availability_id: selectedSlotId,
@@ -101,8 +101,13 @@ export function BookingDialog({ profile, currentUser, onClose }: BookingDialogPr
           subject: selectedSubject,
           level: selectedLevel,
         });
-        // Reserve the slot directly
-        await availabilityApi.updateSlot(selectedSlotId, "Reserved");
+        try {
+          await availabilityApi.updateSlot(selectedSlotId, "Reserved");
+        } catch {
+          // Roll back the booking so both services stay in sync
+          await bookingApi.cancel(booking.booking_id).catch(console.error);
+          throw new Error("Failed to reserve slot — booking has been cancelled.");
+        }
       }
 
       toast.success("Booking request sent!");
