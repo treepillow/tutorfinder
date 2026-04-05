@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -5,6 +6,22 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { MapPin, GraduationCap, Mail, Phone } from "lucide-react";
+import { availabilityApi } from "../utils/api";
+
+function slotsToWeeklyAvailability(slots: any[]): Record<string, string[]> {
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const result: Record<string, string[]> = {};
+  for (const slot of slots) {
+    const date = new Date(slot.date + "T00:00:00");
+    const day = dayNames[date.getDay()];
+    const start = slot.start_time.slice(0, 5);
+    const end = slot.end_time.slice(0, 5);
+    const timeSlot = `${start}-${end}`;
+    if (!result[day]) result[day] = [];
+    if (!result[day].includes(timeSlot)) result[day].push(timeSlot);
+  }
+  return result;
+}
 
 const CIRCLE_GUY_COLORS = [
   { body: "#4d7fe8", legs: "#3b4dbf", hi: "#6b97f0" },
@@ -39,6 +56,7 @@ interface ProfileDetailDialogProps {
   userType: "student" | "tutor";
   onClose: () => void;
   showActions?: boolean;
+  showContact?: boolean;
   onAccept?: () => void;
   onReject?: () => void;
 }
@@ -48,13 +66,29 @@ export function ProfileDetailDialog({
   userType,
   onClose,
   showActions = false,
+  showContact = false,
   onAccept,
   onReject,
 }: ProfileDetailDialogProps) {
-  const getAge = () => {
-    if (profile.age) return profile.age;
-    return 20;
-  };
+  const getAge = () => profile.age ?? "—";
+  const [availability, setAvailability] = useState<Record<string, string[]> | null>(null);
+
+  useEffect(() => {
+    if (profile.userType !== "tutor") return;
+    // If availability is already pre-loaded and in the right shape, use it
+    if (profile.availability && typeof profile.availability === "object") {
+      const values = Object.values(profile.availability);
+      if (values.length > 0 && Array.isArray(values[0])) {
+        setAvailability(profile.availability);
+        return;
+      }
+    }
+    // Otherwise fetch from backend
+    availabilityApi.getSlots(profile.id).then((res: any) => {
+      const slots = res.availability || [];
+      setAvailability(slots.length > 0 ? slotsToWeeklyAvailability(slots) : {});
+    }).catch(() => setAvailability({}));
+  }, [profile.id, profile.userType]);
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -95,17 +129,21 @@ export function ProfileDetailDialog({
             </div>
           )}
 
-          {/* Contact (for matched profiles) */}
-          {showActions && (
+          {/* Contact details — only shown on matched page */}
+          {showContact && (
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-[#2F3B3D]">
-                <Mail className="w-5 h-5 text-[#7C8D8C]" />
-                <span>contact@email.com</span>
-              </div>
-              <div className="flex items-center gap-2 text-[#2F3B3D]">
-                <Phone className="w-5 h-5 text-[#7C8D8C]" />
-                <span>+65 1234 5678</span>
-              </div>
+              {profile.email && (
+                <div className="flex items-center gap-2 text-[#2F3B3D]">
+                  <Mail className="w-5 h-5 text-[#7C8D8C]" />
+                  <span>{profile.email}</span>
+                </div>
+              )}
+              {profile.contactNumber && (
+                <div className="flex items-center gap-2 text-[#2F3B3D]">
+                  <Phone className="w-5 h-5 text-[#7C8D8C]" />
+                  <span>{profile.contactNumber}</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -131,27 +169,33 @@ export function ProfileDetailDialog({
             </div>
           </div>
 
-          {/* Availability (for tutors) */}
-          {profile.availability && (
+          {/* Availability (for tutors only) */}
+          {profile.userType === "tutor" && (
             <div>
               <h4 className="text-lg text-[#2F3B3D] mb-3">Availability</h4>
-              <div className="space-y-2">
-                {Object.entries(profile.availability).map(([day, slots]: [string, any]) => (
-                  <div key={day} className="bg-[#EDE9DF] p-4 rounded-xl">
-                    <div className="text-[#2F3B3D] mb-2">{day}</div>
-                    <div className="flex flex-wrap gap-2">
-                      {slots.map((slot: string) => (
-                        <span
-                          key={slot}
-                          className="px-3 py-1 bg-[#7C8D8C] text-white text-sm rounded-full"
-                        >
-                          {slot}
-                        </span>
-                      ))}
+              {availability === null ? (
+                <p className="text-sm text-[#2F3B3D]/50">Loading...</p>
+              ) : Object.keys(availability).length === 0 ? (
+                <p className="text-sm text-[#2F3B3D]/50">No availability set</p>
+              ) : (
+                <div className="space-y-2">
+                  {Object.entries(availability).map(([day, slots]) => (
+                    <div key={day} className="bg-[#EDE9DF] p-4 rounded-xl">
+                      <div className="text-[#2F3B3D] mb-2">{day}</div>
+                      <div className="flex flex-wrap gap-2">
+                        {slots.map((slot) => (
+                          <span
+                            key={slot}
+                            className="px-3 py-1 bg-[#7C8D8C] text-white text-sm rounded-full"
+                          >
+                            {slot}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

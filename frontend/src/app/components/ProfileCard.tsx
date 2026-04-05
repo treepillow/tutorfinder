@@ -1,4 +1,4 @@
-import { MapPin } from "lucide-react";
+import { MapPin, Mail, Phone, CalendarPlus, ChevronRight } from "lucide-react";
 
 const CIRCLE_GUY_COLORS = [
   { body: "#4d7fe8", legs: "#3b4dbf", hi: "#6b97f0" },
@@ -54,40 +54,73 @@ export function ProfileCard({ profile, onClick, userType }: ProfileCardProps) {
   return (
     <div
       onClick={onClick}
-      className="bg-[#EDE9DF] rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group"
+      className="bg-[#EDE9DF] rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group flex flex-col h-full"
     >
-      <div className="aspect-[4/3] relative bg-[#EDE9DF] flex items-center justify-center">
+      <div className="aspect-[4/3] relative bg-[#EDE9DF] flex items-center justify-center shrink-0">
         <CircleGuyAvatar id={profile.id ?? profile.name} size={110} />
-        <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm text-[#2F3B3D]">
-          {profile.age || 20} years
-        </div>
-      </div>
-
-      <div className="p-5 space-y-3">
-        <div>
-          <h3 className="text-2xl text-[#2F3B3D] mb-1 group-hover:text-[#7C8D8C] transition-colors">
-            {profile.name}
-          </h3>
-          <div className="flex items-center gap-2 text-[#2F3B3D]/70">
-            <MapPin className="w-4 h-4" />
-            <span className="text-sm">{profile.location}</span>
-          </div>
-        </div>
-
-        <div className="text-sm text-[#2F3B3D] line-clamp-2">
-          {subjectText}
-        </div>
-
-        {rateOrBudget && (
-          <div className="flex items-center justify-between py-2 px-3 bg-[#F5F3EF] rounded-lg">
-            <span className="text-sm text-[#2F3B3D]/70">
-              {userType === "student" ? "Rate" : "Budget"}
-            </span>
-            <span className="text-[#7C8D8C]">
-              ${rateOrBudget}/hr
-            </span>
+        {profile.age && (
+          <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm text-[#2F3B3D]">
+            {profile.age} years
           </div>
         )}
+      </div>
+
+      <div className="p-5 flex flex-col flex-1 gap-4">
+        {/* Name + subjects + rate */}
+        <div>
+          <div className="flex items-start justify-between gap-2 mb-0.5">
+            <h3 className="text-2xl text-[#2F3B3D] group-hover:text-[#7C8D8C] transition-colors leading-tight">
+              {profile.name}
+            </h3>
+            {rateOrBudget && (
+              <div className="text-right shrink-0">
+                <span className="text-xl font-semibold text-[#7C8D8C]">${rateOrBudget}</span>
+                <span className="text-sm text-[#7C8D8C]/70">/hr</span>
+              </div>
+            )}
+          </div>
+          <p className="text-sm text-[#2F3B3D]/70 line-clamp-2">{subjectText}</p>
+        </div>
+
+        {/* Contact + location grouped (students only) */}
+        {userType === "student" && (
+          <div className="bg-[#F5F3EF] rounded-xl px-3 py-2.5 space-y-1.5">
+            {profile.location && (
+              <div className="flex items-center gap-2 text-sm text-[#2F3B3D]/70">
+                <MapPin className="w-3.5 h-3.5 shrink-0 text-[#7C8D8C]" />
+                <span className="truncate">{profile.location}</span>
+              </div>
+            )}
+            {profile.email && (
+              <div className="flex items-center gap-2 text-sm text-[#2F3B3D]/70">
+                <Mail className="w-3.5 h-3.5 shrink-0 text-[#7C8D8C]" />
+                <span className="truncate">{profile.email}</span>
+              </div>
+            )}
+            {profile.contactNumber && (
+              <div className="flex items-center gap-2 text-sm text-[#2F3B3D]/70">
+                <Phone className="w-3.5 h-3.5 shrink-0 text-[#7C8D8C]" />
+                <span>{profile.contactNumber}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Spacer pushes CTA to bottom */}
+        <div className="flex-1" />
+
+        {/* CTA */}
+        <div className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
+          userType === "student"
+            ? "bg-[#7C8D8C] text-white group-hover:bg-[#2F3B3D]"
+            : "bg-[#F5F3EF] text-[#2F3B3D] group-hover:bg-[#D6CFBF]"
+        }`}>
+          {userType === "student" ? (
+            <><CalendarPlus className="w-4 h-4" /> Book a Lesson</>
+          ) : (
+            <><ChevronRight className="w-4 h-4" /> View Student Details</>
+          )}
+        </div>
       </div>
     </div>
   );

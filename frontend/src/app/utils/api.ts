@@ -542,6 +542,17 @@ export async function syncAvailabilityToBackend(
 // Enrich a backend profile with decoded bio data for frontend display
 export function enrichProfile(backendProfile: any): any {
   const extra = decodeProfileExtra(backendProfile.bio);
+
+  let age: number | undefined;
+  if (extra.birthday) {
+    const dob = new Date(extra.birthday);
+    const today = new Date();
+    age = today.getFullYear() - dob.getFullYear();
+    if (today < new Date(today.getFullYear(), dob.getMonth(), dob.getDate())) {
+      age -= 1;
+    }
+  }
+
   return {
     ...backendProfile,
     id: backendProfile.user_id,
@@ -552,6 +563,7 @@ export function enrichProfile(backendProfile: any): any {
     location: extra.location || "Singapore",
     gender: extra.gender,
     birthday: extra.birthday,
+    age,
     contactNumber: backendProfile.phone || extra.contactNumber,
     email: backendProfile.email,
   };

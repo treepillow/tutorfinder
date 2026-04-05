@@ -119,7 +119,7 @@ export function SwipeableCard({ profile, onSwipe, onClick, isTop, userType, forc
     onClick();
   };
 
-  const getAge = () => profile.age ?? 20;
+  const getAge = () => profile.age ?? "?";
   const displaySubjects = profile.subjects?.slice(0, 2) || [];
   const subjectText = displaySubjects.map((s: any) => `${s.subject} (${s.level})`).join(", ");
   const rateOrBudget = userType === "student"
@@ -151,8 +151,11 @@ export function SwipeableCard({ profile, onSwipe, onClick, isTop, userType, forc
       <div onClick={handleClick} className="bg-[#EDE9DF] rounded-3xl overflow-hidden shadow-xl">
 
         {/* Image area */}
-        <div className="aspect-[3/2] relative bg-[#EDE9DF] flex items-center justify-center">
-          <CircleGuyAvatar id={profile.id ?? profile.name} size={140} />
+        <div className="aspect-[3/2] relative bg-[#D6CFBF] flex items-center justify-center">
+<CircleGuyAvatar id={profile.id ?? profile.name} size={140} />
+          <div className="absolute bottom-3 right-3 bg-black/20 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full">
+            tap for details
+          </div>
         </div>
 
         {/* Info */}

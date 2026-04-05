@@ -71,8 +71,8 @@ export function MatchedPage() {
           </h1>
           <p className="text-[#2F3B3D]/70">
             {currentUser.userType === "student"
-              ? "Your matched tutors - click to book a lesson"
-              : "Students who matched with you"}
+              ? "Your matched tutors — tap a card to book a lesson"
+              : "Students who matched with you — tap a card to view their details"}
           </p>
         </div>
 
@@ -83,7 +83,7 @@ export function MatchedPage() {
             <p className="text-[#2F3B3D]/70 text-sm">Keep swiping to find your perfect match!</p>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
             {matches.map((profile) => (
               <ProfileCard
                 key={profile.id}
@@ -118,11 +118,8 @@ export function MatchedPage() {
           profile={selectedProfile}
           userType={currentUser.userType}
           onClose={() => setSelectedProfile(null)}
-          showActions={true}
-          onAccept={() => {
-            setSelectedProfile(null);
-          }}
-          onReject={() => setSelectedProfile(null)}
+          showActions={false}
+          showContact={true}
         />
       )}
     </div>
