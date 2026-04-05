@@ -293,7 +293,8 @@ public class PaymentService {
      * Idempotent: if already captured, just marks as HELD in DB.
      */
     public Payment capturePayment(String stripePaymentIntentId,
-                                  String tuteeEmail) throws StripeException {
+                                  String tuteeEmail,
+                                  String tutorEmail) throws StripeException {
         try {
             System.out.printf("[PAYMENT] capturePayment called with intentId=%s%n", stripePaymentIntentId);
             Payment payment = paymentRepository.findByStripePaymentIntentId(stripePaymentIntentId)
@@ -325,11 +326,13 @@ public class PaymentService {
             paymentRepository.save(payment);
             System.out.printf("[PAYMENT] Payment status set to HELD%n");
 
-            // Notify tutee that payment was received
+            // Notify tutee and tutor that payment was received
             publishEvent("payment.success", Map.of(
                     "booking_id",  payment.getBookingId(),
                     "tutee_id",    payment.getTuteeId(),
                     "tutee_email", tuteeEmail != null ? tuteeEmail : "",
+                    "tutor_id",    payment.getTutorId(),
+                    "tutor_email", tutorEmail != null ? tutorEmail : "",
                     "amount",      payment.getAmount().toPlainString()
             ));
             System.out.printf("[PAYMENT] Published payment.success event%n");

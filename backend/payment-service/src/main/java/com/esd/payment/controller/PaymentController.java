@@ -152,11 +152,15 @@ public class PaymentController {
             if (tuteeEmail == null || tuteeEmail.isEmpty()) {
                 tuteeEmail = (String) body.getOrDefault("TuteeEmail", "");
             }
+            String tutorEmail = (String) body.getOrDefault("tutor_email", "");
+            if (tutorEmail == null || tutorEmail.isEmpty()) {
+                tutorEmail = (String) body.getOrDefault("TutorEmail", "");
+            }
             System.out.printf("[PAYMENT] capture called with intentId=%s, tuteeEmail=%s, body keys=%s%n", intentId, tuteeEmail, body.keySet());
             if (intentId == null || intentId.isBlank()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "stripe_payment_intent_id is required"));
             }
-            Payment payment = paymentService.capturePayment(intentId, tuteeEmail);
+            Payment payment = paymentService.capturePayment(intentId, tuteeEmail, tutorEmail);
             return ResponseEntity.ok(toMap(payment));
         } catch (IllegalArgumentException e) {
             System.err.printf("[PAYMENT] IllegalArgumentException in capture: %s%n", e.getMessage());
