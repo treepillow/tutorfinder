@@ -4,6 +4,7 @@ import { BookingDialog } from "../components/BookingDialog";
 import { ProfileDetailDialog } from "../components/ProfileDetailDialog";
 import { getCurrentUser, matchApi, profileApi, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
+import { io } from "socket.io-client";
 import { CircleGuyLonely } from "../components/EmptyState";
 import Lottie from "lottie-react";
 import circleGuyLoadingData from "../assets/circleGuyLoading.json";
@@ -17,10 +18,18 @@ export function MatchedPage() {
 
   useEffect(() => {
     const user = getCurrentUser();
-    if (user) {
-      setCurrentUser(user);
-      loadMatches(user.id);
-    }
+    if (!user) return;
+    setCurrentUser(user);
+    loadMatches(user.id);
+
+    const socket = io(import.meta.env.VITE_MATCH_SERVICE, { transports: ["websocket"] });
+    socket.on("new_match", (match: any) => {
+      if (match.user_a_id === user.id || match.user_b_id === user.id) {
+        loadMatches(user.id);
+        toast("New match!", { description: "Someone matched with you." });
+      }
+    });
+    return () => { socket.disconnect(); };
   }, []);
 
   const loadMatches = async (userId: number) => {

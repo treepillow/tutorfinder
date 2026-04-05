@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/
 import { Calendar, Clock, BookOpen, User, ChevronLeft, ChevronRight, List, Phone, Mail } from "lucide-react";
 import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, availabilityApi, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
+import { io } from "socket.io-client";
 import { CircleGuyCalendar } from "../components/EmptyState";
 import Lottie from "lottie-react";
 import circleGuyLoadingData from "../assets/circleGuyLoading.json";
@@ -20,10 +21,17 @@ export function SchedulePage() {
 
   useEffect(() => {
     const user = getCurrentUser();
-    if (user) {
-      setCurrentUser(user);
-      loadSchedule(user);
-    }
+    if (!user) return;
+    setCurrentUser(user);
+    loadSchedule(user);
+
+    const socket = io(import.meta.env.VITE_BOOKING_SERVICE, { transports: ["websocket"] });
+    socket.on("booking_status_changed", (booking: any) => {
+      if (booking.tutor_id === user.id || booking.tutee_id === user.id) {
+        loadSchedule(user);
+      }
+    });
+    return () => { socket.disconnect(); };
   }, []);
 
   const loadSchedule = async (user: any) => {

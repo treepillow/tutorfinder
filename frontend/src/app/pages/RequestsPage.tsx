@@ -8,6 +8,7 @@ import Lottie from "lottie-react";
 import circleGuyLoadingData from "../assets/circleGuyLoading.json";
 import { useRefreshNavCounts } from "../context/NavCountsContext";
 import { CircleGuyShrug, CircleGuySleeping } from "../components/EmptyState";
+import { io } from "socket.io-client";
 
 export function RequestsPage() {
   const refreshNavCounts = useRefreshNavCounts();
@@ -47,6 +48,37 @@ export function RequestsPage() {
       }
       loadRequests(user);
     }
+
+    // WebSocket: auto-refresh when relevant booking events come in
+    const socket = io(import.meta.env.VITE_BOOKING_SERVICE, { transports: ["websocket"] });
+
+    // Tutor sees new request in "Awaiting Response" tab
+    socket.on("new_booking", (booking: any) => {
+      if (user.userType === "tutor" && booking.tutor_id === user.id) {
+        loadRequests(user);
+        refreshNavCounts();
+        toast("New lesson request!", { description: "A student has requested a lesson." });
+      }
+    });
+
+    // Student sees accepted request move to "Awaiting Payment" tab
+    socket.on("booking_confirmed", (booking: any) => {
+      if (user.userType === "student" && booking.tutee_id === user.id) {
+        loadRequests(user);
+        refreshNavCounts();
+        toast("Tutor accepted your request!", { description: "Head to Awaiting Payment to confirm your lesson." });
+      }
+    });
+
+    // Payment completed — booking leaves the Awaiting Payment tab for both sides
+    socket.on("booking_status_changed", (booking: any) => {
+      if (booking.tutor_id === user.id || booking.tutee_id === user.id) {
+        loadRequests(user);
+        refreshNavCounts();
+      }
+    });
+
+    return () => { socket.disconnect(); };
   }, []);
 
   const loadRequests = async (user: any) => {

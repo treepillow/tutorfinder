@@ -8,10 +8,12 @@ from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+from flask_socketio import SocketIO
 from sqlalchemy import UniqueConstraint, Index
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 
 RABBITMQ_URL        = os.environ.get('RABBITMQ_URL', 'amqp://guest:guest@rabbitmq:5672/')
 PROFILE_SERVICE_URL = os.environ.get('PROFILE_SERVICE_URL', 'http://profile-service:5001')
@@ -168,6 +170,12 @@ def swipe():
 
     threading.Thread(target=notify, args=(match_id, swiper_id, swiped_id), daemon=True).start()
 
+    socketio.emit('new_match', {
+        'match_id':   match_id,
+        'user_a_id':  swiper_id,
+        'user_b_id':  swiped_id,
+    })
+
     return jsonify({'matched': True, 'match_id': match_id}), 200
 
 
@@ -232,4 +240,4 @@ if __name__ == '__main__':
             conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {DB_SCHEMA}'))
             conn.commit()
         db.create_all()
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5002)), debug=False)
+    socketio.run(app, host='0.0.0.0', port=int(os.environ.get('PORT', 5002)), debug=False)

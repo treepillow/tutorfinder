@@ -7,9 +7,11 @@ from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+from flask_socketio import SocketIO
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 
 DB_SCHEMA           = os.environ.get('DB_SCHEMA', 'booking_schema')
 RABBITMQ_URL        = os.environ.get('RABBITMQ_URL', 'amqp://guest:guest@rabbitmq:5672/')
@@ -148,6 +150,7 @@ def create_booking():
             'lesson_date': data['lesson_date'],
             'start_time':  data['start_time'],
         })
+        socketio.emit('new_booking', booking.to_dict())
         return jsonify(booking.to_dict()), 201
     except ValueError as e:
         return jsonify({'error': f'Invalid date/time format: {e}'}), 400
@@ -196,6 +199,7 @@ def confirm_booking(booking_id):
         'tutee_email': get_email(booking.tutee_id),
         'lesson_date': booking.lesson_date.isoformat(),
     })
+    socketio.emit('booking_confirmed', booking.to_dict())
     return jsonify(booking.to_dict()), 200
 
 
@@ -213,6 +217,7 @@ def reject_booking(booking_id):
         'tutee_id':    booking.tutee_id,
         'tutee_email': get_email(booking.tutee_id),
     })
+    socketio.emit('booking_status_changed', booking.to_dict())
     return jsonify(booking.to_dict()), 200
 
 
@@ -232,6 +237,7 @@ def cancel_booking(booking_id):
         'tutor_id':     booking.tutor_id,
         'tutor_email':  get_email(booking.tutor_id),
     })
+    socketio.emit('booking_status_changed', booking.to_dict())
     return jsonify(booking.to_dict()), 200
 
 
@@ -244,6 +250,7 @@ def complete_booking(booking_id):
         return jsonify({'error': f'Cannot complete booking with status: {booking.status}'}), 400
     booking.status = 'Completed'
     db.session.commit()
+    socketio.emit('booking_status_changed', booking.to_dict())
     return jsonify(booking.to_dict()), 200
 
 
@@ -273,6 +280,7 @@ def update_status(booking_id):
         return jsonify({'error': f'Invalid status. Must be one of: {VALID_STATUSES}'}), 400
     booking.status = new_status
     db.session.commit()
+    socketio.emit('booking_status_changed', booking.to_dict())
     return jsonify(booking.to_dict()), 200
 
 
@@ -303,4 +311,4 @@ if __name__ == '__main__':
             conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {DB_SCHEMA}'))
             conn.commit()
         db.create_all()
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5004)), debug=False)
+    socketio.run(app, host='0.0.0.0', port=int(os.environ.get('PORT', 5004)), debug=False)
