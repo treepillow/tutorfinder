@@ -88,7 +88,13 @@ def get_email(user_id):
 def publish_event(routing_key, payload):
     """Publish an event to the RabbitMQ esd_exchange."""
     try:
+        print(f'[BOOKING] Publishing {routing_key}...', flush=True)
         params = pika.URLParameters(RABBITMQ_URL)
+        params.socket_timeout = 10
+        params.blocked_connection_timeout = 10
+        params.heartbeat = 60
+        params.connection_attempts = 3
+        params.retry_delay = 2
         if RABBITMQ_URL.startswith('amqps'):
             ssl_context = ssl.create_default_context()
             params.ssl_options = pika.SSLOptions(ssl_context)
@@ -102,9 +108,9 @@ def publish_event(routing_key, payload):
             properties=pika.BasicProperties(delivery_mode=2)
         )
         conn.close()
-        print(f'[BOOKING] Published {routing_key}: {payload}')
+        print(f'[BOOKING] Published {routing_key}: {payload}', flush=True)
     except Exception as e:
-        print(f'[BOOKING] RabbitMQ publish error: {e}')
+        print(f'[BOOKING] RabbitMQ publish error: {e}', flush=True)
 
 
 @app.route('/health', methods=['GET'])
