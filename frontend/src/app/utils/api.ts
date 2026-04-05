@@ -519,15 +519,25 @@ export async function syncAvailabilityToBackend(
     }
   }
 
-  // Create new slots first — if this fails, old slots are untouched (atomic)
-  await Promise.all(
-    slots.map((slot) => availabilityApi.addSlot({ user_id: userId, ...slot }))
+  // Fetch existing slots to avoid duplicates
+  const res = await availabilityApi.getSlots(userId);
+  const existingSlots = res.availability || [];
+  const existingMap = new Map(
+    existingSlots.map((s: any) => [`${s.date}|${s.start_time}|${s.end_time}`, s])
   );
 
-  // Only delete old Available slots after new ones are successfully created
-  const res = await availabilityApi.getSlots(userId);
+  // Only create slots that don't already exist
+  const slotsToCreate = slots.filter(
+    (slot) => !existingMap.has(`${slot.date}|${slot.start_time}|${slot.end_time}`)
+  );
+
+  await Promise.all(
+    slotsToCreate.map((slot) => availabilityApi.addSlot({ user_id: userId, ...slot }))
+  );
+
+  // Delete old Available slots that aren't in the new set
   const newSlotDates = new Set(slots.map((s) => `${s.date}|${s.start_time}|${s.end_time}`));
-  const toDelete = (res.availability || []).filter(
+  const toDelete = existingSlots.filter(
     (s: any) => s.status === "Available" &&
       !newSlotDates.has(`${s.date}|${s.start_time}|${s.end_time}`)
   );
@@ -535,7 +545,7 @@ export async function syncAvailabilityToBackend(
     toDelete.map((s: any) => availabilityApi.deleteSlot(s.availability_id))
   );
 
-  console.log(`Created ${slots.length} availability slots`);
+  console.log(`Created ${slotsToCreate.length} new slots, kept ${slots.length - slotsToCreate.length} existing`);
   return slots.length;
 }
 
