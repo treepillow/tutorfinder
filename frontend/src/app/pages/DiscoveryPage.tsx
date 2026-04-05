@@ -27,6 +27,11 @@ export function DiscoveryPage() {
   const swipedIdsRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
+    document.body.style.overscrollBehaviorX = "none";
+    return () => { document.body.style.overscrollBehaviorX = ""; };
+  }, []);
+
+  useEffect(() => {
     const user = getCurrentUser();
     if (!user) return;
 
