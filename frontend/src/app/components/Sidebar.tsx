@@ -96,6 +96,17 @@ function IconProfile({ active }: { active: boolean }) {
   );
 }
 
+function IconPayments({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <rect x="2" y="6" width="20" height="14" rx="3" fill={active ? "#7EC8A0" : "none"} stroke={active ? "#2E7D52" : "white"} strokeWidth="2"/>
+      <rect x="2" y="9" width="20" height="3" fill={active ? "#2E7D52" : "white"} opacity={active ? 1 : 0.3}/>
+      <circle cx="7" cy="16" r="1.5" fill={active ? "white" : "white"} opacity={active ? 1 : 0.6}/>
+      <rect x="11" y="15" width="6" height="2" rx="1" fill={active ? "white" : "white"} opacity={active ? 1 : 0.6}/>
+    </svg>
+  );
+}
+
 function IconDisputes({ active }: { active: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -196,6 +207,13 @@ export function Sidebar() {
       Icon: IconSchedule,
       label: "Schedule",
       badge: counts.scheduled,
+      subBadges: null,
+    },
+    {
+      path: "/app/payments",
+      Icon: IconPayments,
+      label: "Payments",
+      badge: 0,
       subBadges: null,
     },
   ];

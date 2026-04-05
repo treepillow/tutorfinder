@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Calendar, Clock, BookOpen, DollarSign, ChevronDown, ChevronUp } from "lucide-react";
+import { CircleGuyAvatar } from "./CircleGuyAvatar";
 
 interface RequestCardProps {
   request: any;
@@ -28,15 +29,13 @@ export function RequestCard({ request, userType, onCancel, onAccept, onReject, o
     : "TBD";
 
   return (
-    <div className="bg-[#EDE9DF] rounded-2xl overflow-hidden">
+    <div className="bg-[#EDE9DF] rounded-2xl overflow-hidden hover:bg-[#D6CFBF]/40 transition-colors group">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full p-6 flex items-center justify-between hover:bg-[#D6CFBF]/30 transition-colors"
+        className="w-full p-6 flex items-center justify-between"
       >
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-[#D6CFBF] to-[#7C8D8C] rounded-full flex items-center justify-center text-2xl">
-            {userType === "student" ? "👨‍🏫" : "🎓"}
-          </div>
+          <CircleGuyAvatar id={userType === "student" ? (request.tutor_id ?? request.tutorName ?? 0) : (request.tutee_id ?? request.studentName ?? 0)} size={48} />
           <div className="text-left">
             <div className="text-lg text-[#2F3B3D]">
               {userType === "student" ? request.tutorName : (request.studentName || "Student Request")}
@@ -50,12 +49,12 @@ export function RequestCard({ request, userType, onCancel, onAccept, onReject, o
           {request.status && (
             <span className={`text-xs px-3 py-1 rounded-full ${
               request.status === "pending" || request.status === "AwaitingConfirmation"
-                ? "bg-yellow-100 text-yellow-700"
+                ? "bg-[#D6CFBF] text-[#2F3B3D]"
                 : request.status === "accepted" || request.status === "AwaitingPayment"
-                ? "bg-blue-100 text-blue-700"
+                ? "bg-[#7C8D8C]/20 text-[#2F3B3D]"
                 : request.status === "confirmed" || request.status === "Confirmed"
-                ? "bg-green-100 text-green-700"
-                : "bg-gray-100 text-gray-700"
+                ? "bg-[#7C8D8C] text-white"
+                : "bg-[#EDE9DF] text-[#2F3B3D]/60"
             }`}>
               {request.status === "AwaitingConfirmation" ? "Pending" :
                request.status === "AwaitingPayment" ? "Awaiting Payment" :
