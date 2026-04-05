@@ -171,15 +171,21 @@ def start_consumer():
     def consume():
         while True:
             try:
-                print(f'[NOTIFICATION] Connecting to RabbitMQ: {RABBITMQ_URL[:30]}...')
+                print(f'[NOTIFICATION] Connecting to RabbitMQ: {RABBITMQ_URL[:30]}...', flush=True)
                 params = pika.URLParameters(RABBITMQ_URL)
                 params.socket_timeout = 10
                 params.blocked_connection_timeout = 10
+                params.heartbeat = 60
+                params.connection_attempts = 3
+                params.retry_delay = 2
                 # SSL config for amqps:// (CloudAMQP)
                 if RABBITMQ_URL.startswith('amqps'):
+                    print('[NOTIFICATION] Using SSL for AMQPS connection', flush=True)
                     ssl_context = ssl.create_default_context()
                     params.ssl_options = pika.SSLOptions(ssl_context)
+                print('[NOTIFICATION] Attempting BlockingConnection...', flush=True)
                 conn = pika.BlockingConnection(params)
+                print('[NOTIFICATION] Connected to RabbitMQ!', flush=True)
                 ch = conn.channel()
                 ch.exchange_declare(exchange='esd_exchange', exchange_type='topic', durable=True)
                 ch.queue_declare(queue='notification_queue', durable=True)
