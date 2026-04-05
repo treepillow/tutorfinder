@@ -108,6 +108,7 @@ export function RequestsPage() {
   };
 
   const handleCancelRequest = async (bookingId: number, availabilityId: number) => {
+    setLoading(true);
     try {
       await bookingProcessApi.cancel(bookingId, currentUser.userType === "student" ? "tutee" : "tutor");
       toast.success("Request cancelled");
@@ -115,10 +116,12 @@ export function RequestsPage() {
       refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to cancel");
+      setLoading(false);
     }
   };
 
   const handleAcceptRequest = async (bookingId: number) => {
+    setLoading(true);
     try {
       await bookingProcessApi.confirm(bookingId);
       toast.success("Request accepted! Student will be notified to pay.");
@@ -126,10 +129,12 @@ export function RequestsPage() {
       refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to accept");
+      setLoading(false);
     }
   };
 
   const handleRejectRequest = async (bookingId: number) => {
+    setLoading(true);
     try {
       await bookingProcessApi.reject(bookingId);
       toast.success("Request rejected");
@@ -137,10 +142,12 @@ export function RequestsPage() {
       refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to reject");
+      setLoading(false);
     }
   };
 
   const handlePay = async (request: any) => {
+    setLoading(true);
     try {
       const amount = parseFloat(request.price) || 50;
       const checkoutRes = await paymentApi.checkout({
@@ -165,6 +172,7 @@ export function RequestsPage() {
       }
     } catch (err: any) {
       toast.error(err.message || "Payment failed");
+      setLoading(false);
     }
   };
 
