@@ -140,6 +140,31 @@ export function SchedulePage() {
     }
   };
 
+  // ── Booking action availability ──
+  // canCancel: only before 1hr before start
+  // canReportNoShow: during or after the booking slot
+  // canComplete: only after the booking slot ends
+  const getBookingActions = (lesson: any) => {
+    const now = new Date();
+
+    const [startH, startM] = (lesson.start_time || "0:00").split(":").map(Number);
+    const [endH, endM] = (lesson.end_time || "0:00").split(":").map(Number);
+
+    const bookingStart = new Date(lesson.dateObj);
+    bookingStart.setHours(startH, startM, 0, 0);
+
+    const bookingEnd = new Date(lesson.dateObj);
+    bookingEnd.setHours(endH, endM, 0, 0);
+
+    const cutoffCancel = new Date(bookingStart.getTime() - 60 * 60 * 1000); // 1hr before start
+
+    return {
+      canCancel: now < cutoffCancel,
+      canReportNoShow: now >= bookingStart,
+      canComplete: now >= bookingEnd,
+    };
+  };
+
   // ── Calendar helpers ──
 
   const prevMonth = () => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
@@ -432,26 +457,39 @@ export function SchedulePage() {
                 </div>
               )}
 
-              <div className="flex gap-3">
-                <button
-                  onClick={() => handleCancelBooking(selectedLesson)}
-                  className="flex-1 px-4 py-2 bg-white text-[#2F3B3D] rounded-full border-2 border-[#D6CFBF] hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all duration-300"
-                >
-                  Cancel Booking
-                </button>
-                <button
-                  onClick={() => handleReportNoShow(selectedLesson)}
-                  className="flex-1 px-4 py-2 bg-white text-[#2F3B3D] rounded-full border-2 border-[#D6CFBF] hover:bg-amber-50 hover:border-amber-200 hover:text-amber-600 transition-all duration-300"
-                >
-                  Report No-Show
-                </button>
-                <button
-                  onClick={() => handleCompleteBooking(selectedLesson)}
-                  className="flex-1 px-4 py-2 bg-[#2F3B3D] text-white rounded-full border-2 border-[#2F3B3D] hover:bg-[#7C8D8C] hover:border-[#7C8D8C] transition-all duration-300"
-                >
-                  Complete Booking
-                </button>
-              </div>
+              {(() => {
+                const { canCancel, canReportNoShow, canComplete } = getBookingActions(selectedLesson);
+                return (
+                  <div className="flex flex-col gap-3">
+                    {canCancel && (
+                      <button
+                        onClick={() => handleCancelBooking(selectedLesson)}
+                        className="w-full px-4 py-2 bg-white text-[#2F3B3D] rounded-full border-2 border-[#D6CFBF] hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all duration-300"
+                      >
+                        Cancel Booking
+                      </button>
+                    )}
+                    <div className="flex gap-3">
+                      {canReportNoShow && (
+                        <button
+                          onClick={() => handleReportNoShow(selectedLesson)}
+                          className="flex-1 px-4 py-2 bg-white text-[#2F3B3D] rounded-full border-2 border-[#D6CFBF] hover:bg-amber-50 hover:border-amber-200 hover:text-amber-600 transition-all duration-300"
+                        >
+                          Report No-Show
+                        </button>
+                      )}
+                      {canComplete && (
+                        <button
+                          onClick={() => handleCompleteBooking(selectedLesson)}
+                          className="flex-1 px-4 py-2 bg-[#2F3B3D] text-white rounded-full border-2 border-[#2F3B3D] hover:bg-[#7C8D8C] hover:border-[#7C8D8C] transition-all duration-300"
+                        >
+                          Complete Booking
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </DialogContent>
         </Dialog>
