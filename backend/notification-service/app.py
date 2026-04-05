@@ -211,8 +211,15 @@ def health():
 @app.route('/notify/send', methods=['POST'])
 def send_notification():
     data = request.get_json(force=True) or {}
+    print(f'[NOTIFICATION] /notify/send received keys: {list(data.keys())} values: {data}', flush=True)
+    # Normalize: accept both snake_case and PascalCase
+    normalized = {}
+    for key, value in data.items():
+        normalized[key.lower().replace('-', '_')] = value
+    data = normalized
     for field in ['user_id', 'type', 'message', 'email']:
         if not data.get(field):
+            print(f'[NOTIFICATION] Missing field: {field}', flush=True)
             return jsonify({'error': f'Missing required field: {field}'}), 400
     if data['type'] not in ['Match', 'Booking', 'Payment']:
         return jsonify({'error': "type must be Match, Booking, or Payment"}), 400
