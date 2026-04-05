@@ -1,5 +1,6 @@
 import os
 import json
+import ssl
 import pika
 import threading
 import time
@@ -170,8 +171,21 @@ def start_consumer():
     def consume():
         while True:
             try:
+                print(f'[NOTIFICATION] Connecting to RabbitMQ: {RABBITMQ_URL[:30]}...', flush=True)
                 params = pika.URLParameters(RABBITMQ_URL)
+                params.socket_timeout = 10
+                params.blocked_connection_timeout = 10
+                params.heartbeat = 60
+                params.connection_attempts = 3
+                params.retry_delay = 2
+                # SSL config for amqps:// (CloudAMQP)
+                if RABBITMQ_URL.startswith('amqps'):
+                    print('[NOTIFICATION] Using SSL for AMQPS connection', flush=True)
+                    ssl_context = ssl.create_default_context()
+                    params.ssl_options = pika.SSLOptions(ssl_context)
+                print('[NOTIFICATION] Attempting BlockingConnection...', flush=True)
                 conn = pika.BlockingConnection(params)
+                print('[NOTIFICATION] Connected to RabbitMQ!', flush=True)
                 ch = conn.channel()
                 ch.exchange_declare(exchange='esd_exchange', exchange_type='topic', durable=True)
                 ch.queue_declare(queue='notification_queue', durable=True)
@@ -180,10 +194,10 @@ def start_consumer():
                 ch.basic_qos(prefetch_count=1)
                 ch.basic_consume(queue='notification_queue',
                                  on_message_callback=handle_message, auto_ack=True)
-                print('[NOTIFICATION] Consumer ready, waiting for messages...')
+                print('[NOTIFICATION] Consumer ready, waiting for messages...', flush=True)
                 ch.start_consuming()
             except Exception as e:
-                print(f'[NOTIFICATION] Consumer error: {e}. Retrying in 5s...')
+                print(f'[NOTIFICATION] Consumer error: {e}. Retrying in 5s...', flush=True)
                 time.sleep(5)
 
     threading.Thread(target=consume, daemon=True).start()
@@ -197,8 +211,15 @@ def health():
 @app.route('/notify/send', methods=['POST'])
 def send_notification():
     data = request.get_json(force=True) or {}
+    print(f'[NOTIFICATION] /notify/send received keys: {list(data.keys())} values: {data}', flush=True)
+    # Normalize: accept both snake_case and PascalCase
+    normalized = {}
+    for key, value in data.items():
+        normalized[key.lower().replace('-', '_')] = value
+    data = normalized
     for field in ['user_id', 'type', 'message', 'email']:
         if not data.get(field):
+            print(f'[NOTIFICATION] Missing field: {field}', flush=True)
             return jsonify({'error': f'Missing required field: {field}'}), 400
     if data['type'] not in ['Match', 'Booking', 'Payment']:
         return jsonify({'error': "type must be Match, Booking, or Payment"}), 400

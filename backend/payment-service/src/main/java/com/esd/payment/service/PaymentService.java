@@ -49,7 +49,6 @@ public class PaymentService {
      * Create a Stripe PaymentIntent (deposit hold) and save a PENDING payment record.
      * Returns client_secret so the frontend can confirm the payment.
      */
-    @Transactional
     public Map<String, Object> createPaymentIntent(
             Integer bookingId, Integer tuteeId, Integer tutorId,
             BigDecimal amount, String currency) throws StripeException {
@@ -135,7 +134,6 @@ public class PaymentService {
     /**
      * Create a Stripe Checkout Session that redirects the user to Stripe's hosted page.
      */
-    @Transactional
     public Map<String, Object> createCheckoutSession(
             Integer bookingId, Integer tuteeId, Integer tutorId,
             BigDecimal amount, String currency) throws StripeException {
@@ -224,21 +222,19 @@ public class PaymentService {
     }
 
     /**
-     * Complete a Checkout Session: retrieve the PaymentIntent ID from the session and save it to DB.
-     * Called by the frontend after Stripe redirects back on success.
-     * NOTE: Does NOT capture yet — OutSystems PaymentCaptured workflow will call /payment/capture
+     * Complete a Checkout Session: retrieve the PaymentIntent ID from the session, capture it, update DB.
+     * Called by the frontend or OutSystems after Stripe Checkout redirects back on success.
      */
     public Payment completeCheckout(Integer bookingId) throws StripeException {
         try {
             System.out.printf("[PAYMENT] completeCheckout called for booking %d%n", bookingId);
 
-            // Get payment record (without transaction)
             Payment payment = paymentRepository.findByBookingId(bookingId)
                     .orElseThrow(() -> new IllegalArgumentException("Payment not found for booking: " + bookingId));
-            System.out.printf("[PAYMENT] Found payment record: %s%n", payment.getPaymentId());
+            System.out.printf("[PAYMENT] Found payment record: %s, status: %s%n", payment.getPaymentId(), payment.getStatus());
 
             if (payment.getStatus() != Payment.PaymentStatus.PENDING) {
-                System.out.printf("[PAYMENT] Payment already completed, status: %s%n", payment.getStatus());
+                System.out.printf("[PAYMENT] Payment already completed, returning as-is%n");
                 return payment;
             }
 
@@ -250,40 +246,45 @@ public class PaymentService {
 
             String intentId = null;
             if (stripeEnabled()) {
-                System.out.printf("[PAYMENT] Retrieving Stripe session: %s%n", sessionId);
-                Session session = Session.retrieve(sessionId);
-                intentId = session.getPaymentIntent();
-                System.out.printf("[PAYMENT] Payment Intent ID from session: %s%n", intentId);
+                // Retry up to 3 times — Stripe may not have attached the PaymentIntent yet
+                for (int attempt = 1; attempt <= 3; attempt++) {
+                    System.out.printf("[PAYMENT] Retrieving Stripe session (attempt %d): %s%n", attempt, sessionId);
+                    Session session = Session.retrieve(sessionId);
+                    intentId = session.getPaymentIntent();
+                    System.out.printf("[PAYMENT] Payment Intent ID from session: %s%n", intentId);
+                    if (intentId != null) break;
+                    if (attempt < 3) {
+                        System.out.printf("[PAYMENT] PaymentIntent not ready, waiting 2s...%n");
+                        try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+                    }
+                }
                 if (intentId == null) {
                     throw new IllegalStateException("Checkout session has no PaymentIntent — payment may not be complete");
+                }
+
+                // Capture the payment
+                PaymentIntent intent = PaymentIntent.retrieve(intentId);
+                System.out.printf("[PAYMENT] PaymentIntent status: %s%n", intent.getStatus());
+                if ("requires_capture".equals(intent.getStatus())) {
+                    intent.capture();
+                    System.out.printf("[PAYMENT] PaymentIntent captured%n");
                 }
             } else {
                 System.out.printf("[PAYMENT MOCK] Mock mode for booking %d%n", bookingId);
                 intentId = "mock_pi_" + bookingId;
             }
 
-            // Now save to database in a separate transaction
-            return savePaymentIntentId(payment.getPaymentId(), intentId);
+            // Save directly (no @Transactional needed for simple save)
+            payment.setStripePaymentIntentId(intentId);
+            payment.setStatus(Payment.PaymentStatus.HELD);
+            paymentRepository.save(payment);
+            System.out.printf("[PAYMENT] Payment %d updated to HELD%n", payment.getPaymentId());
+            return payment;
         } catch (Exception e) {
             System.err.printf("[PAYMENT] Error in completeCheckout: %s%n", e.getMessage());
             e.printStackTrace();
             throw e;
         }
-    }
-
-    /**
-     * Save payment intent ID to database in a separate transaction.
-     * Status stays PENDING until OutSystems calls /payment/capture
-     */
-    @Transactional
-    private Payment savePaymentIntentId(Long paymentId, String intentId) {
-        Payment payment = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + paymentId));
-        payment.setStripePaymentIntentId(intentId);
-        // Keep status as PENDING — will be updated to HELD when /payment/capture is called
-        paymentRepository.save(payment);
-        System.out.printf("[PAYMENT] Payment %d intent ID saved, status still PENDING%n", paymentId);
-        return payment;
     }
 
     /**
@@ -391,6 +392,12 @@ public class PaymentService {
     public Payment refundToTutee(Long paymentId, String tuteeEmail) throws StripeException {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + paymentId));
+
+        // Already refunded — return as-is
+        if (payment.getStatus() == Payment.PaymentStatus.REFUNDED) {
+            System.out.printf("[PAYMENT] Payment %d already REFUNDED, skipping%n", paymentId);
+            return payment;
+        }
 
         if (payment.getStatus() != Payment.PaymentStatus.HELD) {
             throw new IllegalStateException("Payment is not in HELD state: " + payment.getStatus());

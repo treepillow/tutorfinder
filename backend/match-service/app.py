@@ -1,5 +1,6 @@
 import os
 import json
+import ssl
 import threading
 import pika
 import requests
@@ -62,7 +63,16 @@ with app.app_context():
 
 def publish_message(routing_key, body):
     try:
+        print(f'[MATCH] Publishing {routing_key}...', flush=True)
         params = pika.URLParameters(RABBITMQ_URL)
+        params.socket_timeout = 10
+        params.blocked_connection_timeout = 10
+        params.heartbeat = 60
+        params.connection_attempts = 3
+        params.retry_delay = 2
+        if RABBITMQ_URL.startswith('amqps'):
+            ssl_context = ssl.create_default_context()
+            params.ssl_options = pika.SSLOptions(ssl_context)
         conn = pika.BlockingConnection(params)
         ch = conn.channel()
         ch.exchange_declare(exchange='esd_exchange', exchange_type='topic', durable=True)
@@ -71,8 +81,9 @@ def publish_message(routing_key, body):
             body=json.dumps(body),
             properties=pika.BasicProperties(delivery_mode=2))
         conn.close()
+        print(f'[MATCH] Published {routing_key}', flush=True)
     except Exception as e:
-        print(f'RabbitMQ publish error: {e}')
+        print(f'[MATCH] RabbitMQ publish error: {e}', flush=True)
 
 
 @app.route('/health', methods=['GET'])

@@ -87,24 +87,8 @@ export function SchedulePage() {
   const handleCancelBooking = async (lesson: any) => {
     setActionLoading(true);
     try {
-      // Refund the deposit
-      try {
-        const paymentRes = await paymentApi.getByBooking(lesson.booking_id);
-        if (paymentRes.payment_id) {
-          await paymentApi.refund(paymentRes.payment_id);
-        }
-      } catch {}
-
-      // Cancel the booking
-      try {
-        await bookingProcessApi.cancel(lesson.booking_id, currentUser.userType === "student" ? "tutee" : "tutor");
-      } catch {
-        await bookingApi.cancel(lesson.booking_id);
-        if (lesson.availability_id) {
-          await availabilityApi.updateSlot(lesson.availability_id, "Available").catch(() => {});
-        }
-      }
-
+      // Cancel through OutSystems orchestrator (handles refund, slot update, and status change)
+      await bookingProcessApi.cancel(lesson.booking_id, currentUser.userType === "student" ? "tutee" : "tutor");
       toast.success("Booking cancelled and deposit refunded");
       setSelectedLesson(null);
       loadSchedule(currentUser);
@@ -126,6 +110,23 @@ export function SchedulePage() {
       refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to complete booking");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReportNoShow = async (lesson: any) => {
+    setActionLoading(true);
+    try {
+      const reportedBy = currentUser.userType === "student" ? "tutee" : "tutor";
+      const reason = currentUser.userType === "student" ? "Tutor no-show" : "Tutee no-show";
+      await bookingProcessApi.reportDispute(lesson.booking_id, reportedBy, reason);
+      toast.success("No-show reported. An admin will review the dispute.");
+      setSelectedLesson(null);
+      loadSchedule(currentUser);
+      refreshNavCounts();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to report no-show");
     } finally {
       setActionLoading(false);
     }
@@ -426,6 +427,12 @@ export function SchedulePage() {
                   className="flex-1 px-4 py-2 bg-white text-[#2F3B3D] rounded-full border-2 border-[#D6CFBF] hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all duration-300"
                 >
                   Cancel Booking
+                </button>
+                <button
+                  onClick={() => handleReportNoShow(selectedLesson)}
+                  className="flex-1 px-4 py-2 bg-white text-[#2F3B3D] rounded-full border-2 border-[#D6CFBF] hover:bg-amber-50 hover:border-amber-200 hover:text-amber-600 transition-all duration-300"
+                >
+                  Report No-Show
                 </button>
                 <button
                   onClick={() => handleCompleteBooking(selectedLesson)}

@@ -1,5 +1,6 @@
 import os
 import json
+import ssl
 import pika
 import requests
 from datetime import datetime, timedelta
@@ -45,6 +46,8 @@ class Booking(db.Model):
         default='AwaitingConfirmation', nullable=False)
     created_at      = db.Column(db.DateTime, default=datetime.utcnow)
     confirmed_at    = db.Column(db.DateTime, nullable=True)
+    disputed_by     = db.Column(db.String(50), nullable=True)
+    dispute_reason  = db.Column(db.String(500), nullable=True)
 
     def to_dict(self):
         return {
@@ -58,6 +61,8 @@ class Booking(db.Model):
             'status':          self.status,
             'created_at':      self.created_at.isoformat() if self.created_at else None,
             'confirmed_at':    self.confirmed_at.isoformat() if self.confirmed_at else None,
+            'disputed_by':     self.disputed_by,
+            'dispute_reason':  self.dispute_reason,
         }
 
 
@@ -83,7 +88,16 @@ def get_email(user_id):
 def publish_event(routing_key, payload):
     """Publish an event to the RabbitMQ esd_exchange."""
     try:
+        print(f'[BOOKING] Publishing {routing_key}...', flush=True)
         params = pika.URLParameters(RABBITMQ_URL)
+        params.socket_timeout = 10
+        params.blocked_connection_timeout = 10
+        params.heartbeat = 60
+        params.connection_attempts = 3
+        params.retry_delay = 2
+        if RABBITMQ_URL.startswith('amqps'):
+            ssl_context = ssl.create_default_context()
+            params.ssl_options = pika.SSLOptions(ssl_context)
         conn = pika.BlockingConnection(params)
         ch = conn.channel()
         ch.exchange_declare(exchange='esd_exchange', exchange_type='topic', durable=True)
@@ -94,9 +108,9 @@ def publish_event(routing_key, payload):
             properties=pika.BasicProperties(delivery_mode=2)
         )
         conn.close()
-        print(f'[BOOKING] Published {routing_key}: {payload}')
+        print(f'[BOOKING] Published {routing_key}: {payload}', flush=True)
     except Exception as e:
-        print(f'[BOOKING] RabbitMQ publish error: {e}')
+        print(f'[BOOKING] RabbitMQ publish error: {e}', flush=True)
 
 
 @app.route('/health', methods=['GET'])
@@ -149,6 +163,14 @@ def get_bookings_by_user(user_id):
     if status_filter:
         query = query.filter(Booking.status == status_filter)
     bookings = query.order_by(Booking.created_at.desc()).all()
+    return jsonify({'bookings': [b.to_dict() for b in bookings], 'count': len(bookings)}), 200
+
+
+@app.route('/booking/status/<string:status>', methods=['GET'])
+def get_bookings_by_status(status):
+    if status not in VALID_STATUSES:
+        return jsonify({'error': f'Invalid status: {status}'}), 400
+    bookings = Booking.query.filter(Booking.status == status).order_by(Booking.created_at.desc()).all()
     return jsonify({'bookings': [b.to_dict() for b in bookings], 'count': len(bookings)}), 200
 
 
@@ -226,7 +248,10 @@ def dispute_booking(booking_id):
         return jsonify({'error': 'Booking not found'}), 404
     if booking.status not in ['Confirmed', 'Completed']:
         return jsonify({'error': f'Cannot dispute booking with status: {booking.status}'}), 400
+    data = request.get_json(force=True) or {}
     booking.status = 'Disputed'
+    booking.disputed_by = data.get('reported_by') or data.get('ReportedBy')
+    booking.dispute_reason = data.get('reason') or data.get('Reason')
     db.session.commit()
     return jsonify(booking.to_dict()), 200
 

@@ -10,6 +10,7 @@ import { MatchedPage } from "./pages/MatchedPage";
 import { RequestsPage } from "./pages/RequestsPage";
 import { SchedulePage } from "./pages/SchedulePage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { AdminDisputesPage } from "./pages/AdminDisputesPage";
 
 export const router = createBrowserRouter([
   {
@@ -59,6 +60,10 @@ export const router = createBrowserRouter([
       {
         path: "profile",
         element: <ProfilePage />,
+      },
+      {
+        path: "admin/disputes",
+        element: <AdminDisputesPage />,
       },
     ],
   },

@@ -96,6 +96,34 @@ function IconProfile({ active }: { active: boolean }) {
   );
 }
 
+function IconDisputes({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 2L2 7l10 5 10-5-10-5z"
+        fill={active ? "#F5C842" : "none"}
+        stroke={active ? "#E6A800" : "white"}
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12 22V12"
+        stroke={active ? "#E6A800" : "white"}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9 15l3 3 3-3"
+        stroke={active ? "#E53935" : "white"}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        transform="rotate(180 12 16.5)"
+      />
+    </svg>
+  );
+}
+
 function Badge({ count }: { count: number }) {
   if (count === 0) return null;
   return (
@@ -171,6 +199,17 @@ export function Sidebar() {
       subBadges: null,
     },
   ];
+
+  // Admin-only nav items
+  if (currentUser?.role?.toLowerCase() === "admin" || currentUser?.userType === "admin") {
+    navItems.push({
+      path: "/app/admin/disputes",
+      Icon: IconDisputes,
+      label: "Disputes",
+      badge: 0,
+      subBadges: null,
+    });
+  }
 
   return (
     <aside
