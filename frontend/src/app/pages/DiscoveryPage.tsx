@@ -28,7 +28,11 @@ export function DiscoveryPage() {
 
   useEffect(() => {
     document.body.style.overscrollBehaviorX = "none";
-    return () => { document.body.style.overscrollBehaviorX = ""; };
+    document.documentElement.style.overscrollBehaviorX = "none";
+    return () => {
+      document.body.style.overscrollBehaviorX = "";
+      document.documentElement.style.overscrollBehaviorX = "";
+    };
   }, []);
 
   useEffect(() => {
