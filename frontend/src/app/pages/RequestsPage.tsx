@@ -141,6 +141,7 @@ export function RequestsPage() {
   };
 
   const handlePay = async (request: any) => {
+    setLoading(true);
     try {
       const amount = parseFloat(request.price) || 50;
       const checkoutRes = await paymentApi.checkout({
@@ -165,6 +166,7 @@ export function RequestsPage() {
       }
     } catch (err: any) {
       toast.error(err.message || "Payment failed");
+      setLoading(false);
     }
   };
 
