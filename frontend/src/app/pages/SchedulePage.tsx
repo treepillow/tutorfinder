@@ -310,11 +310,8 @@ export function SchedulePage() {
                         ? ""
                         : isToday(day)
                         ? "bg-[#2F3B3D]"
-                        : lessons.length > 0
-                        ? "bg-[#F5F3EF] cursor-pointer hover:bg-[#E3DDD3] transition-colors"
                         : "bg-[#F5F3EF]/60"
                     }`}
-                    onClick={() => lessons.length > 0 && setSelectedLesson(lessons[0])}
                   >
                     {day !== null && (
                       <>
@@ -325,13 +322,19 @@ export function SchedulePage() {
                           {lessons.slice(0, 2).map((lesson) => (
                             <div
                               key={lesson.booking_id}
-                              className="text-xs px-1.5 py-0.5 bg-[#7C8D8C] text-white rounded-md truncate"
+                              onClick={() => setSelectedLesson(lesson)}
+                              className="text-xs px-1.5 py-0.5 bg-[#7C8D8C] hover:bg-[#2F3B3D] text-white rounded-md truncate cursor-pointer transition-colors"
                             >
                               {lesson.subject}
                             </div>
                           ))}
                           {lessons.length > 2 && (
-                            <div className="text-xs text-[#7C8D8C] pl-1">+{lessons.length - 2} more</div>
+                            <div
+                              onClick={() => setSelectedLesson(lessons[2])}
+                              className="text-xs text-[#7C8D8C] hover:text-[#2F3B3D] pl-1 cursor-pointer transition-colors"
+                            >
+                              +{lessons.length - 2} more
+                            </div>
                           )}
                         </div>
                       </>
