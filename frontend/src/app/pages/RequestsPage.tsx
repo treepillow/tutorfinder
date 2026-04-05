@@ -55,7 +55,7 @@ export function RequestsPage() {
     // Tutor sees new request in "Awaiting Response" tab
     socket.on("new_booking", (booking: any) => {
       if (user.userType === "tutor" && booking.tutor_id === user.id) {
-        loadRequests(user);
+        loadRequests(user, true);
         refreshNavCounts();
         toast("New lesson request!", { description: "A student has requested a lesson." });
       }
@@ -64,7 +64,7 @@ export function RequestsPage() {
     // Student sees accepted request move to "Awaiting Payment" tab
     socket.on("booking_confirmed", (booking: any) => {
       if (user.userType === "student" && booking.tutee_id === user.id) {
-        loadRequests(user);
+        loadRequests(user, true);
         refreshNavCounts();
         toast("Tutor accepted your request!", { description: "Head to Awaiting Payment to confirm your lesson." });
       }
@@ -73,7 +73,7 @@ export function RequestsPage() {
     // Payment completed — booking leaves the Awaiting Payment tab for both sides
     socket.on("booking_status_changed", (booking: any) => {
       if (booking.tutor_id === user.id || booking.tutee_id === user.id) {
-        loadRequests(user);
+        loadRequests(user, true);
         refreshNavCounts();
       }
     });
@@ -81,8 +81,8 @@ export function RequestsPage() {
     return () => { socket.disconnect(); };
   }, []);
 
-  const loadRequests = async (user: any) => {
-    setLoading(true);
+  const loadRequests = async (user: any, silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await bookingApi.getByUser(user.id);
       const bookings = res.bookings || [];

@@ -25,15 +25,15 @@ export function MatchedPage() {
     const socket = io(import.meta.env.VITE_MATCH_SERVICE, { transports: ["websocket"] });
     socket.on("new_match", (match: any) => {
       if (match.user_a_id === user.id || match.user_b_id === user.id) {
-        loadMatches(user.id);
+        loadMatches(user.id, true);
         toast("New match!", { description: "Someone matched with you." });
       }
     });
     return () => { socket.disconnect(); };
   }, []);
 
-  const loadMatches = async (userId: number) => {
-    setLoading(true);
+  const loadMatches = async (userId: number, silent = false) => {
+    if (!silent) setLoading(true);
     try {
       // Get all match records
       const matchRecords = await matchApi.getMatches(userId);

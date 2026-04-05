@@ -28,14 +28,14 @@ export function SchedulePage() {
     const socket = io(import.meta.env.VITE_BOOKING_SERVICE, { transports: ["websocket"] });
     socket.on("booking_status_changed", (booking: any) => {
       if (booking.tutor_id === user.id || booking.tutee_id === user.id) {
-        loadSchedule(user);
+        loadSchedule(user, true);
       }
     });
     return () => { socket.disconnect(); };
   }, []);
 
-  const loadSchedule = async (user: any) => {
-    setLoading(true);
+  const loadSchedule = async (user: any, silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await bookingApi.getByUser(user.id, "Confirmed");
       const bookings = res.bookings || [];
