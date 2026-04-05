@@ -41,6 +41,8 @@ class Booking(db.Model):
     lesson_date     = db.Column(db.Date, nullable=False)
     start_time      = db.Column(db.Time, nullable=False)
     end_time        = db.Column(db.Time, nullable=False)
+    subject         = db.Column(db.String(100), nullable=True)
+    level           = db.Column(db.String(100), nullable=True)
     status          = db.Column(
         db.Enum(*VALID_STATUSES, native_enum=False),
         default='AwaitingConfirmation', nullable=False)
@@ -58,6 +60,8 @@ class Booking(db.Model):
             'lesson_date':     self.lesson_date.isoformat() if self.lesson_date else None,
             'start_time':      str(self.start_time),
             'end_time':        str(self.end_time),
+            'subject':         self.subject,
+            'level':           self.level,
             'status':          self.status,
             'created_at':      self.created_at.isoformat() if self.created_at else None,
             'confirmed_at':    self.confirmed_at.isoformat() if self.confirmed_at else None,
@@ -132,6 +136,8 @@ def create_booking():
             lesson_date=datetime.strptime(data['lesson_date'], '%Y-%m-%d').date(),
             start_time=datetime.strptime(data['start_time'], '%H:%M:%S').time(),
             end_time=datetime.strptime(data['end_time'], '%H:%M:%S').time(),
+            subject=data.get('subject'),
+            level=data.get('level'),
         )
         db.session.add(booking)
         db.session.commit()

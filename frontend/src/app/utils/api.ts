@@ -217,6 +217,8 @@ export const bookingApi = {
     lesson_date: string;
     start_time: string;
     end_time: string;
+    subject?: string;
+    level?: string;
   }) {
     return apiFetch(`${BOOKING_SERVICE}/booking`, {
       method: "POST",
@@ -349,6 +351,8 @@ export const bookingProcessApi = {
     start_time: string;
     end_time: string;
     amount: string;
+    subject?: string;
+    level?: string;
   }) {
     return apiFetch(`${BOOKING_PROCESS_SERVICE}/initiate`, {
       method: "POST",
@@ -360,6 +364,8 @@ export const bookingProcessApi = {
         StartTime: data.start_time,
         EndTime: data.end_time,
         Amount: data.amount,
+        Subject: data.subject,
+        Level: data.level,
       }),
     });
   },

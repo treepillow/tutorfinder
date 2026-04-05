@@ -86,6 +86,8 @@ export function BookingDialog({ profile, currentUser, onClose }: BookingDialogPr
           start_time: slot.start_time,
           end_time: slot.end_time,
           amount: price.toFixed(2),
+          subject: selectedSubject,
+          level: selectedLevel,
         });
       } catch {
         // If OutSystems is unavailable, fall back to direct booking service
@@ -96,6 +98,8 @@ export function BookingDialog({ profile, currentUser, onClose }: BookingDialogPr
           lesson_date: slot.date,
           start_time: slot.start_time,
           end_time: slot.end_time,
+          subject: selectedSubject,
+          level: selectedLevel,
         });
         // Reserve the slot directly
         await availabilityApi.updateSlot(selectedSlotId, "Reserved");
