@@ -194,10 +194,10 @@ def start_consumer():
                 ch.basic_qos(prefetch_count=1)
                 ch.basic_consume(queue='notification_queue',
                                  on_message_callback=handle_message, auto_ack=True)
-                print('[NOTIFICATION] Consumer ready, waiting for messages...')
+                print('[NOTIFICATION] Consumer ready, waiting for messages...', flush=True)
                 ch.start_consuming()
             except Exception as e:
-                print(f'[NOTIFICATION] Consumer error: {e}. Retrying in 5s...')
+                print(f'[NOTIFICATION] Consumer error: {e}. Retrying in 5s...', flush=True)
                 time.sleep(5)
 
     threading.Thread(target=consume, daemon=True).start()
