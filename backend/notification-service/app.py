@@ -1,5 +1,6 @@
 import os
 import json
+import ssl
 import pika
 import threading
 import time
@@ -170,7 +171,14 @@ def start_consumer():
     def consume():
         while True:
             try:
+                print(f'[NOTIFICATION] Connecting to RabbitMQ: {RABBITMQ_URL[:30]}...')
                 params = pika.URLParameters(RABBITMQ_URL)
+                params.socket_timeout = 10
+                params.blocked_connection_timeout = 10
+                # SSL config for amqps:// (CloudAMQP)
+                if RABBITMQ_URL.startswith('amqps'):
+                    ssl_context = ssl.create_default_context()
+                    params.ssl_options = pika.SSLOptions(ssl_context)
                 conn = pika.BlockingConnection(params)
                 ch = conn.channel()
                 ch.exchange_declare(exchange='esd_exchange', exchange_type='topic', durable=True)
