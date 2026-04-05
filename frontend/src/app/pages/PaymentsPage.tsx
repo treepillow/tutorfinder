@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { getCurrentUser, bookingApi, paymentApi, profileApi, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
-import { Calendar, Clock, CheckCircle, AlertCircle, XCircle, FlaskConical, ChevronDown } from "lucide-react";
+import { Calendar, Clock, CheckCircle, AlertCircle, XCircle, ChevronDown } from "lucide-react";
 import Lottie from "lottie-react";
 import circleGuyLoadingData from "../assets/circleGuyLoading.json";
 import { CircleGuyAvatar } from "../components/CircleGuyAvatar";
@@ -69,100 +69,6 @@ const TAB_INFO: Record<Tab, { border: string; text: string }> = {
     border: "border-[#D6CFBF]",
     text: "Lesson was cancelled after payment was made. The student's payment has been refunded. Includes bookings cancelled by either party and disputes resolved in the student's favour.",
   },
-};
-
-// ── Demo data ─────────────────────────────────────────────────────────────────
-const DEMO: Record<Tab, any[]> = {
-  held: [
-    {
-      booking_id: 9001,
-      status: "Confirmed",
-      lesson_date: "2026-04-10",
-      start_time: "14:00:00",
-      end_time: "15:00:00",
-      otherProfile: { id: 42, name: "Ms. Lim Wei Ting" },
-      payment: { amount: "75.00", status: "HELD", created_at: "2026-04-05T10:20:00", updated_at: "2026-04-05T10:23:00" },
-    },
-    {
-      booking_id: 9010,
-      status: "Confirmed",
-      lesson_date: "2026-04-12",
-      start_time: "09:00:00",
-      end_time: "10:30:00",
-      otherProfile: { id: 8, name: "Dr. Sarah Johnson" },
-      payment: { amount: "120.00", status: "HELD", created_at: "2026-04-08T15:45:00", updated_at: "2026-04-08T15:47:00" },
-    },
-  ],
-  completed: [
-    {
-      booking_id: 9002,
-      status: "Completed",
-      lesson_date: "2026-03-28",
-      start_time: "10:00:00",
-      end_time: "11:00:00",
-      otherProfile: { id: 7, name: "Mr. Tan Boon Kiat" },
-      // No dispute_reason = completed normally
-      payment: { amount: "60.00", status: "RELEASED", created_at: "2026-03-25T09:00:00", updated_at: "2026-03-28T11:30:00" },
-    },
-    {
-      booking_id: 9011,
-      status: "Completed",
-      lesson_date: "2026-03-22",
-      start_time: "16:30:00",
-      end_time: "17:30:00",
-      otherProfile: { id: 15, name: "Ms. Emily Wong" },
-      dispute_reason: "Tutor did not show up for the scheduled lesson.",
-      dispute_resolved_for: "tutor",
-      payment: { amount: "85.00", status: "RELEASED", created_at: "2026-03-20T12:00:00", updated_at: "2026-03-23T14:15:00" },
-    },
-  ],
-  disputed: [
-    {
-      booking_id: 9003,
-      status: "Disputed",
-      lesson_date: "2026-04-01",
-      start_time: "16:00:00",
-      end_time: "17:00:00",
-      disputed_by: "tutee",
-      dispute_reason: "Tutor did not show up for the scheduled lesson.",
-      otherProfile: { id: 13, name: "Mrs. Chen Xiao Hui" },
-      payment: { amount: "80.00", status: "HELD", created_at: "2026-03-29T14:00:00", updated_at: null },
-    },
-    {
-      booking_id: 9012,
-      status: "Disputed",
-      lesson_date: "2026-04-02",
-      start_time: "11:00:00",
-      end_time: "12:00:00",
-      disputed_by: "tutor",
-      dispute_reason: "Student did not show up for the scheduled lesson.",
-      otherProfile: { id: 22, name: "Alex Martinez" },
-      payment: { amount: "50.00", status: "HELD", created_at: "2026-03-31T10:30:00", updated_at: null },
-    },
-  ],
-  cancelled: [
-    {
-      booking_id: 9004,
-      status: "Cancelled",
-      lesson_date: "2026-03-20",
-      start_time: "09:00:00",
-      end_time: "10:00:00",
-      dispute_reason: null, // null = cancelled by a party, not dispute
-      otherProfile: { id: 5, name: "Mr. Raj Kumar" },
-      payment: { amount: "55.00", status: "REFUNDED", created_at: "2026-03-18T11:00:00", updated_at: "2026-03-20T08:45:00" },
-    },
-    {
-      booking_id: 9013,
-      status: "Cancelled",
-      lesson_date: "2026-03-15",
-      start_time: "13:00:00",
-      end_time: "14:00:00",
-      dispute_reason: "Student did not show up for the scheduled lesson.",
-      dispute_resolved_for: "student",
-      otherProfile: { id: 18, name: "Prof. David Liu" },
-      payment: { amount: "95.00", status: "REFUNDED", created_at: "2026-03-13T09:15:00", updated_at: "2026-03-16T16:20:00" },
-    },
-  ],
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -325,7 +231,6 @@ export function PaymentsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("held");
   const [allRecords, setAllRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [demoMode, setDemoMode] = useState(false);
   const prevTab = useRef<Tab>("held");
 
   useEffect(() => {
@@ -375,24 +280,21 @@ export function PaymentsPage() {
 
   const switchTab = (tab: Tab) => { prevTab.current = activeTab; setActiveTab(tab); };
 
-  const tabRecords = demoMode
-    ? DEMO[activeTab]
-    : allRecords.filter((r) => {
-        const inTab = TABS.find((t) => t.id === activeTab)?.bookingStatuses.includes(r.status);
-        if (!inTab) return false;
-        // Cancelled tab: only show records where payment was already made
-        if (activeTab === "cancelled") return !!r.payment;
-        return true;
-      });
+  const tabRecords = allRecords.filter((r) => {
+    const inTab = TABS.find((t) => t.id === activeTab)?.bookingStatuses.includes(r.status);
+    if (!inTab) return false;
+    // Cancelled tab: only show records where payment was already made
+    if (activeTab === "cancelled") return !!r.payment;
+    return true;
+  });
 
-  const tabCount = (tab: Tab) => demoMode
-    ? DEMO[tab].length
-    : allRecords.filter((r) => {
-        const inTab = TABS.find((t) => t.id === tab)?.bookingStatuses.includes(r.status);
-        if (!inTab) return false;
-        if (tab === "cancelled") return !!r.payment;
-        return true;
-      }).length;
+  const tabCount = (tab: Tab) =>
+    allRecords.filter((r) => {
+      const inTab = TABS.find((t) => t.id === tab)?.bookingStatuses.includes(r.status);
+      if (!inTab) return false;
+      if (tab === "cancelled") return !!r.payment;
+      return true;
+    }).length;
 
   if (!currentUser) return null;
 
@@ -415,18 +317,6 @@ export function PaymentsPage() {
                 : "Track payments you'll receive for completed lessons"}
             </p>
           </div>
-          {/* Demo toggle */}
-          <button
-            onClick={() => setDemoMode((v) => !v)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200 border ${
-              demoMode
-                ? "bg-[#2F3B3D] text-white border-[#2F3B3D]"
-                : "bg-transparent text-[#2F3B3D]/50 border-[#D6CFBF] hover:border-[#2F3B3D]/30 hover:text-[#2F3B3D]"
-            }`}
-          >
-            <FlaskConical className="w-3.5 h-3.5" />
-            {demoMode ? "Demo On" : "Preview"}
-          </button>
         </div>
 
         {/* Tabs */}
@@ -474,7 +364,7 @@ export function PaymentsPage() {
           <div className="overflow-hidden">
             <AnimatePresence mode="popLayout" initial={false} custom={direction}>
               <motion.div
-                key={activeTab + (demoMode ? "-demo" : "")}
+                key={activeTab}
                 custom={direction}
                 initial={{ x: direction * 50, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
