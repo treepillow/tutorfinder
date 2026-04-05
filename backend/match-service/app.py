@@ -44,7 +44,10 @@ class Swipe(db.Model):
 
 class Match(db.Model):
     __tablename__ = 'matches'
-    __table_args__ = {'schema': DB_SCHEMA}
+    __table_args__ = (
+        UniqueConstraint('user_a_id', 'user_b_id', name='uq_match_pair'),
+        {'schema': DB_SCHEMA},
+    )
 
     match_id   = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_a_id  = db.Column(db.Integer, nullable=False)
@@ -116,9 +119,26 @@ def swipe():
     if not reverse:
         return jsonify({'matched': False, 'message': 'Like saved'}), 200
 
-    new_match = Match(user_a_id=swiper_id, user_b_id=swiped_id)
-    db.session.add(new_match)
-    db.session.commit()
+    existing = Match.query.filter(
+        ((Match.user_a_id == swiper_id) & (Match.user_b_id == swiped_id)) |
+        ((Match.user_a_id == swiped_id) & (Match.user_b_id == swiper_id)),
+        Match.status == 'Active'
+    ).first()
+    if existing:
+        return jsonify({'matched': True, 'match_id': existing.match_id}), 200
+
+    try:
+        new_match = Match(user_a_id=swiper_id, user_b_id=swiped_id)
+        db.session.add(new_match)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        existing = Match.query.filter(
+            ((Match.user_a_id == swiper_id) & (Match.user_b_id == swiped_id)) |
+            ((Match.user_a_id == swiped_id) & (Match.user_b_id == swiper_id)),
+            Match.status == 'Active'
+        ).first()
+        return jsonify({'matched': True, 'match_id': existing.match_id if existing else None}), 200
 
     match_id = new_match.match_id
 
