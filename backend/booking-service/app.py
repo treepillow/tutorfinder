@@ -1,5 +1,6 @@
 import os
 import json
+import ssl
 import pika
 import requests
 from datetime import datetime, timedelta
@@ -88,6 +89,9 @@ def publish_event(routing_key, payload):
     """Publish an event to the RabbitMQ esd_exchange."""
     try:
         params = pika.URLParameters(RABBITMQ_URL)
+        if RABBITMQ_URL.startswith('amqps'):
+            ssl_context = ssl.create_default_context()
+            params.ssl_options = pika.SSLOptions(ssl_context)
         conn = pika.BlockingConnection(params)
         ch = conn.channel()
         ch.exchange_declare(exchange='esd_exchange', exchange_type='topic', durable=True)
