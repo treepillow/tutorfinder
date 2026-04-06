@@ -203,7 +203,7 @@ export function SchedulePage() {
     calendarDate.getFullYear() === today.getFullYear();
 
   const formatDate = (dateObj: Date) =>
-    dateObj.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+    dateObj.toLocaleDateString("en-SG", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Singapore" });
 
   if (!currentUser) return null;
 
@@ -267,7 +267,7 @@ export function SchedulePage() {
                     {/* Date badge */}
                     <div className="flex-shrink-0 bg-[#2F3B3D] text-white rounded-xl px-4 py-3 text-center min-w-[56px]">
                       <div className="text-xs font-medium opacity-70 uppercase">
-                        {lesson.dateObj.toLocaleDateString("en-US", { month: "short" })}
+                        {lesson.dateObj.toLocaleDateString("en-SG", { month: "short", timeZone: "Asia/Singapore" })}
                       </div>
                       <div className="text-2xl font-semibold leading-none">
                         {lesson.dateObj.getDate()}
@@ -291,7 +291,7 @@ export function SchedulePage() {
                   <div className="text-right">
                     <div className="text-[#7C8D8C] font-medium">${lesson.price}</div>
                     <div className="text-[#2F3B3D]/40 text-xs mt-1">
-                      {lesson.dateObj.toLocaleDateString("en-US", { weekday: "short" })}
+                      {lesson.dateObj.toLocaleDateString("en-SG", { weekday: "short", timeZone: "Asia/Singapore" })}
                     </div>
                   </div>
                 </div>
@@ -309,7 +309,7 @@ export function SchedulePage() {
                 <ChevronLeft className="w-5 h-5 text-[#2F3B3D]" />
               </button>
               <h2 className="text-xl font-medium text-[#2F3B3D]">
-                {calendarDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                {calendarDate.toLocaleDateString("en-SG", { month: "long", year: "numeric", timeZone: "Asia/Singapore" })}
               </h2>
               <button onClick={nextMonth} className="p-2 hover:bg-[#D6CFBF] rounded-full transition-colors">
                 <ChevronRight className="w-5 h-5 text-[#2F3B3D]" />
