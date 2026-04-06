@@ -46,6 +46,18 @@ export function ProfileCard({ profile, onClick, userType }: ProfileCardProps) {
             )}
           </div>
           <p className="text-sm text-[#2F3B3D]/70 line-clamp-2">{subjectText}</p>
+          {profile.reviewCount != null && (
+            <div className="flex items-center gap-1 mt-1">
+              {profile.reviewCount > 0 ? (
+                <>
+                  <span className="text-yellow-400 text-sm">{"★".repeat(Math.round(profile.avgRating))}{"☆".repeat(5 - Math.round(profile.avgRating))}</span>
+                  <span className="text-xs text-[#2F3B3D]/50">{profile.avgRating.toFixed(1)} ({profile.reviewCount})</span>
+                </>
+              ) : (
+                <span className="text-xs text-[#2F3B3D]/40">No ratings yet</span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Contact + location grouped (students only) */}
