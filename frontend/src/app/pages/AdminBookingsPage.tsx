@@ -22,77 +22,38 @@ const STATUS_LABEL: Record<string, string> = {
   AwaitingPayment: "Awaiting Payment",
 };
 
+function toUtc(s: string) {
+  if (!s) return new Date(NaN);
+  return new Date(s.includes("Z") || s.includes("+") ? s : s + "Z");
+}
 function fmtDate(s: string) {
-  return new Date(s).toLocaleDateString("en-SG", { 
-    day: "numeric", 
-    month: "short", 
+  return toUtc(s).toLocaleDateString("en-SG", {
+    day: "numeric",
+    month: "short",
     year: "numeric",
     timeZone: "Asia/Singapore"
   });
 }
 function fmtTime(s: string) { return s ? s.slice(0, 5) : "—"; }
 
+const DT_OPTS: Intl.DateTimeFormatOptions = {
+  timeZone: "Asia/Singapore",
+  day: "numeric", month: "short", year: "numeric",
+  hour: "2-digit", minute: "2-digit", second: "2-digit",
+  hour12: true,
+};
+
 function getStatusTimestamp(booking: any): string {
-  if (booking.status === "Completed" && booking.completed_at) {
-    return new Date(booking.completed_at).toLocaleString("en-SG", { 
-      timeZone: "Asia/Singapore",
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true
-    });
-  }
-  if (booking.status === "Cancelled" && booking.cancelled_at) {
-    return new Date(booking.cancelled_at).toLocaleString("en-SG", { 
-      timeZone: "Asia/Singapore",
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true
-    });
-  }
-  if (booking.status === "Disputed" && booking.disputed_at) {
-    return new Date(booking.disputed_at).toLocaleString("en-SG", { 
-      timeZone: "Asia/Singapore",
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true
-    });
-  }
-  if ((booking.status === "Confirmed" || booking.status === "AwaitingPayment") && booking.confirmed_at) {
-    return new Date(booking.confirmed_at).toLocaleString("en-SG", { 
-      timeZone: "Asia/Singapore",
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true
-    });
-  }
-  if (booking.status === "AwaitingConfirmation" && booking.created_at) {
-    return new Date(booking.created_at).toLocaleString("en-SG", { 
-      timeZone: "Asia/Singapore",
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true
-    });
-  }
+  if (booking.status === "Completed" && booking.completed_at)
+    return toUtc(booking.completed_at).toLocaleString("en-SG", DT_OPTS);
+  if (booking.status === "Cancelled" && booking.cancelled_at)
+    return toUtc(booking.cancelled_at).toLocaleString("en-SG", DT_OPTS);
+  if (booking.status === "Disputed" && booking.disputed_at)
+    return toUtc(booking.disputed_at).toLocaleString("en-SG", DT_OPTS);
+  if ((booking.status === "Confirmed" || booking.status === "AwaitingPayment") && booking.confirmed_at)
+    return toUtc(booking.confirmed_at).toLocaleString("en-SG", DT_OPTS);
+  if (booking.status === "AwaitingConfirmation" && booking.created_at)
+    return toUtc(booking.created_at).toLocaleString("en-SG", DT_OPTS);
   return "—";
 }
 
@@ -180,11 +141,11 @@ function Detail({ label, value }: { label: string; value: string }) {
 
 // ── Helper: Get sort timestamp based on booking status ──────────────────────
 function getSortTimestamp(booking: any): number {
-  if (booking.completed_at) return new Date(booking.completed_at).getTime();
-  if (booking.cancelled_at) return new Date(booking.cancelled_at).getTime();
-  if (booking.disputed_at) return new Date(booking.disputed_at).getTime();
-  if (booking.confirmed_at) return new Date(booking.confirmed_at).getTime();
-  if (booking.created_at) return new Date(booking.created_at).getTime();
+  if (booking.completed_at) return toUtc(booking.completed_at).getTime();
+  if (booking.cancelled_at) return toUtc(booking.cancelled_at).getTime();
+  if (booking.disputed_at) return toUtc(booking.disputed_at).getTime();
+  if (booking.confirmed_at) return toUtc(booking.confirmed_at).getTime();
+  if (booking.created_at) return toUtc(booking.created_at).getTime();
   if (booking.lesson_date) return new Date(booking.lesson_date).getTime();
   return 0;
 }

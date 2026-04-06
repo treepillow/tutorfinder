@@ -132,6 +132,25 @@ export function RequestsPage() {
       const awaiting_payment = enriched.filter((b: any) => b.status === "AwaitingPayment");
       setPendingRequests(pending);
       setPaymentRequests(awaiting_payment);
+
+      // Recovery: if any AwaitingPayment booking already has a HELD payment,
+      // the completePayment call must have failed after Stripe succeeded — retry it silently
+      if (user.userType === "student" && awaiting_payment.length > 0) {
+        for (const booking of awaiting_payment) {
+          try {
+            const payment = await paymentApi.getByBooking(booking.booking_id);
+            if (payment?.status === "HELD") {
+              console.warn(`[Payment recovery] Booking ${booking.booking_id} stuck in AwaitingPayment with HELD payment — retrying completePayment`);
+              await bookingProcessApi.completePayment(booking.booking_id);
+              toast.success("Payment confirmed — your booking is now active!");
+            }
+          } catch {
+            // silently ignore — don't block the page
+          }
+        }
+        // Reload if any recovery happened
+        loadRequests(user, true);
+      }
     } catch (err: any) {
       console.error("Failed to load requests:", err);
       toast.error("Failed to load requests");

@@ -33,7 +33,6 @@ public class PaymentController {
     @PostMapping("/payment/create-intent")
     public ResponseEntity<?> createIntent(@RequestBody Map<String, Object> body) {
         try {
-            // Handle both snake_case and PascalCase field names
             Integer bookingId = intVal(body, "booking_id");
             if (bookingId == null) bookingId = intVal(body, "BookingId");
             Integer tuteeId = intVal(body, "tutee_id");
@@ -73,7 +72,6 @@ public class PaymentController {
     @PostMapping("/payment/checkout")
     public ResponseEntity<?> checkout(@RequestBody Map<String, Object> body) {
         try {
-            // Handle both snake_case and PascalCase field names
             Integer bookingId = intVal(body, "booking_id");
             if (bookingId == null) bookingId = intVal(body, "BookingId");
             Integer tuteeId = intVal(body, "tutee_id");
@@ -115,9 +113,7 @@ public class PaymentController {
     public ResponseEntity<?> completeCheckout(@RequestBody Map<String, Object> body) {
         try {
             Integer bookingId = intVal(body, "booking_id");
-            if (bookingId == null) {
-                bookingId = intVal(body, "BookingId");
-            }
+            if (bookingId == null) bookingId = intVal(body, "BookingId");
             System.out.printf("[PAYMENT] completeCheckout called with bookingId=%d%n", bookingId);
             if (bookingId == null) {
                 return ResponseEntity.badRequest().body(Map.of("error", "booking_id is required"));
@@ -143,19 +139,12 @@ public class PaymentController {
     @PostMapping("/payment/capture")
     public ResponseEntity<?> capture(@RequestBody Map<String, Object> body) {
         try {
-            // Handle both snake_case and PascalCase field names
             String intentId = (String) body.get("stripe_payment_intent_id");
-            if (intentId == null) {
-                intentId = (String) body.get("StripePaymentIntentId");
-            }
+            if (intentId == null) intentId = (String) body.get("StripePaymentIntentId");
             String tuteeEmail = (String) body.getOrDefault("tutee_email", "");
-            if (tuteeEmail == null || tuteeEmail.isEmpty()) {
-                tuteeEmail = (String) body.getOrDefault("TuteeEmail", "");
-            }
+            if (tuteeEmail == null || tuteeEmail.isEmpty()) tuteeEmail = (String) body.getOrDefault("TuteeEmail", "");
             String tutorEmail = (String) body.getOrDefault("tutor_email", "");
-            if (tutorEmail == null || tutorEmail.isEmpty()) {
-                tutorEmail = (String) body.getOrDefault("TutorEmail", "");
-            }
+            if (tutorEmail == null || tutorEmail.isEmpty()) tutorEmail = (String) body.getOrDefault("TutorEmail", "");
             System.out.printf("[PAYMENT] capture called with intentId=%s, tuteeEmail=%s, body keys=%s%n", intentId, tuteeEmail, body.keySet());
             if (intentId == null || intentId.isBlank()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "stripe_payment_intent_id is required"));
@@ -176,22 +165,16 @@ public class PaymentController {
     /**
      * POST /payment/{paymentId}/release
      * Called by OutSystems Booking Process when lesson is marked complete.
-     * Body: { tutor_stripe_account_id?, tutor_email? }
      */
     @PostMapping("/payment/{paymentId}/release")
     public ResponseEntity<?> release(@PathVariable Long paymentId,
                                      @RequestBody(required = false) Map<String, Object> body) {
         if (body == null) body = new HashMap<>();
         try {
-            // Handle both snake_case and PascalCase field names
             String tutorAccountId = (String) body.getOrDefault("tutor_stripe_account_id", "");
-            if (tutorAccountId == null || tutorAccountId.isEmpty()) {
-                tutorAccountId = (String) body.getOrDefault("TutorStripeAccountId", "");
-            }
+            if (tutorAccountId == null || tutorAccountId.isEmpty()) tutorAccountId = (String) body.getOrDefault("TutorStripeAccountId", "");
             String tutorEmail = (String) body.getOrDefault("tutor_email", "");
-            if (tutorEmail == null || tutorEmail.isEmpty()) {
-                tutorEmail = (String) body.getOrDefault("TutorEmail", "");
-            }
+            if (tutorEmail == null || tutorEmail.isEmpty()) tutorEmail = (String) body.getOrDefault("TutorEmail", "");
             System.out.printf("[PAYMENT] release called for paymentId=%d, tutorEmail=%s%n", paymentId, tutorEmail);
             Payment payment = paymentService.releaseToTutor(paymentId, tutorAccountId, tutorEmail);
             return ResponseEntity.ok(toMap(payment));
@@ -211,18 +194,14 @@ public class PaymentController {
     /**
      * POST /payment/{paymentId}/refund
      * Called by OutSystems Booking Process when booking is cancelled post-payment.
-     * Body: { tutee_email? }
      */
     @PostMapping("/payment/{paymentId}/refund")
     public ResponseEntity<?> refund(@PathVariable Long paymentId,
                                     @RequestBody(required = false) Map<String, Object> body) {
         if (body == null) body = new HashMap<>();
         try {
-            // Handle both snake_case and PascalCase field names
             String tuteeEmail = (String) body.getOrDefault("tutee_email", "");
-            if (tuteeEmail == null || tuteeEmail.isEmpty()) {
-                tuteeEmail = (String) body.getOrDefault("TuteeEmail", "");
-            }
+            if (tuteeEmail == null || tuteeEmail.isEmpty()) tuteeEmail = (String) body.getOrDefault("TuteeEmail", "");
             System.out.printf("[PAYMENT] refund called for paymentId=%d, tuteeEmail=%s%n", paymentId, tuteeEmail);
             Payment payment = paymentService.refundToTutee(paymentId, tuteeEmail);
             return ResponseEntity.ok(toMap(payment));
@@ -241,7 +220,6 @@ public class PaymentController {
 
     /**
      * GET /payment/booking/{bookingId}
-     * Get payment record for a booking.
      */
     @GetMapping("/payment/booking/{bookingId}")
     public ResponseEntity<?> getByBooking(@PathVariable Integer bookingId) {
@@ -252,7 +230,6 @@ public class PaymentController {
 
     /**
      * GET /payment/{paymentId}
-     * Get payment by ID.
      */
     @GetMapping("/payment/{paymentId}")
     public ResponseEntity<?> getById(@PathVariable Long paymentId) {
@@ -264,7 +241,6 @@ public class PaymentController {
     /**
      * POST /payment/notify-success
      * Called by OutSystems after payment is complete and profile info is available.
-     * Publishes payment.success event to RabbitMQ for email notifications.
      */
     @PostMapping("/payment/notify-success")
     public ResponseEntity<?> notifySuccess(@RequestBody Map<String, Object> body) {

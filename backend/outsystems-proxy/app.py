@@ -24,7 +24,7 @@ def proxy(path):
             method=request.method,
             url=f'{OUTSYSTEMS_BASE}/{path}',
             json=request.get_json(force=True, silent=True),
-            timeout=15
+            timeout=30
         )
         return Response(res.content, status=res.status_code, content_type='application/json')
     except Exception as e:
