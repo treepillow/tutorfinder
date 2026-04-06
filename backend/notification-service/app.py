@@ -136,10 +136,10 @@ def handle_message(ch, method, properties, body):
         elif rk == 'booking.cancelled':
             save_and_notify(data.get('tutee_id'), 'Booking', data.get('tutee_email'),
                             'Booking Cancelled',
-                            "A booking has been cancelled.", rk)
+                            "A booking has been cancelled please check your account again.", rk)
             save_and_notify(data.get('tutor_id'), 'Booking', data.get('tutor_email'),
                             'Booking Cancelled',
-                            "A booking has been cancelled.", rk)
+                            "A booking has been cancelled please check your account again.", rk)
 
         elif rk == 'payment.success':
             save_and_notify(data.get('tutee_id'), 'Payment', data.get('tutee_email'),
