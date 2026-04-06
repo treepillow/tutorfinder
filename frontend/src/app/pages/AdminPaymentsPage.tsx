@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { bookingApi, paymentApi, profileApi, enrichProfile } from "../utils/api";
 import { ChevronDown } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -6,7 +6,49 @@ import { CircleGuyAvatar } from "../components/CircleGuyAvatar";
 import Lottie from "lottie-react";
 import circleGuyLoadingData from "../assets/circleGuyLoading.json";
 
-type PaymentStatusFilter = "All" | "HELD" | "RELEASED" | "REFUNDED" | "PENDING";
+type AdminTab = "held" | "completed" | "disputed" | "cancelled";
+
+// ── Tab icons (same style as user PaymentsPage) ──
+function IconHeld({ active }: { active: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" fill={active ? "#d97706" : "none"} stroke={active ? "#d97706" : "currentColor"} strokeWidth="2"/>
+      <path d="M12 7v5l3 3" stroke={active ? "white" : "currentColor"} strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+}
+function IconCompleted({ active }: { active: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" fill={active ? "#16a34a" : "none"} stroke={active ? "#16a34a" : "currentColor"} strokeWidth="2"/>
+      <path d="M8 12l3 3 5-5" stroke={active ? "white" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+function IconDisputed({ active }: { active: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" fill={active ? "#ea580c" : "none"} stroke={active ? "#ea580c" : "currentColor"} strokeWidth="2"/>
+      <path d="M12 8v5" stroke={active ? "white" : "currentColor"} strokeWidth="2" strokeLinecap="round"/>
+      <circle cx="12" cy="16" r="1" fill={active ? "white" : "currentColor"}/>
+    </svg>
+  );
+}
+function IconCancelled({ active }: { active: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" fill={active ? "#dc2626" : "none"} stroke={active ? "#dc2626" : "currentColor"} strokeWidth="2"/>
+      <path d="M9 9l6 6M15 9l-6 6" stroke={active ? "white" : "currentColor"} strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+const TABS: { id: AdminTab; label: string; Icon: React.ComponentType<{ active: boolean }>; border: string; text: string }[] = [
+  { id: "held",      label: "Held",             Icon: IconHeld,      border: "border-[#d97706]", text: "Funds held in escrow — lesson confirmed, awaiting completion or dispute resolution." },
+  { id: "completed", label: "Completed",         Icon: IconCompleted, border: "border-[#16a34a]", text: "Lessons successfully completed with no issues. Funds released to tutor. Includes disputes resolved in the tutor's favour." },
+  { id: "disputed",  label: "Ongoing Disputes",  Icon: IconDisputed,  border: "border-[#ea580c]", text: "Active disputes awaiting admin resolution. Funds remain held." },
+  { id: "cancelled", label: "Cancelled",         Icon: IconCancelled, border: "border-[#dc2626]", text: "Cancelled bookings and disputes resolved in the student's favour. Funds refunded." },
+];
 
 const STATUS_PILL: Record<string, string> = {
   HELD:     "bg-[#2F3B3D] text-white",
@@ -16,42 +58,6 @@ const STATUS_PILL: Record<string, string> = {
   FAILED:   "bg-[#EF4444] text-white",
 };
 
-const PAYMENT_STATUS_INFO: Record<PaymentStatusFilter, { border: string; text: string }> = {
-  All: {
-    border: "border-[#2F3B3D]",
-    text: "All payment transactions.",
-  },
-  HELD: {
-    border: "border-[#2F3B3D]",
-    text: "Funds held in escrow — waiting for lesson completion or dispute resolution.",
-  },
-  RELEASED: {
-    border: "border-[#16A34A]",
-    text: "Lesson completed successfully, no disputes — funds sent to tutor.",
-  },
-  REFUNDED: {
-    border: "border-[#EF4444]",
-    text: "Booking cancelled or student won dispute — funds refunded to student.",
-  },
-  PENDING: {
-    border: "border-[#60A5FA]",
-    text: "Payment awaiting processing, confirmation, or admin review.",
-  },
-};
-
-function fmtDateTime(s: string) {
-  if (!s) return "—";
-  return new Date(s).toLocaleString("en-SG", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Singapore" });
-}
-
-const TAB_LABELS: Record<PaymentStatusFilter, string> = {
-  All: "All",
-  HELD: "Held",
-  RELEASED: "Released",
-  REFUNDED: "Refunded",
-  PENDING: "Pending",
-};
-
 const PAYMENT_STATUS_DISPLAY: Record<string, string> = {
   HELD: "Held",
   RELEASED: "Released",
@@ -59,6 +65,20 @@ const PAYMENT_STATUS_DISPLAY: Record<string, string> = {
   PENDING: "Pending",
   FAILED: "Failed",
 };
+
+function fmtDateTime(s: string) {
+  if (!s) return "—";
+  const d = new Date(s.includes("Z") || s.includes("+") ? s : s + "Z");
+  return d.toLocaleString("en-SG", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Singapore" });
+}
+
+function matchesTab(r: any, tab: AdminTab): boolean {
+  if (tab === "held")      return r.status === "Confirmed" && !!r.payment;
+  if (tab === "completed") return r.status === "Completed" && !!r.payment;
+  if (tab === "disputed")  return r.status === "Disputed"  && !!r.payment;
+  if (tab === "cancelled") return r.status === "Cancelled" && !!r.payment;
+  return false;
+}
 
 function SummaryCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
@@ -70,8 +90,26 @@ function SummaryCard({ label, value, sub }: { label: string; value: string; sub?
   );
 }
 
-function PaymentCard({ payment }: { payment: any }) {
+function PaymentCard({ record }: { record: any }) {
   const [expanded, setExpanded] = useState(false);
+  const p = record.payment;
+  const fromDispute = !!record.dispute_reason;
+
+  const pillLabel =
+    record.status === "Completed" && fromDispute ? "Dispute: Resolved" :
+    record.status === "Cancelled" && fromDispute ? "Dispute: Refunded" :
+    record.status === "Confirmed" ? "Held" :
+    record.status === "Completed" ? "Released" :
+    record.status === "Cancelled" ? "Refunded" :
+    record.status === "Disputed"  ? "Under Review" :
+    record.status;
+
+  const pillClass =
+    record.status === "Confirmed" ? "bg-[#2F3B3D] text-white" :
+    record.status === "Completed" ? "bg-[#16A34A] text-white" :
+    record.status === "Cancelled" ? "bg-[#EF4444] text-white" :
+    record.status === "Disputed"  ? "bg-[#D97706] text-white" :
+    "bg-[#EDE9DF] text-[#2F3B3D]";
 
   return (
     <div className="bg-[#EDE9DF] rounded-2xl overflow-hidden">
@@ -79,40 +117,27 @@ function PaymentCard({ payment }: { payment: any }) {
         onClick={() => setExpanded((v) => !v)}
         className="w-full flex items-center gap-4 px-5 py-4 hover:bg-[#E3DDD3] transition-colors duration-150 text-left"
       >
-        {/* Avatars */}
         <div className="flex -space-x-2 shrink-0">
-          <CircleGuyAvatar id={payment.tutee_id} size={36} />
-          <CircleGuyAvatar id={payment.tutor_id} size={36} />
+          <CircleGuyAvatar id={record.tutee_id} size={36} />
+          <CircleGuyAvatar id={record.tutor_id} size={36} />
         </div>
 
-        {/* Names */}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-[#2F3B3D] leading-tight truncate">
-            {payment.tuteeName}
+            {record.tuteeName}
             <span className="text-[#2F3B3D]/30 mx-1.5">→</span>
-            {payment.tutorName}
+            {record.tutorName}
           </p>
-          <p className="text-xs text-[#2F3B3D]/40 mt-0.5">Booking #{payment.booking_id}</p>
+          <p className="text-xs text-[#2F3B3D]/40 mt-0.5">Booking #{record.booking_id}</p>
         </div>
 
-        {/* Amount */}
         <p className="text-base font-semibold text-[#2F3B3D] shrink-0">
-          ${parseFloat(payment.amount).toFixed(2)}
+          ${parseFloat(p?.amount || "0").toFixed(2)}
         </p>
 
-        {/* Status pill */}
-        {(() => {
-          const fromDispute = !!payment._booking?.dispute_reason;
-          const label =
-            payment.status === "RELEASED" && fromDispute ? "Dispute: Resolved" :
-            payment.status === "REFUNDED" && fromDispute ? "Dispute: Refunded" :
-            (PAYMENT_STATUS_DISPLAY[payment.status] ?? payment.status);
-          return (
-            <span className={`text-xs px-3 py-1 rounded-full font-medium shrink-0 ${STATUS_PILL[payment.status] ?? "bg-[#EDE9DF] text-[#2F3B3D]"}`}>
-              {label}
-            </span>
-          );
-        })()}
+        <span className={`text-xs px-3 py-1 rounded-full font-medium shrink-0 ${pillClass}`}>
+          {pillLabel}
+        </span>
 
         <ChevronDown className={`w-4 h-4 text-[#2F3B3D]/30 shrink-0 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
       </button>
@@ -128,19 +153,19 @@ function PaymentCard({ payment }: { payment: any }) {
           >
             <div className="px-5 pb-5 pt-3 border-t border-[#D6CFBF]/50 space-y-3">
               <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-                <Detail label="Payment ID" value={String(payment.payment_id)} />
-                <Detail label="Created" value={fmtDateTime(payment.created_at)} />
-                <Detail label="Last Updated" value={fmtDateTime(payment.updated_at)} />
-                {payment.stripe_payment_intent_id && (
-                  <Detail label="Stripe Intent" value={payment.stripe_payment_intent_id} />
+                <Detail label="Payment ID" value={String(p?.payment_id ?? "—")} />
+                <Detail label="Created" value={fmtDateTime(p?.created_at)} />
+                <Detail label="Last Updated" value={fmtDateTime(p?.updated_at)} />
+                {p?.stripe_payment_intent_id && (
+                  <Detail label="Stripe Intent" value={p.stripe_payment_intent_id} />
                 )}
-                {payment.stripe_transfer_id && (
-                  <Detail label="Stripe Transfer" value={payment.stripe_transfer_id} />
+                {p?.stripe_transfer_id && (
+                  <Detail label="Stripe Transfer" value={p.stripe_transfer_id} />
                 )}
               </div>
-              {payment._booking?.dispute_reason && (
+              {record.dispute_reason && (
                 <div className="bg-[#F5F3EF] rounded-xl px-4 py-3 text-sm text-[#2F3B3D]/70">
-                  <span className="font-medium text-[#2F3B3D]">Dispute reason: </span>{payment._booking.dispute_reason}
+                  <span className="font-medium text-[#2F3B3D]">Dispute reason: </span>{record.dispute_reason}
                 </div>
               )}
             </div>
@@ -163,7 +188,8 @@ function Detail({ label, value }: { label: string; value: string }) {
 export function AdminPaymentsPage() {
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<PaymentStatusFilter>("All");
+  const [activeTab, setActiveTab] = useState<AdminTab>("held");
+  const prevTab = useRef<AdminTab>("held");
 
   useEffect(() => { load(); }, []);
 
@@ -176,14 +202,18 @@ export function AdminPaymentsPage() {
         r.status === "fulfilled" ? (r.value?.bookings || []) : []
       );
 
-      const paymentResults = await Promise.allSettled(
-        allBookings.map((b) => paymentApi.getByBooking(b.booking_id))
+      // Attach payment to each booking (booking is primary, like user PaymentsPage)
+      const withPayments = await Promise.all(
+        allBookings.map(async (b) => {
+          let payment: any = null;
+          try { payment = await paymentApi.getByBooking(b.booking_id); } catch {}
+          return { ...b, payment };
+        })
       );
-      const rawPayments = paymentResults
-        .map((r, i) => r.status === "fulfilled" ? { ...r.value, _booking: allBookings[i] } : null)
-        .filter(Boolean);
+      // Only keep bookings that have a payment
+      const rawRecords = withPayments.filter((r) => !!r.payment);
 
-      const ids = [...new Set(rawPayments.flatMap((p: any) => [p.tutee_id, p.tutor_id]))] as number[];
+      const ids = [...new Set(rawRecords.flatMap((r: any) => [r.tutee_id, r.tutor_id]))] as number[];
       const profileMap: Record<number, any> = {};
       await Promise.allSettled(
         ids.map(async (id) => {
@@ -192,11 +222,11 @@ export function AdminPaymentsPage() {
         })
       );
 
-      const enriched = rawPayments
-        .map((p: any) => ({
-          ...p,
-          tuteeName: profileMap[p.tutee_id]?.name ?? `User #${p.tutee_id}`,
-          tutorName: profileMap[p.tutor_id]?.name ?? `User #${p.tutor_id}`,
+      const enriched = rawRecords
+        .map((r: any) => ({
+          ...r,
+          tuteeName: profileMap[r.tutee_id]?.name ?? `User #${r.tutee_id}`,
+          tutorName: profileMap[r.tutor_id]?.name ?? `User #${r.tutor_id}`,
         }))
         .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
@@ -208,11 +238,14 @@ export function AdminPaymentsPage() {
     }
   };
 
-  const sum = (s: string) =>
-    payments.filter((p) => p.status === s).reduce((a, p) => a + parseFloat(p.amount || "0"), 0);
+  const switchTab = (tab: AdminTab) => { prevTab.current = activeTab; setActiveTab(tab); };
 
-  const filtered = statusFilter === "All" ? payments : payments.filter((p) => p.status === statusFilter);
-  const tabs: PaymentStatusFilter[] = ["All", "HELD", "RELEASED", "REFUNDED", "PENDING"];
+  const tabPayments = payments.filter((p) => matchesTab(p, activeTab));
+  const tabCount = (tab: AdminTab) => payments.filter((p) => matchesTab(p, tab)).length;
+
+  const tabOrder = TABS.map((t) => t.id);
+  const direction = tabOrder.indexOf(activeTab) > tabOrder.indexOf(prevTab.current) ? 1 : -1;
+  const activeTabInfo = TABS.find((t) => t.id === activeTab)!;
 
   return (
     <div className="min-h-screen p-8">
@@ -225,32 +258,36 @@ export function AdminPaymentsPage() {
 
         {/* Summary cards */}
         <div className="grid grid-cols-4 gap-3 mb-8">
-          <SummaryCard label="In Escrow" value={`$${sum("HELD").toFixed(2)}`} sub="Currently held" />
-          <SummaryCard label="Released" value={`$${sum("RELEASED").toFixed(2)}`} />
-          <SummaryCard label="Refunded" value={`$${sum("REFUNDED").toFixed(2)}`} />
-          <SummaryCard
-            label="Total Volume"
-            value={`$${payments.reduce((a, p) => a + parseFloat(p.amount || "0"), 0).toFixed(2)}`}
-            sub="All time"
-          />
+          <SummaryCard label="In Escrow"    value={`$${payments.filter((r) => r.status === "Confirmed").reduce((a, r) => a + parseFloat(r.payment?.amount || "0"), 0).toFixed(2)}`} sub="Currently held" />
+          <SummaryCard label="Released"     value={`$${payments.filter((r) => r.status === "Completed").reduce((a, r) => a + parseFloat(r.payment?.amount || "0"), 0).toFixed(2)}`} />
+          <SummaryCard label="Refunded"     value={`$${payments.filter((r) => r.status === "Cancelled").reduce((a, r) => a + parseFloat(r.payment?.amount || "0"), 0).toFixed(2)}`} />
+          <SummaryCard label="Total Volume" value={`$${payments.reduce((a, r) => a + parseFloat(r.payment?.amount || "0"), 0).toFixed(2)}`} sub="All time" />
         </div>
 
-        {/* Filter tabs — same pill style as bookings */}
-        <div className="flex p-1.5 bg-[#EDE9DF] rounded-2xl mb-3 gap-1">
-          {tabs.map((t) => {
-            const count = t === "All" ? payments.length : payments.filter((p) => p.status === t).length;
-            const isActive = statusFilter === t;
+        {/* Tabs — sliding pill style matching user PaymentsPage */}
+        <div className="relative flex p-1.5 bg-[#EDE9DF] rounded-2xl mb-3">
+          <div
+            className="absolute top-1.5 bottom-1.5 bg-[#2F3B3D] rounded-xl shadow transition-all duration-300 ease-in-out"
+            style={{
+              width: `calc(${100 / TABS.length}% - 6px)`,
+              left: `calc(${(TABS.findIndex((t) => t.id === activeTab) / TABS.length) * 100}% + 3px)`,
+            }}
+          />
+          {TABS.map((tab) => {
+            const count = tabCount(tab.id);
+            const isActive = activeTab === tab.id;
             return (
               <button
-                key={t}
-                onClick={() => setStatusFilter(t)}
-                className={`flex-1 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200 ${
-                  isActive ? "bg-[#2F3B3D] text-white" : "text-[#2F3B3D]/50 hover:text-[#2F3B3D]"
+                key={tab.id}
+                onClick={() => switchTab(tab.id)}
+                className={`relative z-10 flex-1 py-2.5 rounded-xl text-xs font-medium transition-colors duration-200 flex items-center justify-center gap-1.5 ${
+                  isActive ? "text-white" : "text-[#2F3B3D]/50 hover:text-[#2F3B3D]"
                 }`}
               >
-                {TAB_LABELS[t]}
+                <tab.Icon active={isActive} />
+                <span>{tab.label}</span>
                 {count > 0 && (
-                  <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full ${
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full leading-none ${
                     isActive ? "bg-white/20 text-white" : "bg-[#D6CFBF] text-[#2F3B3D]/60"
                   }`}>
                     {count}
@@ -262,18 +299,32 @@ export function AdminPaymentsPage() {
         </div>
 
         {/* Tab info */}
-        <div className={`border-l-2 pl-3 mb-6 ${PAYMENT_STATUS_INFO[statusFilter].border}`}>
-          <p className="text-xs text-[#2F3B3D]/50">{PAYMENT_STATUS_INFO[statusFilter].text}</p>
+        <div className={`border-l-2 pl-3 mb-6 ${activeTabInfo.border}`}>
+          <p className="text-xs text-[#2F3B3D]/50">{activeTabInfo.text}</p>
         </div>
 
         {/* Cards */}
-        {filtered.length === 0 ? (
-          <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
-            <p className="text-[#2F3B3D]/40 text-sm">No payments found</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filtered.map((p) => <PaymentCard key={p.payment_id} payment={p} />)}
+        {!loading && (
+          <div className="overflow-hidden">
+            <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+              <motion.div
+                key={activeTab}
+                custom={direction}
+                initial={{ x: direction * 50, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: direction * -50, opacity: 0 }}
+                transition={{ duration: 0.25, ease: "easeInOut" }}
+                className="space-y-3"
+              >
+                {tabPayments.length === 0 ? (
+                  <div className="bg-[#EDE9DF] rounded-2xl p-12 text-center">
+                    <p className="text-[#2F3B3D]/40 text-sm">No payments found</p>
+                  </div>
+                ) : (
+                  tabPayments.map((r) => <PaymentCard key={r.booking_id} record={r} />)
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
         )}
       </div>

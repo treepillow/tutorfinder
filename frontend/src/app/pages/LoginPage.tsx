@@ -62,7 +62,7 @@ const [loginErrors, setLoginErrors] = useState<{ email?: string; password?: stri
       setCurrentUser(enriched);
 
       toast.success("Welcome back!");
-      navigate("/app/discover");
+      navigate(enriched.userType === "admin" ? "/app/admin/dashboard" : "/app/discover");
     } catch (err: any) {
       toast.error(err.message || "Login failed");
     } finally {
