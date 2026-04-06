@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { SwipeableCard } from "../components/SwipeableCard";
 import { ProfileDetailDialog } from "../components/ProfileDetailDialog";
 import { MatchDialog } from "../components/MatchDialog";
-import { getCurrentUser, profileApi, matchApi, enrichProfile } from "../utils/api";
+import { getCurrentUser, profileApi, matchApi, enrichProfile, reviewApi } from "../utils/api";
 import { toast } from "sonner";
 import { io, Socket } from "socket.io-client";
 import { useRefreshNavCounts } from "../context/NavCountsContext";
@@ -90,7 +90,23 @@ export function DiscoveryPage() {
 
       const allProfiles = (searchRes.profiles || []).map(enrichProfile);
       const unswiped = allProfiles.filter((p: any) => !swipedIds.has(p.id));
-setProfiles(unswiped);
+
+      const withRatings = await Promise.all(
+        unswiped.map(async (profile: any) => {
+          if (profile.userType !== "tutor") return profile;
+          try {
+            const reviews = await reviewApi.getByTutor(profile.id);
+            const list = Array.isArray(reviews) ? reviews : [];
+            const avg = list.length > 0
+              ? list.reduce((sum: number, r: any) => sum + (r.Rating || r.rating || 0), 0) / list.length
+              : null;
+            return { ...profile, avgRating: avg, reviewCount: list.length };
+          } catch {
+            return profile;
+          }
+        })
+      );
+      setProfiles(withRatings);
     } catch (err: any) {
       console.error("Failed to load profiles:", err);
       toast.error("Failed to load profiles");
