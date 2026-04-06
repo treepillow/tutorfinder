@@ -526,6 +526,14 @@ export async function syncAvailabilityToBackend(
   const slots: { date: string; start_time: string; end_time: string }[] = [];
   const seenSlotKeys = new Set<string>();
 
+  // Format date as YYYY-MM-DD in local timezone (not UTC)
+  const toLocalDateStr = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
   // Generate slots for the next 2 weeks
   for (let week = 0; week < 2; week++) {
     for (const [dayName, timeSlots] of Object.entries(availability)) {
@@ -535,13 +543,13 @@ export async function syncAvailabilityToBackend(
       const date = new Date(today);
       date.setDate(today.getDate() + ((targetDay - today.getDay() + 7) % 7) + week * 7);
 
-      const todayDateStr = today.toISOString().split("T")[0];
-      const dateDateStr = date.toISOString().split("T")[0];
+      const todayDateStr = toLocalDateStr(today);
+      const dateDateStr = toLocalDateStr(date);
       if (dateDateStr < todayDateStr && week === 0) {
         date.setDate(date.getDate() + 7);
       }
 
-      const dateStr = date.toISOString().split("T")[0];
+      const dateStr = toLocalDateStr(date);
 
       for (const timeSlot of timeSlots) {
         const [startStr, endStr] = timeSlot.split("-");
