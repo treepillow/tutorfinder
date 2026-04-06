@@ -132,7 +132,10 @@ function BookingCard({ booking }: { booking: any }) {
 
         {/* Status pill */}
         <span className={`${STATUS_PILL_CLASS} shrink-0 ${STATUS_PILL[booking.status] ?? "bg-[#EDE9DF] text-[#2F3B3D]"}`}>
-          {STATUS_LABEL[booking.status] ?? booking.status}
+          {booking.dispute_reason && booking.status === "Completed" ? "Dispute: Resolved" :
+           booking.dispute_reason && booking.status === "Cancelled" ? "Dispute: Refunded" :
+           booking.dispute_reason && booking.status === "Disputed" ? "Disputed" :
+           STATUS_LABEL[booking.status] ?? booking.status}
         </span>
 
         <ChevronDown className={`w-4 h-4 text-[#2F3B3D]/30 shrink-0 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />

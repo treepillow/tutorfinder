@@ -101,9 +101,18 @@ function PaymentCard({ payment }: { payment: any }) {
         </p>
 
         {/* Status pill */}
-        <span className={`text-xs px-3 py-1 rounded-full font-medium shrink-0 ${STATUS_PILL[payment.status] ?? "bg-[#EDE9DF] text-[#2F3B3D]"}`}>
-          {PAYMENT_STATUS_DISPLAY[payment.status] ?? payment.status}
-        </span>
+        {(() => {
+          const fromDispute = !!payment._booking?.dispute_reason;
+          const label =
+            payment.status === "RELEASED" && fromDispute ? "Dispute: Resolved" :
+            payment.status === "REFUNDED" && fromDispute ? "Dispute: Refunded" :
+            (PAYMENT_STATUS_DISPLAY[payment.status] ?? payment.status);
+          return (
+            <span className={`text-xs px-3 py-1 rounded-full font-medium shrink-0 ${STATUS_PILL[payment.status] ?? "bg-[#EDE9DF] text-[#2F3B3D]"}`}>
+              {label}
+            </span>
+          );
+        })()}
 
         <ChevronDown className={`w-4 h-4 text-[#2F3B3D]/30 shrink-0 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
       </button>
@@ -117,15 +126,22 @@ function PaymentCard({ payment }: { payment: any }) {
             transition={{ duration: 0.2, ease: "easeInOut" }}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-5 pt-3 border-t border-[#D6CFBF]/50 grid grid-cols-2 gap-x-6 gap-y-3">
-              <Detail label="Payment ID" value={String(payment.payment_id)} />
-              <Detail label="Created" value={fmtDateTime(payment.created_at)} />
-              <Detail label="Last Updated" value={fmtDateTime(payment.updated_at)} />
-              {payment.stripe_payment_intent_id && (
-                <Detail label="Stripe Intent" value={payment.stripe_payment_intent_id} />
-              )}
-              {payment.stripe_transfer_id && (
-                <Detail label="Stripe Transfer" value={payment.stripe_transfer_id} />
+            <div className="px-5 pb-5 pt-3 border-t border-[#D6CFBF]/50 space-y-3">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                <Detail label="Payment ID" value={String(payment.payment_id)} />
+                <Detail label="Created" value={fmtDateTime(payment.created_at)} />
+                <Detail label="Last Updated" value={fmtDateTime(payment.updated_at)} />
+                {payment.stripe_payment_intent_id && (
+                  <Detail label="Stripe Intent" value={payment.stripe_payment_intent_id} />
+                )}
+                {payment.stripe_transfer_id && (
+                  <Detail label="Stripe Transfer" value={payment.stripe_transfer_id} />
+                )}
+              </div>
+              {payment._booking?.dispute_reason && (
+                <div className="bg-[#F5F3EF] rounded-xl px-4 py-3 text-sm text-[#2F3B3D]/70">
+                  <span className="font-medium text-[#2F3B3D]">Dispute reason: </span>{payment._booking.dispute_reason}
+                </div>
               )}
             </div>
           </motion.div>
