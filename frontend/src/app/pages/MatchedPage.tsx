@@ -25,8 +25,8 @@ export function MatchedPage() {
     const socket = io(import.meta.env.VITE_MATCH_SERVICE, { transports: ["websocket"] });
     socket.on("new_match", (match: any) => {
       if (match.user_a_id === user.id || match.user_b_id === user.id) {
-        loadMatches(user.id, true);
         toast("New match!", { description: "Someone matched with you." });
+        loadMatches(user.id, true);
       }
     });
     return () => { socket.disconnect(); };
@@ -35,14 +35,12 @@ export function MatchedPage() {
   const loadMatches = async (userId: number, silent = false) => {
     if (!silent) setLoading(true);
     try {
-      // Get all match records
       const matchRecords = await matchApi.getMatches(userId);
 
-      // Fetch profile for each matched user
       const profilePromises = matchRecords.map(async (m: any) => {
         try {
           const profile = await profileApi.getProfile(m.other_user_id);
-          return enrichProfile(profile);
+          return { ...enrichProfile(profile), _matchedAt: m.created_at };
         } catch {
           return null;
         }
@@ -66,6 +64,9 @@ export function MatchedPage() {
           }
         })
       );
+
+      // newest match first → oldest match last
+      withRatings.sort((a: any, b: any) => new Date(b._matchedAt).getTime() - new Date(a._matchedAt).getTime());
       setMatches(withRatings);
     } catch (err: any) {
       console.error("Failed to load matches:", err);
@@ -77,24 +78,18 @@ export function MatchedPage() {
 
   const handleProfileClick = (profile: any) => {
     setSelectedProfile(profile);
-
-    // Students can book, tutors just view
     if (currentUser?.userType === "student") {
       setShowBooking(true);
     }
   };
 
-  if (!currentUser) {
-    return null;
-  }
+  if (!currentUser) return null;
 
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-4xl tracking-tight text-[#2F3B3D] mb-2">
-            Matches
-          </h1>
+          <h1 className="text-4xl tracking-tight text-[#2F3B3D] mb-2">Matches</h1>
           <p className="text-[#2F3B3D]/70">
             {currentUser.userType === "student"
               ? "Your matched tutors — tap a card to book a lesson"
@@ -124,7 +119,7 @@ export function MatchedPage() {
 
       {loading && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm bg-white/30">
-          <Lottie animationData={circleGuyLoadingData} loop autoplay style={{ width: 500, height: 500, transform: 'translateY(-80px)' }} />
+          <Lottie animationData={circleGuyLoadingData} loop autoplay style={{ width: 500, height: 500, transform: "translateY(-80px)" }} />
         </div>
       )}
 
