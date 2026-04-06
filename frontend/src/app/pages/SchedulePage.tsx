@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
-import { Calendar, Clock, BookOpen, User, ChevronLeft, ChevronRight, List, Phone, Mail, X, AlertCircle, Check } from "lucide-react";
+import { Calendar, Clock, BookOpen, User, ChevronLeft, ChevronRight, Phone, Mail, X, AlertCircle, Check } from "lucide-react";
 import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, availabilityApi, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
 import { io } from "socket.io-client";
-import { CircleGuyCalendar } from "../components/EmptyState";
+import laptopGuy from "../assets/laptopGuy.png";
 import Lottie from "lottie-react";
 import circleGuyLoadingData from "../assets/circleGuyLoading.json";
 import { useRefreshNavCounts } from "../context/NavCountsContext";
@@ -16,28 +16,42 @@ export function SchedulePage() {
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [view, setView] = useState<"list" | "calendar">("calendar");
+  const [view, setView] = useState<"bookings" | "calendar">("calendar");
+  const [bookingTab, setBookingTab] = useState<"upcoming" | "completed" | "disputed">("upcoming");
   const [calendarDate, setCalendarDate] = useState(new Date());
+
+  const TAB_STATUS: Record<string, string> = {
+    upcoming: "Confirmed",
+    completed: "Completed",
+    disputed: "Disputed",
+  };
 
   useEffect(() => {
     const user = getCurrentUser();
     if (!user) return;
     setCurrentUser(user);
-    loadSchedule(user);
+    loadSchedule(user, "upcoming");
 
     const socket = io(import.meta.env.VITE_BOOKING_SERVICE, { transports: ["websocket"] });
     socket.on("booking_status_changed", (booking: any) => {
       if (booking.tutor_id === user.id || booking.tutee_id === user.id) {
-        loadSchedule(user, true);
+        loadSchedule(user, bookingTab, true);
       }
     });
     return () => { socket.disconnect(); };
   }, []);
 
-  const loadSchedule = async (user: any, silent = false) => {
+  useEffect(() => {
+    if (!currentUser) return;
+    setSchedule([]);
+    loadSchedule(currentUser, bookingTab, true);
+  }, [bookingTab]);
+
+  const loadSchedule = async (user: any, tab: string, silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const res = await bookingApi.getByUser(user.id, "Confirmed");
+      const status = TAB_STATUS[tab] || "Confirmed";
+      const res = await bookingApi.getByUser(user.id, status);
       const bookings = res.bookings || [];
 
       // Fetch each unique other-user profile once, then reuse
@@ -99,7 +113,7 @@ export function SchedulePage() {
       await bookingProcessApi.cancel(lesson.booking_id, currentUser.userType === "student" ? "tutee" : "tutor");
       toast.success("Booking cancelled and deposit refunded");
       setSelectedLesson(null);
-      loadSchedule(currentUser);
+      loadSchedule(currentUser, bookingTab);
       refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to cancel booking");
@@ -114,7 +128,7 @@ export function SchedulePage() {
       await bookingProcessApi.complete(lesson.booking_id);
       toast.success("Booking marked as completed");
       setSelectedLesson(null);
-      loadSchedule(currentUser);
+      loadSchedule(currentUser, bookingTab);
       refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to complete booking");
@@ -131,7 +145,7 @@ export function SchedulePage() {
       await bookingProcessApi.reportDispute(lesson.booking_id, reportedBy, reason);
       toast.success("No-show reported. An admin will review the dispute.");
       setSelectedLesson(null);
-      loadSchedule(currentUser);
+      loadSchedule(currentUser, bookingTab);
       refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to report no-show");
@@ -221,15 +235,6 @@ export function SchedulePage() {
           {/* View toggle */}
           <div className="flex p-1 bg-[#EDE9DF] rounded-full">
             <button
-              onClick={() => setView("list")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                view === "list" ? "bg-[#2F3B3D] text-white shadow" : "text-[#2F3B3D]/60 hover:text-[#2F3B3D]"
-              }`}
-            >
-              <List className="w-4 h-4" />
-              List
-            </button>
-            <button
               onClick={() => setView("calendar")}
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                 view === "calendar" ? "bg-[#2F3B3D] text-white shadow" : "text-[#2F3B3D]/60 hover:text-[#2F3B3D]"
@@ -238,23 +243,70 @@ export function SchedulePage() {
               <Calendar className="w-4 h-4" />
               Calendar
             </button>
+            <button
+              onClick={() => setView("bookings")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                view === "bookings" ? "bg-[#2F3B3D] text-white shadow" : "text-[#2F3B3D]/60 hover:text-[#2F3B3D]"
+              }`}
+            >
+              <BookOpen className="w-4 h-4" />
+              Bookings
+            </button>
           </div>
         </div>
 
-        {!loading && view === "list" ? (
+        {/* Bookings sub-tabs */}
+        {view === "bookings" && (
+          <div className="flex p-1 bg-[#EDE9DF] rounded-full mb-6 w-fit">
+            {(["upcoming", "completed", "disputed"] as const).map((tab) => {
+              const icons = {
+                upcoming: <Clock className="w-4 h-4" />,
+                completed: <Check className="w-4 h-4" />,
+                disputed: <AlertCircle className="w-4 h-4" />,
+              };
+              const labels = { upcoming: "Upcoming", completed: "Completed", disputed: "Disputed" };
+              const isActive = bookingTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setBookingTab(tab)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                    isActive ? "bg-[#2F3B3D] text-white shadow" : "text-[#2F3B3D]/60 hover:text-[#2F3B3D]"
+                  }`}
+                >
+                  {icons[tab]}
+                  {labels[tab]}
+                  {isActive && schedule.length > 0 && (
+                    <span className="ml-1 bg-white/20 text-white text-xs px-1.5 py-0.5 rounded-full leading-none">
+                      {schedule.length}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {!loading && view === "bookings" ? (
           schedule.length === 0 ? (
             <div className="bg-[#EDE9DF] rounded-2xl p-10 text-center flex flex-col items-center">
-              <CircleGuyCalendar size={120} />
-              <h3 className="text-xl text-[#2F3B3D] font-medium mt-3 mb-1">No lessons scheduled yet</h3>
+              <img src={laptopGuy} style={{ width: 120, height: 120, objectFit: "contain" }} />
+              <h3 className="text-xl text-[#2F3B3D] font-medium mt-3 mb-1">
+                {bookingTab === "upcoming" ? "No upcoming lessons" : bookingTab === "completed" ? "No completed lessons" : "No disputed lessons"}
+              </h3>
               <p className="text-[#2F3B3D]/60 text-sm">
-                {currentUser.userType === "student"
-                  ? "Book lessons with your matched tutors to see them here"
-                  : "Accept student requests to see scheduled lessons"}
+                {bookingTab === "upcoming"
+                  ? currentUser.userType === "student"
+                    ? "Book lessons with your matched tutors to see them here"
+                    : "Accept student requests to see scheduled lessons"
+                  : bookingTab === "completed"
+                  ? "Completed lessons will appear here"
+                  : "Disputed lessons will appear here"}
               </p>
             </div>
           ) : (
 
-          // ── List View ──
+          // ── Bookings View ──
           <div className="space-y-3">
             {schedule.map((lesson) => (
               <button

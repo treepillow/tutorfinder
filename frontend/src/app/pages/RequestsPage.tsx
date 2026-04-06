@@ -7,7 +7,8 @@ import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, 
 import Lottie from "lottie-react";
 import circleGuyLoadingData from "../assets/circleGuyLoading.json";
 import { useRefreshNavCounts } from "../context/NavCountsContext";
-import { CircleGuyShrug, CircleGuySleeping } from "../components/EmptyState";
+import thinkingGuy from "../assets/thinkingGuy.png";
+import creditGuy from "../assets/creditGuy.png";
 import { io } from "socket.io-client";
 
 export function RequestsPage() {
@@ -283,7 +284,7 @@ export function RequestsPage() {
                   {activeTab === "awaiting" ? (
                     pendingRequests.length === 0 ? (
                       <div className="bg-[#EDE9DF] rounded-2xl p-10 text-center flex flex-col items-center">
-                        <CircleGuyShrug size={120} />
+                        <img src={thinkingGuy} alt="Thinking" style={{ width: 120, height: 120, objectFit: "contain" }} />
                         <p className="text-[#2F3B3D] font-medium mt-3">No pending requests</p>
                         <p className="text-[#2F3B3D]/60 text-sm mt-1">Nothing here yet — check back soon!</p>
                       </div>
@@ -302,7 +303,7 @@ export function RequestsPage() {
                   ) : (
                     paymentRequests.length === 0 ? (
                       <div className="bg-[#EDE9DF] rounded-2xl p-10 text-center flex flex-col items-center">
-                        <CircleGuySleeping size={120} />
+                        <img src={creditGuy} alt="Credit" style={{ width: 120, height: 120, objectFit: "contain" }} />
                         <p className="text-[#2F3B3D] font-medium mt-3">No payments pending</p>
                         <p className="text-[#2F3B3D]/60 text-sm mt-1">All quiet on the payment front!</p>
                       </div>
