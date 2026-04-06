@@ -19,6 +19,7 @@ export function SchedulePage() {
   const [view, setView] = useState<"bookings" | "calendar">("calendar");
   const [bookingTab, setBookingTab] = useState<"upcoming" | "completed" | "disputed">("upcoming");
   const [calendarDate, setCalendarDate] = useState(new Date());
+  const [dayOverflow, setDayOverflow] = useState<{ date: string; lessons: any[] } | null>(null);
 
   const TAB_STATUS: Record<string, string> = {
     upcoming: "Confirmed",
@@ -407,8 +408,12 @@ export function SchedulePage() {
                           ))}
                           {lessons.length > 2 && (
                             <div
-                              onClick={() => setSelectedLesson(lessons[2])}
-                              className="text-xs text-[#7C8D8C] hover:text-[#2F3B3D] pl-1 cursor-pointer transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const dateStr = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), day!).toLocaleDateString("en-SG", { weekday: "long", day: "numeric", month: "short", timeZone: "Asia/Singapore" });
+                                setDayOverflow({ date: dateStr, lessons });
+                              }}
+                              className="text-xs text-[#7C8D8C] hover:text-[#2F3B3D] pl-1 cursor-pointer transition-colors font-medium"
                             >
                               +{lessons.length - 2} more
                             </div>
@@ -429,6 +434,35 @@ export function SchedulePage() {
         <div className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm bg-white/30">
           <Lottie animationData={circleGuyLoadingData} loop autoplay style={{ width: 500, height: 500, transform: 'translateY(-80px)' }} />
         </div>
+      )}
+
+      {/* Day overflow dialog */}
+      {dayOverflow && (
+        <Dialog open={true} onOpenChange={() => setDayOverflow(null)}>
+          <DialogContent className="bg-[#F5F3EF] border-[#D6CFBF] max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="text-xl text-[#2F3B3D]">{dayOverflow.date}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2">
+              {dayOverflow.lessons.map((lesson) => (
+                <button
+                  key={lesson.booking_id}
+                  onClick={() => { setDayOverflow(null); setSelectedLesson(lesson); }}
+                  className="w-full text-left bg-[#EDE9DF] hover:bg-[#E3DDD3] rounded-xl px-4 py-3 transition-colors"
+                >
+                  <div className="text-sm font-medium text-[#2F3B3D]">
+                    {lesson.subject}{lesson.level ? ` · ${lesson.level}` : ""}
+                  </div>
+                  <div className="flex items-center gap-1 text-[#2F3B3D]/50 text-xs mt-0.5">
+                    <Clock className="w-3 h-3" />
+                    {lesson.slots[0]}
+                  </div>
+                  <div className="text-[#2F3B3D]/50 text-xs mt-0.5">{lesson.otherName}</div>
+                </button>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Lesson detail dialog */}

@@ -513,7 +513,9 @@ export async function syncAvailabilityToBackend(
       const date = new Date(today);
       date.setDate(today.getDate() + ((targetDay - today.getDay() + 7) % 7) + week * 7);
 
-      if (date <= today && week === 0) {
+      const todayDateStr = today.toISOString().split("T")[0];
+      const dateDateStr = date.toISOString().split("T")[0];
+      if (dateDateStr < todayDateStr && week === 0) {
         date.setDate(date.getDate() + 7);
       }
 

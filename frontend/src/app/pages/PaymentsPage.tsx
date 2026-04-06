@@ -72,13 +72,18 @@ const TAB_INFO: Record<Tab, { border: string; text: string }> = {
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+function toUtcDate(s: string) {
+  // Backend returns naive ISO strings without 'Z' — force UTC interpretation
+  if (!s) return new Date(NaN);
+  return new Date(s.includes("Z") || s.includes("+") ? s : s + "Z");
+}
 function fmtDate(s: string) {
   if (!s) return "—";
-  return new Date(s).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Singapore" });
+  return toUtcDate(s).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Singapore" });
 }
 function fmtDateTime(s: string) {
   if (!s) return "—";
-  return new Date(s).toLocaleString("en-SG", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Singapore" });
+  return toUtcDate(s).toLocaleString("en-SG", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Singapore" });
 }
 function fmtTime(s: string) {
   return s ? s.slice(0, 5) : "—";
