@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const HOURS = Array.from({ length: 12 }, (_, i) => i + 10); // 10am to 9pm
+const HOURS = Array.from({ length: 24 }, (_, i) => i); // 12am to 11pm
 
 interface AvailabilitySelectorProps {
   value: Record<string, string[]>;
