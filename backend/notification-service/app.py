@@ -75,10 +75,10 @@ def send_email(to_email, subject, message_text):
             'subject': subject,
             'text': message_text,
         })
-        print(f'[NOTIFICATION] Email sent to {to_email} | Subject: {subject}')
+        print(f'[NOTIFICATION] Email sent to {to_email} | Subject: {subject}', flush=True)
         return True
     except Exception as e:
-        print(f'Email error: {e}')
+        print(f'[NOTIFICATION] Email error: {e}', flush=True)
         return False
 
 
@@ -94,14 +94,14 @@ def save_and_notify(user_id, notify_type, email, subject, message, routing_key):
             db.session.add(notif)
             db.session.commit()
     except Exception as e:
-        print(f'Save notification error: {e}')
+        print(f'[NOTIFICATION] Save notification error: {e}', flush=True)
 
 
 def handle_message(ch, method, properties, body):
     try:
         data = json.loads(body)
         rk   = method.routing_key
-        print(f'[NOTIFICATION] {rk}: {data}')
+        print(f'[NOTIFICATION] Received {rk}: {data}', flush=True)
 
         if rk == 'match.created':
             save_and_notify(data.get('user_a_id'), 'Match', data.get('user_a_email'),
