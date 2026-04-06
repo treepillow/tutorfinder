@@ -75,6 +75,7 @@ def send_email(to_email, subject, message_text):
             'subject': subject,
             'text': message_text,
         })
+        print(f'[NOTIFICATION] Email sent to {to_email} | Subject: {subject}')
         return True
     except Exception as e:
         print(f'Email error: {e}')
