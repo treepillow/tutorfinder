@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { Calendar, Clock, BookOpen, User, ChevronLeft, ChevronRight, Phone, Mail, X, AlertCircle, Check } from "lucide-react";
-import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, enrichProfile } from "../utils/api";
+import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, enrichProfile, reviewApi } from "../utils/api";
 import { toast } from "sonner";
 import { io } from "socket.io-client";
 import laptopGuy from "../assets/laptopGuy.png";
@@ -63,6 +63,10 @@ export function SchedulePage() {
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [dayOverflow, setDayOverflow] = useState<{ date: string; lessons: any[] } | null>(null);
   const prevTab = useRef<BookingTab>("upcoming");
+  const [ratingLesson, setRatingLesson] = useState<any>(null);
+  const [ratingValue, setRatingValue] = useState(0);
+  const [ratingLoading, setRatingLoading] = useState(false);
+  const [ratedBookings, setRatedBookings] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -211,6 +215,27 @@ export function SchedulePage() {
       toast.error(err.message || "Failed to complete booking");
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleSubmitRating = async () => {
+    if (!ratingLesson || ratingValue === 0) return;
+    setRatingLoading(true);
+    try {
+      await reviewApi.create({
+        BookingId: ratingLesson.booking_id,
+        TutorId: ratingLesson.tutor_id,
+        TuteeId: ratingLesson.tutee_id,
+        Rating: ratingValue,
+      });
+      setRatedBookings((prev) => new Set(prev).add(ratingLesson.booking_id));
+      toast.success("Rating submitted!");
+      setRatingLesson(null);
+      setRatingValue(0);
+    } catch {
+      toast.error("Failed to submit rating");
+    } finally {
+      setRatingLoading(false);
     }
   };
 
@@ -495,7 +520,18 @@ export function SchedulePage() {
                               </div>
                             </div>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right flex flex-col items-end gap-2">
+                            {lesson.status === "Completed" && currentUser.userType === "student" && !ratedBookings.has(lesson.booking_id) && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setRatingLesson(lesson); setRatingValue(0); }}
+                                className="text-xs px-3 py-1 bg-[#2F3B3D] text-white rounded-full hover:bg-[#7C8D8C] transition-colors"
+                              >
+                                Rate Tutor
+                              </button>
+                            )}
+                            {(lesson.status === "Completed" && currentUser.userType === "student" && ratedBookings.has(lesson.booking_id)) && (
+                              <span className="text-xs text-green-600 font-medium">Rated ★</span>
+                            )}
                             <div className="text-[#7C8D8C] font-medium">${lesson.price}</div>
                             <div className="text-[#2F3B3D]/40 text-xs mt-1">
                               {lesson.dateObj.toLocaleDateString("en-SG", { weekday: "short", timeZone: "Asia/Singapore" })}
@@ -610,6 +646,38 @@ export function SchedulePage() {
                   <div className="text-[#2F3B3D]/50 text-xs mt-0.5">{lesson.otherName}</div>
                 </button>
               ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Rating dialog */}
+      {ratingLesson && (
+        <Dialog open={true} onOpenChange={() => { setRatingLesson(null); setRatingValue(0); }}>
+          <DialogContent className="bg-[#F5F3EF] border-[#D6CFBF] max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="text-xl text-[#2F3B3D]">Rate your tutor</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-[#2F3B3D]/70 text-sm">How was your lesson with <span className="font-medium text-[#2F3B3D]">{ratingLesson.otherName}</span>?</p>
+              <div className="flex gap-2 justify-center py-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => setRatingValue(star)}
+                    className={`text-4xl transition-transform hover:scale-110 ${star <= ratingValue ? "text-yellow-400" : "text-[#D6CFBF]"}`}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={handleSubmitRating}
+                disabled={ratingValue === 0 || ratingLoading}
+                className="w-full py-2.5 bg-[#2F3B3D] text-white rounded-full text-sm font-medium disabled:opacity-40 hover:bg-[#7C8D8C] transition-colors"
+              >
+                {ratingLoading ? "Submitting..." : "Submit Rating"}
+              </button>
             </div>
           </DialogContent>
         </Dialog>

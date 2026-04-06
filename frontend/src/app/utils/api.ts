@@ -7,6 +7,7 @@ const BOOKING_SERVICE = import.meta.env.VITE_BOOKING_SERVICE;
 const PAYMENT_SERVICE = import.meta.env.VITE_PAYMENT_SERVICE;
 const NOTIFICATION_SERVICE = import.meta.env.VITE_NOTIFICATION_SERVICE;
 const BOOKING_PROCESS_SERVICE = import.meta.env.VITE_BOOKING_PROCESS_SERVICE;
+const REVIEW_SERVICE = import.meta.env.VITE_REVIEW_SERVICE;
 
 // ── Warm up services on app load to avoid cold-start delays ──
 export function warmUpServices() {
@@ -444,6 +445,26 @@ export const bookingProcessApi = {
         Resolution: resolution,
       }),
     });
+  },
+};
+
+// ── Review Service (OutSystems) ──
+
+export const reviewApi = {
+  create(data: { BookingId: number; TutorId: number; TuteeId: number; Rating: number }) {
+    return fetch(`${REVIEW_SERVICE}/review`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }).then((r) => r.json());
+  },
+
+  getByTutor(tutorId: number) {
+    return fetch(`${REVIEW_SERVICE}/review/tutor/${tutorId}`).then((r) => r.json());
+  },
+
+  getByTutee(tuteeId: number) {
+    return fetch(`${REVIEW_SERVICE}/review/tutee/${tuteeId}`).then((r) => r.json());
   },
 };
 
