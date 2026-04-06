@@ -5,6 +5,7 @@ import Lottie from "lottie-react";
 import { Dialog, DialogContent } from "./ui/dialog";
 import { getCurrentUser } from "../utils/api";
 import circleGuyIdleData from "../assets/circleGuyIdle.json";
+import handshake from "../assets/agreement.png";
 
 import { CircleGuyAvatar } from "./CircleGuyAvatar";
 
@@ -182,29 +183,7 @@ export function MatchDialog({ profile, onClose }: MatchDialogProps) {
               <span className="text-xs text-[#2F3B3D]/60 font-medium">You</span>
             </div>
 
-            {/* Handshake icon */}
-            <svg width="44" height="44" viewBox="0 0 64 64" fill="none">
-              {/* Left arm sleeve */}
-              <rect x="2" y="28" width="14" height="10" rx="3" fill="#7C8D8C"/>
-              {/* Right arm sleeve */}
-              <rect x="48" y="26" width="14" height="10" rx="3" fill="#2F3B3D"/>
-              {/* Left hand / fingers */}
-              <rect x="14" y="26" width="6" height="4" rx="2" fill="#FFCC80"/>
-              <rect x="14" y="22" width="5" height="4" rx="2" fill="#FFCC80"/>
-              <rect x="18" y="21" width="5" height="4" rx="2" fill="#FFCC80"/>
-              <rect x="22" y="22" width="5" height="4" rx="2" fill="#FFCC80"/>
-              {/* Right hand / fingers */}
-              <rect x="44" y="26" width="6" height="4" rx="2" fill="#FFB74D"/>
-              <rect x="39" y="22" width="5" height="4" rx="2" fill="#FFB74D"/>
-              <rect x="35" y="21" width="5" height="4" rx="2" fill="#FFB74D"/>
-              <rect x="31" y="22" width="5" height="4" rx="2" fill="#FFB74D"/>
-              {/* Clasped palms */}
-              <rect x="20" y="26" width="24" height="10" rx="4" fill="#FFCC80"/>
-              <rect x="26" y="26" width="12" height="10" rx="3" fill="#FFB74D"/>
-              {/* Cuff lines */}
-              <line x1="28" y1="28" x2="28" y2="34" stroke="#E6A800" strokeWidth="1" strokeLinecap="round" opacity="0.4"/>
-              <line x1="36" y1="28" x2="36" y2="34" stroke="#E6A800" strokeWidth="1" strokeLinecap="round" opacity="0.4"/>
-            </svg>
+            <img src={handshake} className="w-12 h-12 object-contain" />
 
             <div className="flex flex-col items-center gap-1.5">
               <div className="w-16 h-16 rounded-full bg-[#EDE9DF] flex items-center justify-center shadow-md overflow-hidden">
