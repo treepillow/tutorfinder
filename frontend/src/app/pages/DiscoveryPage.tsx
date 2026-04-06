@@ -6,7 +6,7 @@ import { getCurrentUser, profileApi, matchApi, enrichProfile } from "../utils/ap
 import { toast } from "sonner";
 import { io, Socket } from "socket.io-client";
 import { useRefreshNavCounts } from "../context/NavCountsContext";
-import { CircleGuyParty } from "../components/EmptyState";
+import celebratingGuy from "../assets/celebratingGuy.png";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import Lottie from "lottie-react";
@@ -181,7 +181,7 @@ setProfiles(unswiped);
           </div>
         ) : (
           <div className="bg-[#EDE9DF] rounded-3xl p-12 text-center flex flex-col items-center">
-            <CircleGuyParty size={130} />
+            <img src={celebratingGuy} alt="Celebrating" style={{ width: 130, height: 130, objectFit: "contain" }} />
             <h3 className="text-2xl text-[#2F3B3D] mt-4 mb-2">You've seen everyone!</h3>
             <p className="text-[#2F3B3D]/70 text-sm">Check back later for new profiles</p>
           </div>
