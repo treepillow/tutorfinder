@@ -43,7 +43,7 @@ export function SchedulePage() {
 
   useEffect(() => {
     if (!currentUser) return;
-    loadSchedule(currentUser, bookingTab);
+    loadSchedule(currentUser, bookingTab, true);
   }, [bookingTab]);
 
   const loadSchedule = async (user: any, tab: string, silent = false) => {
