@@ -7,6 +7,7 @@ export interface NavCounts {
   awaitingPayment: number;
   scheduled: number;
   disputes: number;
+  pendingCompletion: number;
 }
 
 interface NavCountsContextValue {
@@ -23,9 +24,9 @@ export function NavCountsProvider({ children }: { children: React.ReactNode }) {
     awaitingPayment: 0,
     scheduled: 0,
     disputes: 0,
+    pendingCompletion: 0,
   });
 
-  // Use a ref so the interval callback always has the latest version
   const fetchRef = useRef<() => void>(() => {});
 
   const fetchCounts = useCallback(async () => {
@@ -51,6 +52,18 @@ export function NavCountsProvider({ children }: { children: React.ReactNode }) {
         ? (disputesRes.value?.bookings ?? [])
         : [];
 
+      // Count confirmed lessons whose end time has already passed
+      const now = new Date();
+      const pendingCompletion = Array.isArray(bookings)
+        ? bookings.filter((b: any) => {
+            if (b.status !== "Confirmed") return false;
+            const [endH, endM] = (b.end_time || "0:00").split(":").map(Number);
+            const end = new Date(b.lesson_date + "T00:00:00");
+            end.setHours(endH, endM, 0, 0);
+            return now >= end;
+          }).length
+        : 0;
+
       setCounts({
         matched: Array.isArray(matches) ? matches.length : 0,
         awaitingResponse: Array.isArray(bookings)
@@ -63,6 +76,7 @@ export function NavCountsProvider({ children }: { children: React.ReactNode }) {
           ? bookings.filter((b: any) => b.status === "Confirmed").length
           : 0,
         disputes: Array.isArray(disputedBookings) ? disputedBookings.length : 0,
+        pendingCompletion,
       });
     } catch {
       // silently fail — counts are decorative

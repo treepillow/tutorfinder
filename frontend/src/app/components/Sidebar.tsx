@@ -370,6 +370,41 @@ export function Sidebar() {
         )}
       </button>
 
+      {/* Pending completion nudge */}
+      {!isAdmin && counts.pendingCompletion > 0 && (
+        <div className="px-3 mb-2">
+          {isCollapsed ? (
+            <NavLink
+              to="/app/schedule"
+              className="flex items-center justify-center w-full py-2 bg-[#C0392B]/80 hover:bg-[#C0392B] rounded-xl relative transition-colors duration-200"
+              title={`${counts.pendingCompletion} lesson${counts.pendingCompletion > 1 ? "s" : ""} pending`}
+            >
+              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+              <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-0.5 rounded-full bg-white text-[#C0392B] text-[9px] font-bold flex items-center justify-center leading-none">
+                {counts.pendingCompletion}
+              </span>
+            </NavLink>
+          ) : (
+            <NavLink
+              to="/app/schedule"
+              className="flex items-center gap-3 px-4 py-3 bg-[#C0392B]/80 hover:bg-[#C0392B] rounded-xl transition-colors duration-200"
+            >
+              <span className="w-2 h-2 rounded-full bg-white animate-pulse shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-xs font-semibold leading-tight">
+                  {counts.pendingCompletion === 1
+                    ? "1 lesson ended"
+                    : `${counts.pendingCompletion} lessons ended`}
+                </p>
+                <p className="text-white/60 text-[10px] mt-0.5 leading-tight">
+                  Action needed on Schedule
+                </p>
+              </div>
+            </NavLink>
+          )}
+        </div>
+      )}
+
       {/* User profile section at bottom */}
       <div className="px-3 pb-6 relative" ref={userMenuRef}>
         {/* Dropdown menu (appears above) */}

@@ -240,7 +240,7 @@ export function SchedulePage() {
     return {
       canCancel: now < cutoffCancel,
       canReportNoShow: now >= start,
-      canComplete: now >= end,
+      canComplete: now >= end && currentUser.userType === "student",
     };
   };
 
@@ -401,6 +401,51 @@ export function SchedulePage() {
           </div>
         )}
 
+
+        {/* Pending completion banner */}
+        {!loading && (() => {
+          const needsCompletion = allLessons.filter((l) => {
+            if (l.status !== "Confirmed") return false;
+            const { end } = getLessonTimes(l);
+            return now >= end;
+          });
+          if (needsCompletion.length === 0) return null;
+          const isStudent = currentUser.userType === "student";
+          const count = needsCompletion.length;
+          return (
+            <div className="mb-5 bg-[#C0392B] rounded-2xl p-5">
+              {/* Header row */}
+              <div className="flex items-center gap-2 mb-4">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-60"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                </span>
+                <p className="text-white font-medium text-sm leading-tight flex-1">
+                  {isStudent
+                    ? count === 1 ? "1 lesson needs your confirmation" : `${count} lessons need your confirmation`
+                    : count === 1 ? "1 lesson is awaiting student confirmation" : `${count} lessons are awaiting student confirmation`}
+                </p>
+                <p className="text-white/50 text-xs">
+                  {isStudent ? "Tap a lesson to confirm" : "Tap to view"}
+                </p>
+              </div>
+              {/* Lesson cards row */}
+              <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
+                {needsCompletion.map((l) => (
+                  <button
+                    key={l.booking_id}
+                    onClick={() => setSelectedLesson(l)}
+                    className="flex-shrink-0 bg-white/10 hover:bg-white/20 active:bg-white/25 rounded-xl px-4 py-3 text-left transition-colors duration-150 min-w-[160px]"
+                  >
+                    <p className="text-white text-xs font-semibold truncate">{l.subject}{l.level ? ` · ${l.level}` : ""}</p>
+                    <p className="text-white/60 text-[11px] mt-0.5 truncate">{l.otherName}</p>
+                    <p className="text-white/40 text-[11px] mt-1">{l.slots[0]}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {!loading && view === "bookings" ? (
           <div className="overflow-hidden">
