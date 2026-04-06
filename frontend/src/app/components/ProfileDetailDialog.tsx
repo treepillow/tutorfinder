@@ -48,15 +48,7 @@ export function ProfileDetailDialog({
 
   useEffect(() => {
     if (profile.userType !== "tutor") return;
-    // If availability is already pre-loaded and in the right shape, use it
-    if (profile.availability && typeof profile.availability === "object") {
-      const values = Object.values(profile.availability);
-      if (values.length > 0 && Array.isArray(values[0])) {
-        setAvailability(profile.availability);
-        return;
-      }
-    }
-    // Otherwise fetch from backend
+    // Always fetch fresh availability from backend
     availabilityApi.getSlots(profile.id).then((res: any) => {
       const slots = res.availability || [];
       setAvailability(slots.length > 0 ? slotsToWeeklyAvailability(slots) : {});
