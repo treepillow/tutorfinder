@@ -301,9 +301,18 @@ public class PaymentService {
                     .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + stripePaymentIntentId));
             System.out.printf("[PAYMENT] Found payment: %d%n", payment.getPaymentId());
 
-            // If already captured, just update status and return
+            // If already captured, still publish event and return
             if (payment.getStatus() == Payment.PaymentStatus.HELD) {
-                System.out.printf("[PAYMENT] Payment already HELD, skipping capture%n");
+                System.out.printf("[PAYMENT] Payment already HELD, skipping capture but publishing event%n");
+                publishEvent("payment.success", Map.of(
+                        "booking_id",  payment.getBookingId(),
+                        "tutee_id",    payment.getTuteeId(),
+                        "tutee_email", tuteeEmail != null ? tuteeEmail : "",
+                        "tutor_id",    payment.getTutorId(),
+                        "tutor_email", tutorEmail != null ? tutorEmail : "",
+                        "amount",      payment.getAmount().toPlainString()
+                ));
+                System.out.printf("[PAYMENT] Published payment.success event (already held)%n");
                 return payment;
             }
 
