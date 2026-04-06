@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from "react-router";
+import { Outlet, useNavigate, useLocation } from "react-router";
 import { useEffect } from "react";
 import { Sidebar } from "./Sidebar";
 import { getToken, getCurrentUser } from "../utils/api";
@@ -6,14 +6,25 @@ import { NavCountsProvider } from "../context/NavCountsContext";
 
 export function AppLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const token = getToken();
     const currentUser = getCurrentUser();
     if (!token || !currentUser) {
       navigate("/");
+      return;
     }
-  }, [navigate]);
+
+    // Redirect root /app based on user type
+    if (location.pathname === "/app") {
+      if (currentUser.userType === "admin") {
+        navigate("/app/admin/dashboard", { replace: true });
+      } else {
+        navigate("/app/discover", { replace: true });
+      }
+    }
+  }, [navigate, location.pathname]);
 
   return (
     <NavCountsProvider>

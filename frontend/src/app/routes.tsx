@@ -42,9 +42,10 @@ export const router = createBrowserRouter([
     path: "/app",
     element: <AppLayout />,
     children: [
+      // Admin and regular users are redirected in AppLayout
       {
         index: true,
-        element: <Navigate to="/app/discover" replace />,
+        element: <div />, // AppLayout handles the redirect
       },
       {
         path: "admin",
