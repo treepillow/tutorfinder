@@ -48,7 +48,7 @@ type Tab = "held" | "completed" | "disputed" | "cancelled";
 const TABS: { id: Tab; label: string; bookingStatuses: string[]; Icon: any }[] = [
   { id: "held",      label: "Held",      bookingStatuses: ["Confirmed"],   Icon: IconHeld },
   { id: "completed", label: "Completed", bookingStatuses: ["Completed"],   Icon: IconCompleted },
-  { id: "disputed",  label: "Disputed",  bookingStatuses: ["Disputed"],    Icon: IconDisputed },
+  { id: "disputed",  label: "Ongoing Disputes",  bookingStatuses: ["Disputed"],    Icon: IconDisputed },
   { id: "cancelled", label: "Cancelled", bookingStatuses: ["Cancelled"],   Icon: IconCancelled },
 ];
 

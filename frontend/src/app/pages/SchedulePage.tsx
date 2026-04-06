@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { Calendar, Clock, BookOpen, User, ChevronLeft, ChevronRight, Phone, Mail, X, AlertCircle, Check } from "lucide-react";
-import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, availabilityApi, enrichProfile } from "../utils/api";
+import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
 import { io } from "socket.io-client";
 import laptopGuy from "../assets/laptopGuy.png";
@@ -9,96 +10,130 @@ import Lottie from "lottie-react";
 import circleGuyLoadingData from "../assets/circleGuyLoading.json";
 import { useRefreshNavCounts } from "../context/NavCountsContext";
 
+type BookingTab = "upcoming" | "completed" | "disputed";
+
+function IconUpcoming({ active }: { active: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" fill={active ? "#d97706" : "none"} stroke={active ? "#d97706" : "currentColor"} strokeWidth="2"/>
+      <path d="M12 7v5l3 3" stroke={active ? "white" : "currentColor"} strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+}
+function IconCompleted({ active }: { active: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" fill={active ? "#16a34a" : "none"} stroke={active ? "#16a34a" : "currentColor"} strokeWidth="2"/>
+      <path d="M8 12l3 3 5-5" stroke={active ? "white" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+function IconDisputed({ active }: { active: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" fill={active ? "#ea580c" : "none"} stroke={active ? "#ea580c" : "currentColor"} strokeWidth="2"/>
+      <path d="M12 8v5" stroke={active ? "white" : "currentColor"} strokeWidth="2" strokeLinecap="round"/>
+      <circle cx="12" cy="16" r="1" fill={active ? "white" : "currentColor"}/>
+    </svg>
+  );
+}
+
+
+const TABS: { id: BookingTab; label: string; status: string; Icon: React.ComponentType<{ active: boolean }> }[] = [
+  { id: "upcoming",  label: "Upcoming",  status: "Confirmed", Icon: IconUpcoming },
+  { id: "completed", label: "Completed", status: "Completed", Icon: IconCompleted },
+  { id: "disputed",  label: "Ongoing Disputes",  status: "Disputed",  Icon: IconDisputed },
+];
+
+const TAB_INFO: Record<BookingTab, { border: string; text: string }> = {
+  upcoming:  { border: "border-[#d97706]", text: "Your confirmed upcoming lessons. Cancel is available up to 1 hour before the lesson starts." },
+  completed: { border: "border-[#16a34a]", text: "Lessons that were successfully completed with no issues. Payment has been or will be released to the tutor." },
+  disputed:  { border: "border-[#ea580c]", text: "Ongoing disputes awaiting admin review. Once resolved, they will no longer appear here." },
+};
+
 export function SchedulePage() {
   const refreshNavCounts = useRefreshNavCounts();
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [schedule, setSchedule] = useState<any[]>([]);
+  const [allLessons, setAllLessons] = useState<any[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [view, setView] = useState<"bookings" | "calendar">("calendar");
-  const [bookingTab, setBookingTab] = useState<"upcoming" | "completed" | "disputed">("upcoming");
+  const [bookingTab, setBookingTab] = useState<BookingTab>("upcoming");
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [dayOverflow, setDayOverflow] = useState<{ date: string; lessons: any[] } | null>(null);
-
-  const TAB_STATUS: Record<string, string> = {
-    upcoming: "Confirmed",
-    completed: "Completed",
-    disputed: "Disputed",
-  };
+  const prevTab = useRef<BookingTab>("upcoming");
 
   useEffect(() => {
     const user = getCurrentUser();
     if (!user) return;
     setCurrentUser(user);
-    loadSchedule(user, "upcoming");
+    loadAll(user);
 
     const socket = io(import.meta.env.VITE_BOOKING_SERVICE, { transports: ["websocket"] });
     socket.on("booking_status_changed", (booking: any) => {
       if (booking.tutor_id === user.id || booking.tutee_id === user.id) {
-        loadSchedule(user, bookingTab, true);
+        loadAll(user, true);
       }
     });
     return () => { socket.disconnect(); };
   }, []);
 
-  useEffect(() => {
-    if (!currentUser) return;
-    setSchedule([]);
-    loadSchedule(currentUser, bookingTab, true);
-  }, [bookingTab]);
+  const enrichBookings = async (bookings: any[], user: any) => {
+    // Fetch all unique other-user profiles (tutor for student, tutee for tutor)
+    const otherIds = [...new Set(bookings.map((b: any) =>
+      user.userType === "student" ? b.tutor_id : b.tutee_id
+    ))] as number[];
 
-  const loadSchedule = async (user: any, tab: string, silent = false) => {
+    const profileMap: Record<number, any> = {};
+    await Promise.all(
+      otherIds.map(async (id) => {
+        try { profileMap[id] = enrichProfile(await profileApi.getProfile(id)); }
+        catch { profileMap[id] = { name: `User #${id}` }; }
+      })
+    );
+
+    return bookings.map((booking: any) => {
+      const otherUserId = user.userType === "student" ? booking.tutor_id : booking.tutee_id;
+      const otherProfile = profileMap[otherUserId] || { name: `User #${otherUserId}` };
+
+      // Price: find the matching subject+level entry from the tutor's profile
+      const tutorProfile = user.userType === "student" ? otherProfile : null;
+      const matchedSubject = tutorProfile?.subjects?.find(
+        (s: any) => s.subject === booking.subject && s.level === booking.level
+      ) || tutorProfile?.subjects?.[0];
+      const price = parseFloat(matchedSubject?.hourlyRate || tutorProfile?.price_rate || "0") || 0;
+
+      return {
+        ...booking,
+        otherProfile,
+        dateObj: new Date(booking.lesson_date + "T00:00:00"),
+        // Trust booking record directly — subject/level are stored at booking time
+        subject: booking.subject || "Lesson",
+        level: booking.level || "",
+        otherName: otherProfile.name,
+        price,
+        slots: [`${booking.start_time?.slice(0, 5)}-${booking.end_time?.slice(0, 5)}`],
+      };
+    });
+  };
+
+  const loadAll = async (user: any, silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const status = TAB_STATUS[tab] || "Confirmed";
-      const res = await bookingApi.getByUser(user.id, status);
-      const bookings = res.bookings || [];
+      const statuses = ["Confirmed", "Completed", "Disputed"];
+      const results = await Promise.all(
+        statuses.map((s) => bookingApi.getByUser(user.id, s).catch(() => ({ bookings: [] })))
+      );
+      const all: any[] = results.flatMap((r) => r.bookings || []);
 
-      // Fetch each unique other-user profile once, then reuse
-      const uniqueIds = [...new Set(bookings.map((b: any) =>
-        user.userType === "student" ? b.tutor_id : b.tutee_id
-      ))] as number[];
+      // Deduplicate
+      const seen = new Set<number>();
+      const unique = all.filter((b) => { if (seen.has(b.booking_id)) return false; seen.add(b.booking_id); return true; });
 
-      const profileMap: Record<number, any> = {};
-      let myProfile: any = null;
-      await Promise.all([
-        ...uniqueIds.map(async (id) => {
-          try {
-            const p = await profileApi.getProfile(id);
-            profileMap[id] = enrichProfile(p);
-          } catch {
-            profileMap[id] = { name: `User #${id}` };
-          }
-        }),
-        profileApi.getProfile(user.id).then((p) => { myProfile = enrichProfile(p); }).catch(() => {}),
-      ]);
-
-      const enriched = bookings.map((booking: any) => {
-        const otherUserId = user.userType === "student" ? booking.tutor_id : booking.tutee_id;
-        const otherProfile = profileMap[otherUserId] || { name: `User #${otherUserId}` };
-        // Subject/level/price come from the tutor's profile, not the student's
-        const infoProfile = user.userType === "tutor" && myProfile ? myProfile : otherProfile;
-        return {
-          ...booking,
-          otherProfile,
-          date: booking.lesson_date,
-          dateObj: new Date(booking.lesson_date + "T00:00:00"),
-          startHour: parseInt(booking.start_time?.split(":")[0] || "0"),
-          endHour: parseInt(booking.end_time?.split(":")[0] || "0"),
-          subject: booking.subject || infoProfile.subjects?.[0]?.subject || "Lesson",
-          level: booking.level || infoProfile.subjects?.[0]?.level || "",
-          tutorName: user.userType === "student" ? otherProfile.name : user.name,
-          studentName: user.userType === "tutor" ? otherProfile.name : user.name,
-          otherName: otherProfile.name,
-          price: infoProfile.subjects?.[0]?.hourlyRate || infoProfile.price_rate || 0,
-          slots: [`${booking.start_time?.slice(0, 5)}-${booking.end_time?.slice(0, 5)}`],
-        };
-      });
-
-      // Sort by date ascending
+      const enriched = await enrichBookings(unique, user);
       enriched.sort((a: any, b: any) => a.dateObj.getTime() - b.dateObj.getTime());
-      setSchedule(enriched);
+      setAllLessons(enriched);
     } catch (err: any) {
       console.error("Failed to load schedule:", err);
       toast.error("Failed to load schedule");
@@ -107,14 +142,55 @@ export function SchedulePage() {
     }
   };
 
+  const switchTab = (tab: BookingTab) => {
+    prevTab.current = bookingTab;
+    setBookingTab(tab);
+  };
+
+  const getLessonTimes = (l: any) => {
+    const [startH, startM] = (l.start_time || "0:00").split(":").map(Number);
+    const [endH, endM] = (l.end_time || "0:00").split(":").map(Number);
+    const start = new Date(l.dateObj); start.setHours(startH, startM, 0, 0);
+    const end = new Date(l.dateObj); end.setHours(endH, endM, 0, 0);
+    return { start, end };
+  };
+
+  const now = new Date();
+
+  const isOngoing = (l: any) => {
+    if (l.status !== "Confirmed") return false;
+    const { start, end } = getLessonTimes(l);
+    return now >= start && now < end;
+  };
+
+  const isUpcoming = (l: any) => {
+    if (l.status !== "Confirmed") return false;
+    const { start } = getLessonTimes(l);
+    return now < start;
+  };
+
+  const ongoingLessons = allLessons.filter(isOngoing);
+
+  const matchesTab = (l: any, tab: BookingTab) => {
+    if (tab === "upcoming")  return isUpcoming(l);
+    if (tab === "completed") return l.status === "Completed" && !l.dispute_reason;
+    if (tab === "disputed")  return l.status === "Disputed";
+    return false;
+  };
+
+  const tabLessons = allLessons.filter((l) => matchesTab(l, bookingTab));
+  const tabCount = (tab: BookingTab) => allLessons.filter((l) => matchesTab(l, tab)).length;
+
+  const tabOrder = TABS.map((t) => t.id);
+  const direction = tabOrder.indexOf(bookingTab) > tabOrder.indexOf(prevTab.current) ? 1 : -1;
+
   const handleCancelBooking = async (lesson: any) => {
     setActionLoading(true);
     try {
-      // Cancel through OutSystems orchestrator (handles refund, slot update, and status change)
       await bookingProcessApi.cancel(lesson.booking_id, currentUser.userType === "student" ? "tutee" : "tutor");
       toast.success("Booking cancelled and deposit refunded");
       setSelectedLesson(null);
-      loadSchedule(currentUser, bookingTab);
+      loadAll(currentUser, true);
       refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to cancel booking");
@@ -129,7 +205,7 @@ export function SchedulePage() {
       await bookingProcessApi.complete(lesson.booking_id);
       toast.success("Booking marked as completed");
       setSelectedLesson(null);
-      loadSchedule(currentUser, bookingTab);
+      loadAll(currentUser, true);
       refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to complete booking");
@@ -146,7 +222,7 @@ export function SchedulePage() {
       await bookingProcessApi.reportDispute(lesson.booking_id, reportedBy, reason);
       toast.success("No-show reported. An admin will review the dispute.");
       setSelectedLesson(null);
-      loadSchedule(currentUser, bookingTab);
+      loadAll(currentUser, true);
       refreshNavCounts();
     } catch (err: any) {
       toast.error(err.message || "Failed to report no-show");
@@ -155,57 +231,45 @@ export function SchedulePage() {
     }
   };
 
-  // ── Booking action availability ──
-  // canCancel: only before 1hr before start
-  // canReportNoShow: during or after the booking slot
-  // canComplete: only after the booking slot ends
   const getBookingActions = (lesson: any) => {
-    const now = new Date();
-
-    const [startH, startM] = (lesson.start_time || "0:00").split(":").map(Number);
-    const [endH, endM] = (lesson.end_time || "0:00").split(":").map(Number);
-
-    const bookingStart = new Date(lesson.dateObj);
-    bookingStart.setHours(startH, startM, 0, 0);
-
-    const bookingEnd = new Date(lesson.dateObj);
-    bookingEnd.setHours(endH, endM, 0, 0);
-
-    const cutoffCancel = new Date(bookingStart.getTime() - 60 * 60 * 1000); // 1hr before start
-
+    if (lesson.status !== "Confirmed") {
+      return { canCancel: false, canReportNoShow: false, canComplete: false };
+    }
+    const { start, end } = getLessonTimes(lesson);
+    const cutoffCancel = new Date(start.getTime() - 60 * 60 * 1000);
     return {
       canCancel: now < cutoffCancel,
-      canReportNoShow: now >= bookingStart,
-      canComplete: now >= bookingEnd,
+      canReportNoShow: now >= start,
+      canComplete: now >= end,
     };
   };
 
   // ── Calendar helpers ──
-
   const prevMonth = () => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
   const nextMonth = () => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
 
   const calendarDays = (() => {
     const year = calendarDate.getFullYear();
     const month = calendarDate.getMonth();
-    const firstDay = new Date(year, month, 1).getDay(); // 0 = Sun
+    const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    // Shift so Monday = 0
     const startOffset = (firstDay + 6) % 7;
     const cells: (number | null)[] = [
       ...Array(startOffset).fill(null),
       ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
     ];
-    // Pad to full weeks
     while (cells.length % 7 !== 0) cells.push(null);
     return cells;
   })();
+
+  // Calendar shows only Confirmed (upcoming) lessons
+  const calendarLessons = allLessons.filter((l) => l.status === "Confirmed");
 
   const getLessonsForDay = (day: number | null) => {
     if (!day) return [];
     const year = calendarDate.getFullYear();
     const month = calendarDate.getMonth();
-    return schedule.filter(l => {
+    return calendarLessons.filter(l => {
       const d = l.dateObj;
       return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
     });
@@ -222,6 +286,17 @@ export function SchedulePage() {
 
   if (!currentUser) return null;
 
+  const emptyMessages: Record<BookingTab, { title: string; sub: string }> = {
+    upcoming: {
+      title: "No upcoming lessons",
+      sub: currentUser.userType === "student"
+        ? "Book lessons with your matched tutors to see them here"
+        : "Accept student requests to see scheduled lessons",
+    },
+    completed: { title: "No completed lessons", sub: "Completed lessons will appear here" },
+    disputed:  { title: "No disputed lessons",  sub: "Disputed lessons will appear here" },
+  };
+
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-5xl mx-auto">
@@ -233,53 +308,84 @@ export function SchedulePage() {
             <p className="text-[#2F3B3D]/70">Your confirmed lessons</p>
           </div>
 
-          {/* View toggle */}
-          <div className="flex p-1 bg-[#EDE9DF] rounded-full">
-            <button
-              onClick={() => setView("calendar")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                view === "calendar" ? "bg-[#2F3B3D] text-white shadow" : "text-[#2F3B3D]/60 hover:text-[#2F3B3D]"
-              }`}
-            >
-              <Calendar className="w-4 h-4" />
-              Calendar
-            </button>
-            <button
-              onClick={() => setView("bookings")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                view === "bookings" ? "bg-[#2F3B3D] text-white shadow" : "text-[#2F3B3D]/60 hover:text-[#2F3B3D]"
-              }`}
-            >
-              <BookOpen className="w-4 h-4" />
-              Bookings
-            </button>
+          <div className="flex items-center gap-3">
+            {/* Ongoing lesson indicator */}
+            {ongoingLessons.length > 0 && (
+              <button
+                onClick={() => setSelectedLesson(ongoingLessons[0])}
+                className="flex items-center gap-3 px-4 py-2.5 bg-[#EDE9DF] hover:bg-[#E3DDD3] text-[#2F3B3D] rounded-2xl transition-colors duration-150"
+              >
+                <span className="relative flex h-2.5 w-2.5 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-400"></span>
+                </span>
+                <div className="flex items-center gap-2">
+                  <p className="text-[10px] font-semibold text-green-600 uppercase tracking-wide">Ongoing</p>
+                  <span className="text-[#2F3B3D]/20">·</span>
+                  <p className="text-xs font-semibold text-[#2F3B3D]">
+                    {ongoingLessons[0].subject}{ongoingLessons[0].level ? ` · ${ongoingLessons[0].level}` : ""}
+                  </p>
+                  <span className="text-[#2F3B3D]/20">·</span>
+                  <p className="text-xs text-[#2F3B3D]/50">{ongoingLessons[0].otherName}</p>
+                  <span className="text-[#2F3B3D]/20">·</span>
+                  <p className="text-xs text-[#2F3B3D]/50">{ongoingLessons[0].slots[0]}</p>
+                </div>
+              </button>
+            )}
+
+            {/* View toggle */}
+            <div className="flex p-1 bg-[#EDE9DF] rounded-full">
+              <button
+                onClick={() => setView("calendar")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  view === "calendar" ? "bg-[#2F3B3D] text-white shadow" : "text-[#2F3B3D]/60 hover:text-[#2F3B3D]"
+                }`}
+              >
+                <Calendar className="w-4 h-4" />
+                Calendar
+              </button>
+              <button
+                onClick={() => setView("bookings")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  view === "bookings" ? "bg-[#2F3B3D] text-white shadow" : "text-[#2F3B3D]/60 hover:text-[#2F3B3D]"
+                }`}
+              >
+                <BookOpen className="w-4 h-4" />
+                Bookings
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Bookings sub-tabs */}
+        {/* Bookings sub-tabs — sliding pill style like PaymentsPage */}
         {view === "bookings" && (
-          <div className="flex p-1 bg-[#EDE9DF] rounded-full mb-6 w-fit">
-            {(["upcoming", "completed", "disputed"] as const).map((tab) => {
-              const icons = {
-                upcoming: <Clock className="w-4 h-4" />,
-                completed: <Check className="w-4 h-4" />,
-                disputed: <AlertCircle className="w-4 h-4" />,
-              };
-              const labels = { upcoming: "Upcoming", completed: "Completed", disputed: "Disputed" };
-              const isActive = bookingTab === tab;
+          <div className="relative flex p-1.5 bg-[#EDE9DF] rounded-2xl mb-5">
+            {/* Sliding pill */}
+            <div
+              className="absolute top-1.5 bottom-1.5 bg-[#2F3B3D] rounded-xl shadow transition-all duration-300 ease-in-out"
+              style={{
+                width: `calc(${100 / TABS.length}% - 6px)`,
+                left: `calc(${(TABS.findIndex((t) => t.id === bookingTab) / TABS.length) * 100}% + 3px)`,
+              }}
+            />
+            {TABS.map((tab) => {
+              const count = tabCount(tab.id);
+              const isActive = bookingTab === tab.id;
               return (
                 <button
-                  key={tab}
-                  onClick={() => setBookingTab(tab)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                    isActive ? "bg-[#2F3B3D] text-white shadow" : "text-[#2F3B3D]/60 hover:text-[#2F3B3D]"
+                  key={tab.id}
+                  onClick={() => switchTab(tab.id)}
+                  className={`relative z-10 flex-1 py-2.5 rounded-xl text-xs font-medium transition-colors duration-200 flex items-center justify-center gap-1.5 ${
+                    isActive ? "text-white" : "text-[#2F3B3D]/50 hover:text-[#2F3B3D]"
                   }`}
                 >
-                  {icons[tab]}
-                  {labels[tab]}
-                  {isActive && schedule.length > 0 && (
-                    <span className="ml-1 bg-white/20 text-white text-xs px-1.5 py-0.5 rounded-full leading-none">
-                      {schedule.length}
+                  <tab.Icon active={isActive} />
+                  <span>{tab.label}</span>
+                  {count > 0 && (
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full leading-none ${
+                      isActive ? "bg-white/20 text-white" : "bg-[#D6CFBF] text-[#2F3B3D]/60"
+                    }`}>
+                      {count}
                     </span>
                   )}
                 </button>
@@ -288,75 +394,80 @@ export function SchedulePage() {
           </div>
         )}
 
-        {!loading && view === "bookings" ? (
-          schedule.length === 0 ? (
-            <div className="bg-[#EDE9DF] rounded-2xl p-10 text-center flex flex-col items-center">
-              <img src={laptopGuy} style={{ width: 120, height: 120, objectFit: "contain" }} />
-              <h3 className="text-xl text-[#2F3B3D] font-medium mt-3 mb-1">
-                {bookingTab === "upcoming" ? "No upcoming lessons" : bookingTab === "completed" ? "No completed lessons" : "No disputed lessons"}
-              </h3>
-              <p className="text-[#2F3B3D]/60 text-sm">
-                {bookingTab === "upcoming"
-                  ? currentUser.userType === "student"
-                    ? "Book lessons with your matched tutors to see them here"
-                    : "Accept student requests to see scheduled lessons"
-                  : bookingTab === "completed"
-                  ? "Completed lessons will appear here"
-                  : "Disputed lessons will appear here"}
-              </p>
-            </div>
-          ) : (
-
-          // ── Bookings View ──
-          <div className="space-y-3">
-            {schedule.map((lesson) => (
-              <button
-                key={lesson.booking_id}
-                onClick={() => setSelectedLesson(lesson)}
-                className="w-full text-left bg-[#EDE9DF] hover:bg-[#E3DDD3] rounded-2xl p-5 transition-colors duration-150"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    {/* Date badge */}
-                    <div className="flex-shrink-0 bg-[#2F3B3D] text-white rounded-xl px-4 py-3 text-center min-w-[56px]">
-                      <div className="text-xs font-medium opacity-70 uppercase">
-                        {lesson.dateObj.toLocaleDateString("en-SG", { month: "short", timeZone: "Asia/Singapore" })}
-                      </div>
-                      <div className="text-2xl font-semibold leading-none">
-                        {lesson.dateObj.getDate()}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-[#2F3B3D] font-medium">
-                        {lesson.subject}{lesson.level ? ` · ${lesson.level}` : ""}
-                      </div>
-                      <div className="text-[#2F3B3D]/60 text-sm mt-0.5">
-                        {currentUser.userType === "student" ? "Tutor" : "Student"}: {lesson.otherName}
-                      </div>
-                      <div className="flex items-center gap-1 text-[#2F3B3D]/50 text-sm mt-0.5">
-                        <Clock className="w-3.5 h-3.5" />
-                        {lesson.slots[0]}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <div className="text-[#7C8D8C] font-medium">${lesson.price}</div>
-                    <div className="text-[#2F3B3D]/40 text-xs mt-1">
-                      {lesson.dateObj.toLocaleDateString("en-SG", { weekday: "short", timeZone: "Asia/Singapore" })}
-                    </div>
-                  </div>
-                </div>
-              </button>
-            ))}
+        {/* Tab info */}
+        {view === "bookings" && (
+          <div className={`border-l-2 pl-3 mb-5 ${TAB_INFO[bookingTab].border}`}>
+            <p className="text-xs text-[#2F3B3D]/50">{TAB_INFO[bookingTab].text}</p>
           </div>
-          )
+        )}
+
+
+        {!loading && view === "bookings" ? (
+          <div className="overflow-hidden">
+            <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+              <motion.div
+                key={bookingTab}
+                custom={direction}
+                initial={{ x: direction * 50, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: direction * -50, opacity: 0 }}
+                transition={{ duration: 0.25, ease: "easeInOut" }}
+              >
+                {tabLessons.length === 0 ? (
+                  <div className="bg-[#EDE9DF] rounded-2xl p-10 text-center flex flex-col items-center">
+                    <img src={laptopGuy} style={{ width: 120, height: 120, objectFit: "contain" }} />
+                    <h3 className="text-xl text-[#2F3B3D] font-medium mt-3 mb-1">{emptyMessages[bookingTab].title}</h3>
+                    <p className="text-[#2F3B3D]/60 text-sm">{emptyMessages[bookingTab].sub}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {tabLessons.map((lesson) => (
+                      <button
+                        key={lesson.booking_id}
+                        onClick={() => setSelectedLesson(lesson)}
+                        className="w-full text-left bg-[#EDE9DF] hover:bg-[#E3DDD3] rounded-2xl p-5 transition-colors duration-150"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="flex-shrink-0 bg-[#2F3B3D] text-white rounded-xl px-4 py-3 text-center min-w-[56px]">
+                              <div className="text-xs font-medium opacity-70 uppercase">
+                                {lesson.dateObj.toLocaleDateString("en-SG", { month: "short", timeZone: "Asia/Singapore" })}
+                              </div>
+                              <div className="text-2xl font-semibold leading-none">
+                                {lesson.dateObj.getDate()}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[#2F3B3D] font-medium">
+                                {lesson.subject}{lesson.level ? ` · ${lesson.level}` : ""}
+                              </div>
+                              <div className="text-[#2F3B3D]/60 text-sm mt-0.5">
+                                {currentUser.userType === "student" ? "Tutor" : "Student"}: {lesson.otherName}
+                              </div>
+                              <div className="flex items-center gap-1 text-[#2F3B3D]/50 text-sm mt-0.5">
+                                <Clock className="w-3.5 h-3.5" />
+                                {lesson.slots[0]}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-[#7C8D8C] font-medium">${lesson.price}</div>
+                            <div className="text-[#2F3B3D]/40 text-xs mt-1">
+                              {lesson.dateObj.toLocaleDateString("en-SG", { weekday: "short", timeZone: "Asia/Singapore" })}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         ) : (
 
           // ── Calendar View ──
           <div className="bg-[#EDE9DF] rounded-3xl p-6">
-            {/* Month navigation */}
             <div className="flex items-center justify-between mb-6">
               <button onClick={prevMonth} className="p-2 hover:bg-[#D6CFBF] rounded-full transition-colors">
                 <ChevronLeft className="w-5 h-5 text-[#2F3B3D]" />
@@ -369,14 +480,12 @@ export function SchedulePage() {
               </button>
             </div>
 
-            {/* Day headers */}
             <div className="grid grid-cols-7 mb-2">
               {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(d => (
                 <div key={d} className="text-center text-xs font-medium text-[#2F3B3D]/50 py-2">{d}</div>
               ))}
             </div>
 
-            {/* Calendar grid */}
             <div className="grid grid-cols-7 gap-1">
               {calendarDays.map((day, i) => {
                 const lessons = getLessonsForDay(day);
@@ -384,11 +493,7 @@ export function SchedulePage() {
                   <div
                     key={i}
                     className={`min-h-[72px] rounded-xl p-1.5 ${
-                      day === null
-                        ? ""
-                        : isToday(day)
-                        ? "bg-[#2F3B3D]"
-                        : "bg-[#F5F3EF]/60"
+                      day === null ? "" : isToday(day) ? "bg-[#2F3B3D]" : "bg-[#F5F3EF]/60"
                     }`}
                   >
                     {day !== null && (
