@@ -140,39 +140,11 @@ export function SchedulePage() {
     }
   };
 
-  const openTestLesson = () => {
-    const now = new Date();
-    const startTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:00`;
-    const endHour = (now.getHours() + 1) % 24;
-    const endTime = `${String(endHour).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:00`;
-    const dateStr = now.toISOString().split("T")[0];
-    setSelectedLesson({
-      _isTest: true,
-      booking_id: 9999,
-      subject: "Mathematics",
-      level: "A-Level",
-      lesson_date: dateStr,
-      start_time: startTime,
-      end_time: endTime,
-      date: dateStr,
-      dateObj: new Date(dateStr + "T00:00:00"),
-      slots: [`${startTime.slice(0, 5)}-${endTime.slice(0, 5)}`],
-      otherName: "Sarah Smith",
-      price: 80,
-      otherProfile: {
-        name: "Sarah Smith",
-        contactNumber: "+65 9123 4567",
-        email: "sarah.smith@example.com",
-      },
-    });
-  };
-
   // ── Booking action availability ──
   // canCancel: only before 1hr before start
   // canReportNoShow: during or after the booking slot
   // canComplete: only after the booking slot ends
   const getBookingActions = (lesson: any) => {
-    if (lesson._isTest) return { canCancel: true, canReportNoShow: true, canComplete: true };
     const now = new Date();
 
     const [startH, startM] = (lesson.start_time || "0:00").split(":").map(Number);
@@ -246,14 +218,6 @@ export function SchedulePage() {
             <p className="text-[#2F3B3D]/70">Your confirmed lessons</p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={openTestLesson}
-              className="px-4 py-2 bg-blue-100 text-blue-700 rounded-full border-2 border-blue-300 hover:bg-blue-200 hover:border-blue-400 transition-all duration-300 text-sm font-medium"
-            >
-              📋 Test Lesson
-            </button>
-
           {/* View toggle */}
           <div className="flex p-1 bg-[#EDE9DF] rounded-full">
             <button
@@ -274,7 +238,6 @@ export function SchedulePage() {
               <Calendar className="w-4 h-4" />
               Calendar
             </button>
-          </div>
           </div>
         </div>
 

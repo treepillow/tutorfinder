@@ -182,13 +182,28 @@ export function MatchDialog({ profile, onClose }: MatchDialogProps) {
               <span className="text-xs text-[#2F3B3D]/60 font-medium">You</span>
             </div>
 
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 21C12 21 3 14.5 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 13 5.08C14.09 3.81 15.76 3 17.5 3C20.58 3 23 5.42 23 8.5C23 14.5 12 21 12 21Z"
-                fill="#F44336" stroke="#C62828" strokeWidth="1.5" strokeLinejoin="round"
-                transform="translate(-1,0)"
-              />
-              <ellipse cx="8.5" cy="8" rx="2.2" ry="1.3" fill="white" opacity="0.35" transform="translate(-1,0)"/>
+            {/* Handshake icon */}
+            <svg width="44" height="44" viewBox="0 0 64 64" fill="none">
+              {/* Left arm sleeve */}
+              <rect x="2" y="28" width="14" height="10" rx="3" fill="#7C8D8C"/>
+              {/* Right arm sleeve */}
+              <rect x="48" y="26" width="14" height="10" rx="3" fill="#2F3B3D"/>
+              {/* Left hand / fingers */}
+              <rect x="14" y="26" width="6" height="4" rx="2" fill="#FFCC80"/>
+              <rect x="14" y="22" width="5" height="4" rx="2" fill="#FFCC80"/>
+              <rect x="18" y="21" width="5" height="4" rx="2" fill="#FFCC80"/>
+              <rect x="22" y="22" width="5" height="4" rx="2" fill="#FFCC80"/>
+              {/* Right hand / fingers */}
+              <rect x="44" y="26" width="6" height="4" rx="2" fill="#FFB74D"/>
+              <rect x="39" y="22" width="5" height="4" rx="2" fill="#FFB74D"/>
+              <rect x="35" y="21" width="5" height="4" rx="2" fill="#FFB74D"/>
+              <rect x="31" y="22" width="5" height="4" rx="2" fill="#FFB74D"/>
+              {/* Clasped palms */}
+              <rect x="20" y="26" width="24" height="10" rx="4" fill="#FFCC80"/>
+              <rect x="26" y="26" width="12" height="10" rx="3" fill="#FFB74D"/>
+              {/* Cuff lines */}
+              <line x1="28" y1="28" x2="28" y2="34" stroke="#E6A800" strokeWidth="1" strokeLinecap="round" opacity="0.4"/>
+              <line x1="36" y1="28" x2="36" y2="34" stroke="#E6A800" strokeWidth="1" strokeLinecap="round" opacity="0.4"/>
             </svg>
 
             <div className="flex flex-col items-center gap-1.5">
