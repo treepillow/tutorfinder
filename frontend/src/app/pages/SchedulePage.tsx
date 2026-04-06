@@ -43,6 +43,7 @@ export function SchedulePage() {
 
   useEffect(() => {
     if (!currentUser) return;
+    setSchedule([]);
     loadSchedule(currentUser, bookingTab, true);
   }, [bookingTab]);
 
@@ -234,15 +235,6 @@ export function SchedulePage() {
           {/* View toggle */}
           <div className="flex p-1 bg-[#EDE9DF] rounded-full">
             <button
-              onClick={() => setView("bookings")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                view === "bookings" ? "bg-[#2F3B3D] text-white shadow" : "text-[#2F3B3D]/60 hover:text-[#2F3B3D]"
-              }`}
-            >
-              <BookOpen className="w-4 h-4" />
-              Bookings
-            </button>
-            <button
               onClick={() => setView("calendar")}
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                 view === "calendar" ? "bg-[#2F3B3D] text-white shadow" : "text-[#2F3B3D]/60 hover:text-[#2F3B3D]"
@@ -250,6 +242,15 @@ export function SchedulePage() {
             >
               <Calendar className="w-4 h-4" />
               Calendar
+            </button>
+            <button
+              onClick={() => setView("bookings")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                view === "bookings" ? "bg-[#2F3B3D] text-white shadow" : "text-[#2F3B3D]/60 hover:text-[#2F3B3D]"
+              }`}
+            >
+              <BookOpen className="w-4 h-4" />
+              Bookings
             </button>
           </div>
         </div>
