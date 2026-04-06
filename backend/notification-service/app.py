@@ -147,7 +147,7 @@ def handle_message(ch, method, properties, body):
                             f"Payment of SGD {data.get('amount')} received! Your lesson is confirmed.", rk)
             save_and_notify(data.get('tutor_id'), 'Payment', data.get('tutor_email'),
                             'Payment Received',
-                            f"Your student has paid for the lesson on {data.get('lesson_date')}. The deposit is held and will be released after the lesson.", rk)
+                            f"Your student has paid SGD {data.get('amount')} for the lesson. The deposit is held and will be released after the lesson.", rk)
 
         elif rk == 'payment.failed':
             save_and_notify(data.get('tutee_id'), 'Payment', data.get('tutee_email'),
