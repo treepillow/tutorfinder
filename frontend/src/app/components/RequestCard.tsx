@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Calendar, Clock, BookOpen, DollarSign, ChevronDown, ChevronUp } from "lucide-react";
+import { Calendar, Clock, BookOpen, DollarSign, ChevronDown, ChevronUp, X } from "lucide-react";
 import { CircleGuyAvatar } from "./CircleGuyAvatar";
 
 interface RequestCardProps {
@@ -106,8 +106,9 @@ export function RequestCard({ request, userType, onCancel, onAccept, onReject, o
             {userType === "student" && (request.status === "pending" || request.status === "AwaitingConfirmation") && onCancel && (
               <button
                 onClick={onCancel}
-                className="flex-1 px-4 py-2 bg-white text-[#2F3B3D] rounded-full border-2 border-[#D6CFBF] hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all duration-300"
+                className="flex-1 flex items-center justify-center gap-2.5 px-5 py-2.5 bg-white text-red-400 rounded-full border border-red-200 hover:bg-red-50 hover:text-red-500 transition-all duration-300 text-sm"
               >
+                <span className="w-5 h-5 rounded-full border border-current flex items-center justify-center shrink-0"><X className="w-3 h-3" /></span>
                 Cancel Request
               </button>
             )}
@@ -115,8 +116,9 @@ export function RequestCard({ request, userType, onCancel, onAccept, onReject, o
             {(request.status === "accepted" || request.status === "AwaitingPayment") && onCancel && (
               <button
                 onClick={onCancel}
-                className="flex-1 px-4 py-2 bg-white text-[#2F3B3D] rounded-full border-2 border-[#D6CFBF] hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all duration-300"
+                className="flex-1 flex items-center justify-center gap-2.5 px-5 py-2.5 bg-white text-red-400 rounded-full border border-red-200 hover:bg-red-50 hover:text-red-500 transition-all duration-300 text-sm"
               >
+                <span className="w-5 h-5 rounded-full border border-current flex items-center justify-center shrink-0"><X className="w-3 h-3" /></span>
                 Cancel
               </button>
             )}

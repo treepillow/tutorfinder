@@ -5,6 +5,15 @@ import { useNavigate } from "react-router";
 import { gsap } from "gsap";
 import Lottie from "lottie-react";
 import circleGuyIdleData from "../assets/circleGuyIdle.json";
+import cowboyGuy from "../assets/cowboyGuy.png";
+import lilGuy from "../assets/lilGuy.png";
+import peakyGuy from "../assets/peakyGuy.png";
+import searchingGuy from "../assets/searchingGuy.png";
+import sleepyGuy from "../assets/sleepyGuy.png";
+import swaggyGuy from "../assets/swaggyGuy.png";
+import wizardGuy from "../assets/wizardGuy.png";
+
+const AVATARS = [cowboyGuy, lilGuy, peakyGuy, searchingGuy, sleepyGuy, swaggyGuy, wizardGuy];
 import {
   Dialog,
   DialogContent,
@@ -12,9 +21,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
-
-// Warm complementary header colours — terracotta, amber, sage, dusty rose, ochre
-const CARD_COLORS = ["#C2714F", "#D4956A", "#7C8D8C", "#B87B6E", "#C9956C", "#8FA68E", "#C47E5A"];
 
 const cardData = [
   { emoji: "👨", name: "James L.", age: 34, location: "Bishan",    subject: "Physics (A-Level)",    rate: "$45/hr",  isTutor: true  },
@@ -34,17 +40,17 @@ function wrap(offset: number) {
 }
 
 function ProfileCard({ card, colorIndex }: { card: typeof cardData[0]; colorIndex: number }) {
-  const headerColor = CARD_COLORS[colorIndex % CARD_COLORS.length];
+  const avatar = AVATARS[colorIndex % AVATARS.length];
   return (
-    <div className="w-[210px] bg-[#FAFAF8] rounded-2xl overflow-hidden select-none shadow-lg border border-[#E5E4E1]">
-      <div className="h-[150px] relative flex items-center justify-center" style={{ backgroundColor: headerColor }}>
-        <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-4xl font-bold text-white">
-          {card.name.charAt(0)}
-        </div>
-        <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full text-xs text-[#2F3B3D] font-medium">
+    <div className="w-[210px] bg-[#EDE9DF] rounded-3xl overflow-hidden select-none shadow-xl">
+      {/* Image area — matches SwipeableCard */}
+      <div className="h-[150px] bg-[#D6CFBF] flex items-center justify-center relative">
+        <img src={avatar} alt={card.name} className="w-28 h-28 object-contain" />
+        <div className="absolute bottom-2 right-2 bg-black/20 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full">
           {card.age} yrs
         </div>
       </div>
+      {/* Info */}
       <div className="p-4 space-y-2.5">
         <div>
           <p className="text-[#2F3B3D] font-semibold text-sm leading-tight">{card.name}</p>
@@ -56,7 +62,7 @@ function ProfileCard({ card, colorIndex }: { card: typeof cardData[0]; colorInde
         <p className="text-xs text-[#2F3B3D]/70">{card.subject}</p>
         <div className="flex items-center justify-between py-1.5 px-2.5 bg-[#F5F3EF] rounded-lg">
           <span className="text-xs text-[#2F3B3D]/60">{card.isTutor ? "Rate" : "Budget"}</span>
-          <span className="text-xs font-semibold" style={{ color: headerColor }}>{card.rate}</span>
+          <span className="text-xs font-semibold text-[#7C8D8C]">{card.rate}</span>
         </div>
       </div>
     </div>

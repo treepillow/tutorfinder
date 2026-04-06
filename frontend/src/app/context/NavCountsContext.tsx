@@ -6,6 +6,7 @@ export interface NavCounts {
   awaitingResponse: number;
   awaitingPayment: number;
   scheduled: number;
+  disputes: number;
 }
 
 interface NavCountsContextValue {
@@ -21,6 +22,7 @@ export function NavCountsProvider({ children }: { children: React.ReactNode }) {
     awaitingResponse: 0,
     awaitingPayment: 0,
     scheduled: 0,
+    disputes: 0,
   });
 
   // Use a ref so the interval callback always has the latest version
@@ -29,10 +31,12 @@ export function NavCountsProvider({ children }: { children: React.ReactNode }) {
   const fetchCounts = useCallback(async () => {
     const user = getCurrentUser();
     if (!user?.user_id) return;
+    const isAdmin = user?.role?.toLowerCase() === "admin" || user?.userType === "admin";
     try {
-      const [matchesRes, bookingsRes] = await Promise.allSettled([
+      const [matchesRes, bookingsRes, disputesRes] = await Promise.allSettled([
         matchApi.getMatches(user.user_id),
         bookingApi.getByUser(user.user_id),
+        isAdmin ? bookingApi.getByStatus("Disputed") : Promise.resolve(null),
       ]);
 
       const matches = matchesRes.status === "fulfilled"
@@ -41,6 +45,10 @@ export function NavCountsProvider({ children }: { children: React.ReactNode }) {
 
       const bookings = bookingsRes.status === "fulfilled"
         ? (bookingsRes.value?.bookings ?? bookingsRes.value ?? [])
+        : [];
+
+      const disputedBookings = disputesRes.status === "fulfilled" && disputesRes.value
+        ? (disputesRes.value?.bookings ?? [])
         : [];
 
       setCounts({
@@ -54,6 +62,7 @@ export function NavCountsProvider({ children }: { children: React.ReactNode }) {
         scheduled: Array.isArray(bookings)
           ? bookings.filter((b: any) => b.status === "Confirmed").length
           : 0,
+        disputes: Array.isArray(disputedBookings) ? disputedBookings.length : 0,
       });
     } catch {
       // silently fail — counts are decorative

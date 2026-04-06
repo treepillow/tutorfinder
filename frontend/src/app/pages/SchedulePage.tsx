@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
-import { Calendar, Clock, BookOpen, User, ChevronLeft, ChevronRight, List, Phone, Mail } from "lucide-react";
+import { Calendar, Clock, BookOpen, User, ChevronLeft, ChevronRight, List, Phone, Mail, X, AlertCircle, Check } from "lucide-react";
 import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, availabilityApi, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
 import { io } from "socket.io-client";
@@ -140,11 +140,39 @@ export function SchedulePage() {
     }
   };
 
+  const openTestLesson = () => {
+    const now = new Date();
+    const startTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:00`;
+    const endHour = (now.getHours() + 1) % 24;
+    const endTime = `${String(endHour).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:00`;
+    const dateStr = now.toISOString().split("T")[0];
+    setSelectedLesson({
+      _isTest: true,
+      booking_id: 9999,
+      subject: "Mathematics",
+      level: "A-Level",
+      lesson_date: dateStr,
+      start_time: startTime,
+      end_time: endTime,
+      date: dateStr,
+      dateObj: new Date(dateStr + "T00:00:00"),
+      slots: [`${startTime.slice(0, 5)}-${endTime.slice(0, 5)}`],
+      otherName: "Sarah Smith",
+      price: 80,
+      otherProfile: {
+        name: "Sarah Smith",
+        contactNumber: "+65 9123 4567",
+        email: "sarah.smith@example.com",
+      },
+    });
+  };
+
   // ── Booking action availability ──
   // canCancel: only before 1hr before start
   // canReportNoShow: during or after the booking slot
   // canComplete: only after the booking slot ends
   const getBookingActions = (lesson: any) => {
+    if (lesson._isTest) return { canCancel: true, canReportNoShow: true, canComplete: true };
     const now = new Date();
 
     const [startH, startM] = (lesson.start_time || "0:00").split(":").map(Number);
@@ -218,6 +246,14 @@ export function SchedulePage() {
             <p className="text-[#2F3B3D]/70">Your confirmed lessons</p>
           </div>
 
+          <div className="flex items-center gap-3">
+            <button
+              onClick={openTestLesson}
+              className="px-4 py-2 bg-blue-100 text-blue-700 rounded-full border-2 border-blue-300 hover:bg-blue-200 hover:border-blue-400 transition-all duration-300 text-sm font-medium"
+            >
+              📋 Test Lesson
+            </button>
+
           {/* View toggle */}
           <div className="flex p-1 bg-[#EDE9DF] rounded-full">
             <button
@@ -238,6 +274,7 @@ export function SchedulePage() {
               <Calendar className="w-4 h-4" />
               Calendar
             </button>
+          </div>
           </div>
         </div>
 
@@ -464,8 +501,9 @@ export function SchedulePage() {
                     {canCancel && (
                       <button
                         onClick={() => handleCancelBooking(selectedLesson)}
-                        className="w-full px-4 py-2 bg-white text-[#2F3B3D] rounded-full border-2 border-[#D6CFBF] hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all duration-300"
+                        className="w-full flex items-center justify-center gap-2.5 px-5 py-2.5 bg-white text-red-400 rounded-full border border-red-200 hover:bg-red-50 hover:text-red-500 transition-all duration-300 text-sm"
                       >
+                        <span className="w-5 h-5 rounded-full border border-current flex items-center justify-center shrink-0"><X className="w-3 h-3" /></span>
                         Cancel Booking
                       </button>
                     )}
@@ -473,16 +511,18 @@ export function SchedulePage() {
                       {canReportNoShow && (
                         <button
                           onClick={() => handleReportNoShow(selectedLesson)}
-                          className="flex-1 px-4 py-2 bg-white text-[#2F3B3D] rounded-full border-2 border-[#D6CFBF] hover:bg-amber-50 hover:border-amber-200 hover:text-amber-600 transition-all duration-300"
+                          className="flex-1 flex items-center justify-center gap-2.5 px-5 py-2.5 bg-white text-amber-600 rounded-full border border-amber-300 hover:bg-amber-50 hover:text-amber-700 transition-all duration-300 text-sm"
                         >
+                          <AlertCircle className="w-4 h-4" />
                           Report No-Show
                         </button>
                       )}
                       {canComplete && (
                         <button
                           onClick={() => handleCompleteBooking(selectedLesson)}
-                          className="flex-1 px-4 py-2 bg-[#2F3B3D] text-white rounded-full border-2 border-[#2F3B3D] hover:bg-[#7C8D8C] hover:border-[#7C8D8C] transition-all duration-300"
+                          className="flex-1 flex items-center justify-center gap-2.5 px-5 py-2.5 bg-[#2F3B3D] text-white rounded-full border-2 border-[#2F3B3D] hover:bg-[#7C8D8C] hover:border-[#7C8D8C] transition-all duration-300 text-sm"
                         >
+                          <span className="w-5 h-5 rounded-full border border-current flex items-center justify-center shrink-0"><Check className="w-3 h-3" /></span>
                           Complete Booking
                         </button>
                       )}

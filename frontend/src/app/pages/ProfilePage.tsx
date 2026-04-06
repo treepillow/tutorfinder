@@ -181,9 +181,9 @@ export function ProfilePage() {
             <div className="flex gap-2">
               <button
                 onClick={cancelEditing}
-                className="flex items-center gap-2 px-5 py-2.5 bg-white border border-[#D6CFBF] text-[#2F3B3D] rounded-full hover:bg-[#EDE9DF] transition-all duration-200 text-sm font-medium"
+                className="flex items-center justify-center gap-2.5 px-5 py-2.5 bg-white text-red-400 rounded-full border border-red-200 hover:bg-red-50 hover:text-red-500 transition-all duration-300 text-sm"
               >
-                <X className="w-4 h-4" />
+                <span className="w-5 h-5 rounded-full border border-current flex items-center justify-center shrink-0"><X className="w-3 h-3" /></span>
                 Cancel
               </button>
               <button
@@ -191,7 +191,7 @@ export function ProfilePage() {
                 disabled={saving}
                 className="flex items-center gap-2 px-5 py-2.5 bg-[#7C8D8C] text-white rounded-full hover:bg-[#2F3B3D] transition-all duration-200 text-sm font-medium disabled:opacity-50"
               >
-                <Check className="w-4 h-4" />
+                <span className="w-5 h-5 rounded-full border border-current flex items-center justify-center shrink-0"><Check className="w-3 h-3" /></span>
                 {saving ? "Saving..." : "Save"}
               </button>
             </div>

@@ -177,57 +177,66 @@ export function Sidebar() {
     navigate("/");
   };
 
+  const roleLabel = (() => {
+    const role = currentUser?.role?.toLowerCase() ?? currentUser?.userType?.toLowerCase();
+    if (role === "admin") return "Admin";
+    if (role === "tutor") return "Tutor";
+    if (role === "student") return "Student";
+    return null;
+  })();
+
   // Sub-badges shown under Requests and matched items
   const requestsTotal = counts.awaitingResponse + counts.awaitingPayment;
 
-  const navItems = [
-    {
-      path: "/app/discover",
-      Icon: IconDiscover,
-      label: "Discover",
-      badge: 0,
-      subBadges: null,
-    },
-    {
-      path: "/app/matched",
-      Icon: IconMatched,
-      label: "Matched",
-      badge: counts.matched,
-      subBadges: null,
-    },
-    {
-      path: "/app/requests",
-      Icon: IconRequests,
-      label: "Requests",
-      badge: requestsTotal,
-      subBadges: null,
-    },
-    {
-      path: "/app/schedule",
-      Icon: IconSchedule,
-      label: "Schedule",
-      badge: counts.scheduled,
-      subBadges: null,
-    },
-    {
-      path: "/app/payments",
-      Icon: IconPayments,
-      label: "Payments",
-      badge: 0,
-      subBadges: null,
-    },
-  ];
+  const isAdmin = currentUser?.role?.toLowerCase() === "admin" || currentUser?.userType === "admin";
 
-  // Admin-only nav items
-  if (currentUser?.role?.toLowerCase() === "admin" || currentUser?.userType === "admin") {
-    navItems.push({
-      path: "/app/admin/disputes",
-      Icon: IconDisputes,
-      label: "Disputes",
-      badge: 0,
-      subBadges: null,
-    });
-  }
+  const navItems = isAdmin
+    ? [
+        {
+          path: "/app/admin/disputes",
+          Icon: IconDisputes,
+          label: "Disputes",
+          badge: counts.disputes,
+          subBadges: null,
+        },
+      ]
+    : [
+        {
+          path: "/app/discover",
+          Icon: IconDiscover,
+          label: "Discover",
+          badge: 0,
+          subBadges: null,
+        },
+        {
+          path: "/app/matched",
+          Icon: IconMatched,
+          label: "Matched",
+          badge: counts.matched,
+          subBadges: null,
+        },
+        {
+          path: "/app/requests",
+          Icon: IconRequests,
+          label: "Requests",
+          badge: requestsTotal,
+          subBadges: null,
+        },
+        {
+          path: "/app/schedule",
+          Icon: IconSchedule,
+          label: "Schedule",
+          badge: counts.scheduled,
+          subBadges: null,
+        },
+        {
+          path: "/app/payments",
+          Icon: IconPayments,
+          label: "Payments",
+          badge: 0,
+          subBadges: null,
+        },
+      ];
 
   return (
     <aside
@@ -240,11 +249,14 @@ export function Sidebar() {
           isCollapsed ? "justify-center" : ""
         }`}>
           <img src={circleGrad} alt="TutorFinder" className="w-8 h-8 flex-shrink-0" />
-          <h1 className={`text-2xl tracking-tight transition-opacity duration-300 ${
-            isCollapsed ? "hidden" : "opacity-100"
-          }`}>
-            TutorFinder
-          </h1>
+          {!isCollapsed && (
+            <div>
+              <h1 className="text-2xl tracking-tight leading-tight">TutorFinder</h1>
+              {roleLabel && (
+                <p className="text-[11px] text-white/40 tracking-widest uppercase leading-none mt-0.5">{roleLabel}</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
