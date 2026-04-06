@@ -64,11 +64,25 @@ def add_slot():
         if not data.get(field):
             return jsonify({'error': f'Missing required field: {field}'}), 400
     try:
+        parsed_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+        parsed_start = datetime.strptime(data['start_time'], '%H:%M:%S').time()
+        parsed_end = datetime.strptime(data['end_time'], '%H:%M:%S').time()
+
+        # Prevent duplicate slots for the same user/date/time
+        existing = Availability.query.filter_by(
+            user_id=int(data['user_id']),
+            date=parsed_date,
+            start_time=parsed_start,
+            end_time=parsed_end,
+        ).first()
+        if existing:
+            return jsonify(existing.to_dict()), 200
+
         slot = Availability(
             user_id=int(data['user_id']),
-            date=datetime.strptime(data['date'], '%Y-%m-%d').date(),
-            start_time=datetime.strptime(data['start_time'], '%H:%M:%S').time(),
-            end_time=datetime.strptime(data['end_time'], '%H:%M:%S').time(),
+            date=parsed_date,
+            start_time=parsed_start,
+            end_time=parsed_end,
             status='Available'
         )
         db.session.add(slot)

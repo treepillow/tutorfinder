@@ -502,6 +502,7 @@ export async function syncAvailabilityToBackend(
 
   const today = new Date();
   const slots: { date: string; start_time: string; end_time: string }[] = [];
+  const seenSlotKeys = new Set<string>();
 
   // Generate slots for the next 2 weeks
   for (let week = 0; week < 2; week++) {
@@ -527,17 +528,37 @@ export async function syncAvailabilityToBackend(
         const endTime = endStr.includes(":") && endStr.split(":").length === 2
           ? endStr + ":00" : endStr;
 
+        const key = `${dateStr}|${startTime}|${endTime}`;
+        if (seenSlotKeys.has(key)) continue;
+        seenSlotKeys.add(key);
         slots.push({ date: dateStr, start_time: startTime, end_time: endTime });
       }
     }
   }
 
-  // Fetch existing slots to avoid duplicates
+  // Fetch existing slots
   const res = await availabilityApi.getSlots(userId);
   const existingSlots = res.availability || [];
-  const existingMap = new Map(
-    existingSlots.map((s: any) => [`${s.date}|${s.start_time}|${s.end_time}`, s])
+
+  // Deduplicate existing Available slots — keep the first occurrence, delete the rest
+  const seenExisting = new Map<string, any>();
+  const duplicatesToDelete: any[] = [];
+  for (const s of existingSlots) {
+    const key = `${s.date}|${s.start_time}|${s.end_time}`;
+    if (s.status === "Available") {
+      if (seenExisting.has(key)) {
+        duplicatesToDelete.push(s);
+      } else {
+        seenExisting.set(key, s);
+      }
+    }
+  }
+  await Promise.allSettled(
+    duplicatesToDelete.map((s: any) => availabilityApi.deleteSlot(s.availability_id))
   );
+
+  // Rebuild existingMap after dedup
+  const existingMap = seenExisting;
 
   // Only create slots that don't already exist
   const slotsToCreate = slots.filter(
@@ -550,7 +571,7 @@ export async function syncAvailabilityToBackend(
 
   // Delete old Available slots that aren't in the new set
   const newSlotDates = new Set(slots.map((s) => `${s.date}|${s.start_time}|${s.end_time}`));
-  const toDelete = existingSlots.filter(
+  const toDelete = [...existingMap.values()].filter(
     (s: any) => s.status === "Available" &&
       !newSlotDates.has(`${s.date}|${s.start_time}|${s.end_time}`)
   );
