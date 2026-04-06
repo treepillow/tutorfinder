@@ -310,8 +310,8 @@ public class PaymentController {
         m.put("status",                   p.getStatus().name());
         m.put("stripe_payment_intent_id", p.getStripePaymentIntentId());
         m.put("stripe_transfer_id",       p.getStripeTransferId());
-        m.put("created_at",               p.getCreatedAt() != null ? p.getCreatedAt().toString() : null);
-        m.put("updated_at",               p.getUpdatedAt() != null ? p.getUpdatedAt().toString() : null);
+        m.put("created_at",               p.getCreatedAt() != null ? p.getCreatedAt().toString() + "Z" : null);
+        m.put("updated_at",               p.getUpdatedAt() != null ? p.getUpdatedAt().toString() + "Z" : null);
         return m;
     }
 }

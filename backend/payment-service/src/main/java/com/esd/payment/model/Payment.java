@@ -3,6 +3,7 @@ package com.esd.payment.model;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Entity
 @Table(name = "payments")
@@ -44,9 +45,9 @@ public class Payment {
     private String tuteeCurrency = "sgd";
 
     @Column(updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now(ZoneId.of("UTC"));
 
-    private LocalDateTime updatedAt = LocalDateTime.now();
+    private LocalDateTime updatedAt = LocalDateTime.now(ZoneId.of("UTC"));
 
     public enum PaymentStatus {
         PENDING, HELD, RELEASED, REFUNDED, FAILED
@@ -54,7 +55,7 @@ public class Payment {
 
     @PreUpdate
     public void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(ZoneId.of("UTC"));
     }
 
     // Getters and setters
