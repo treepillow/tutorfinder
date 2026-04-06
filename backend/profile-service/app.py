@@ -252,13 +252,6 @@ def search_profiles():
                 continue
 
         profile_data = p.to_public_dict()
-        try:
-            avail = requests.get(
-                f'{AVAILABILITY_SERVICE_URL}/availability/{p.user_id}', timeout=5)
-            profile_data['availability'] = avail.json().get('availability', []) \
-                if avail.status_code == 200 else []
-        except Exception:
-            profile_data['availability'] = []
         results.append(profile_data)
 
     return jsonify({'profiles': results, 'count': len(results)}), 200
