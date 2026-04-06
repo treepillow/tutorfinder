@@ -261,6 +261,37 @@ public class PaymentController {
                 .orElse(ResponseEntity.status(404).body(null));
     }
 
+    /**
+     * POST /payment/notify-success
+     * Called by OutSystems after payment is complete and profile info is available.
+     * Publishes payment.success event to RabbitMQ for email notifications.
+     */
+    @PostMapping("/payment/notify-success")
+    public ResponseEntity<?> notifySuccess(@RequestBody Map<String, Object> body) {
+        try {
+            Integer bookingId = intVal(body, "booking_id");
+            if (bookingId == null) bookingId = intVal(body, "BookingId");
+            Integer tuteeId = intVal(body, "tutee_id");
+            if (tuteeId == null) tuteeId = intVal(body, "TuteeId");
+            Integer tutorId = intVal(body, "tutor_id");
+            if (tutorId == null) tutorId = intVal(body, "TutorId");
+            String tuteeEmail = (String) body.getOrDefault("tutee_email", "");
+            if (tuteeEmail == null || tuteeEmail.isEmpty()) tuteeEmail = (String) body.getOrDefault("TuteeEmail", "");
+            String tutorEmail = (String) body.getOrDefault("tutor_email", "");
+            if (tutorEmail == null || tutorEmail.isEmpty()) tutorEmail = (String) body.getOrDefault("TutorEmail", "");
+            String amount = body.getOrDefault("amount", body.getOrDefault("Amount", "0")).toString();
+
+            System.out.printf("[PAYMENT] notifySuccess: bookingId=%d, tuteeEmail=%s, tutorEmail=%s%n",
+                    bookingId, tuteeEmail, tutorEmail);
+
+            paymentService.publishPaymentSuccess(bookingId, tuteeId, tutorId, tuteeEmail, tutorEmail, amount);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            System.err.printf("[PAYMENT] Exception in notifySuccess: %s%n", e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     // ---- helpers ----
 
     private Integer intVal(Map<String, Object> body, String key) {

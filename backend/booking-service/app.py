@@ -183,6 +183,30 @@ def health():
     return jsonify({'status': 'healthy', 'service': 'booking-service'}), 200
 
 
+@app.route('/booking/notify', methods=['POST'])
+def notify():
+    """Called by OutSystems to publish a booking event to RabbitMQ.
+    OutSystems passes the event type and all required data including emails."""
+    data = request.get_json(force=True) or {}
+    event_type = data.get('event_type') or data.get('EventType')
+    if not event_type:
+        return jsonify({'error': 'event_type is required'}), 400
+
+    # Normalize keys to snake_case
+    payload = {}
+    key_map = {
+        'BookingId': 'booking_id', 'TuteeId': 'tutee_id', 'TutorId': 'tutor_id',
+        'TuteeEmail': 'tutee_email', 'TutorEmail': 'tutor_email',
+        'LessonDate': 'lesson_date', 'StartTime': 'start_time',
+    }
+    for k, v in data.items():
+        snake = key_map.get(k, k)
+        payload[snake] = v
+
+    publish_event(event_type, payload)
+    return jsonify({'success': True}), 200
+
+
 @app.route('/booking', methods=['POST'])
 def create_booking():
     data = request.get_json(force=True) or {}
@@ -202,13 +226,7 @@ def create_booking():
         )
         db.session.add(booking)
         db.session.commit()
-        publish_event('booking.created', {
-            'booking_id':  booking.booking_id,
-            'tutor_id':    booking.tutor_id,
-            'tutor_email': get_email(booking.tutor_id),
-            'lesson_date': data['lesson_date'],
-            'start_time':  data['start_time'],
-        })
+        # Don't publish AMQP here — OutSystems will call /booking/notify with emails
         socketio.emit('new_booking', booking.to_dict())
         return jsonify(booking.to_dict()), 201
     except ValueError as e:
@@ -252,12 +270,7 @@ def confirm_booking(booking_id):
     booking.status = 'AwaitingPayment'
     booking.confirmed_at = datetime.utcnow()
     db.session.commit()
-    publish_event('booking.confirmed', {
-        'booking_id':  booking.booking_id,
-        'tutee_id':    booking.tutee_id,
-        'tutee_email': get_email(booking.tutee_id),
-        'lesson_date': booking.lesson_date.isoformat(),
-    })
+    # Don't publish AMQP here — OutSystems will call /booking/notify with emails
     socketio.emit('booking_confirmed', booking.to_dict())
     return jsonify(booking.to_dict()), 200
 
@@ -272,11 +285,7 @@ def reject_booking(booking_id):
     booking.status = 'Cancelled'
     booking.cancelled_at = datetime.utcnow()
     db.session.commit()
-    publish_event('booking.rejected', {
-        'booking_id':  booking.booking_id,
-        'tutee_id':    booking.tutee_id,
-        'tutee_email': get_email(booking.tutee_id),
-    })
+    # Don't publish AMQP here — OutSystems will call /booking/notify with emails
     socketio.emit('booking_status_changed', booking.to_dict())
     return jsonify(booking.to_dict()), 200
 
@@ -291,13 +300,7 @@ def cancel_booking(booking_id):
     booking.status = 'Cancelled'
     booking.cancelled_at = datetime.utcnow()
     db.session.commit()
-    publish_event('booking.cancelled', {
-        'booking_id':   booking.booking_id,
-        'tutee_id':     booking.tutee_id,
-        'tutee_email':  get_email(booking.tutee_id),
-        'tutor_id':     booking.tutor_id,
-        'tutor_email':  get_email(booking.tutor_id),
-    })
+    # Don't publish AMQP here — OutSystems will call /booking/notify with emails
     socketio.emit('booking_status_changed', booking.to_dict())
     return jsonify(booking.to_dict()), 200
 

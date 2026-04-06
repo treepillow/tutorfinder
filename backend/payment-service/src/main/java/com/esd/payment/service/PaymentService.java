@@ -446,6 +446,18 @@ public class PaymentService {
         return paymentRepository.findById(paymentId);
     }
 
+    public void publishPaymentSuccess(Integer bookingId, Integer tuteeId, Integer tutorId,
+                                       String tuteeEmail, String tutorEmail, String amount) {
+        publishEvent("payment.success", Map.of(
+                "booking_id",  bookingId,
+                "tutee_id",    tuteeId,
+                "tutor_id",    tutorId,
+                "tutee_email", tuteeEmail != null ? tuteeEmail : "",
+                "tutor_email", tutorEmail != null ? tutorEmail : "",
+                "amount",      amount
+        ));
+    }
+
     private void publishEvent(String routingKey, Map<String, Object> body) {
         try {
             String json = objectMapper.writeValueAsString(body);
