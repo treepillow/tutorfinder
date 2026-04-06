@@ -4,7 +4,6 @@ import { Calendar, Clock, BookOpen, User, ChevronLeft, ChevronRight, Phone, Mail
 import { getCurrentUser, bookingApi, bookingProcessApi, profileApi, paymentApi, availabilityApi, enrichProfile } from "../utils/api";
 import { toast } from "sonner";
 import { io } from "socket.io-client";
-import { CircleGuyCalendar } from "../components/EmptyState";
 import laptopGuy from "../assets/laptopGuy.png";
 import Lottie from "lottie-react";
 import circleGuyLoadingData from "../assets/circleGuyLoading.json";
@@ -290,9 +289,7 @@ export function SchedulePage() {
         {!loading && view === "bookings" ? (
           schedule.length === 0 ? (
             <div className="bg-[#EDE9DF] rounded-2xl p-10 text-center flex flex-col items-center">
-              {bookingTab === "disputed"
-                ? <img src={laptopGuy} style={{ width: 120, height: 120, objectFit: "contain" }} />
-                : <CircleGuyCalendar size={120} />}
+              <img src={laptopGuy} style={{ width: 120, height: 120, objectFit: "contain" }} />
               <h3 className="text-xl text-[#2F3B3D] font-medium mt-3 mb-1">
                 {bookingTab === "upcoming" ? "No upcoming lessons" : bookingTab === "completed" ? "No completed lessons" : "No disputed lessons"}
               </h3>
