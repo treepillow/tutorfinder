@@ -160,6 +160,18 @@ export function SwipeableCard({ profile, onSwipe, onClick, isTop, userType, forc
               {userType === "student" ? "Teaching" : "Looking for"}
             </div>
             <div className="text-[#2F3B3D] text-sm">{subjectText}</div>
+            {profile.reviewCount != null && (
+              <div className="flex items-center gap-1 mt-1">
+                {profile.reviewCount > 0 ? (
+                  <>
+                    <span className="text-yellow-400 text-sm">{"★".repeat(Math.round(profile.avgRating))}{"☆".repeat(5 - Math.round(profile.avgRating))}</span>
+                    <span className="text-xs text-[#2F3B3D]/50">{profile.avgRating.toFixed(1)} ({profile.reviewCount})</span>
+                  </>
+                ) : (
+                  <span className="text-xs text-[#2F3B3D]/40">No ratings yet</span>
+                )}
+              </div>
+            )}
           </div>
 
           {rateOrBudget && (
