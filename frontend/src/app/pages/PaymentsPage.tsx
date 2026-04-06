@@ -74,11 +74,11 @@ const TAB_INFO: Record<Tab, { border: string; text: string }> = {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function fmtDate(s: string) {
   if (!s) return "—";
-  return new Date(s).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(s).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Singapore" });
 }
 function fmtDateTime(s: string) {
   if (!s) return "—";
-  return new Date(s).toLocaleString("en-SG", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(s).toLocaleString("en-SG", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Singapore" });
 }
 function fmtTime(s: string) {
   return s ? s.slice(0, 5) : "—";
@@ -103,9 +103,9 @@ function PaymentCard({ record, userType, tab }: { record: any; userType: string;
   };
   const statusPill: Record<Tab, string> = {
     held:      "bg-[#2F3B3D] text-white",
-    completed: completedViaDispute ? "bg-[#60A5FA] text-white" : "bg-[#16A34A] text-white",
+    completed: "bg-[#16A34A] text-white",
     disputed:  "bg-[#D97706] text-white",
-    cancelled: cancelledViaDispute ? "bg-[#B91C1C] text-white" : "bg-[#EF4444] text-white",
+    cancelled: "bg-[#EF4444] text-white",
   };
 
   // Reason note shown in expanded section
@@ -225,6 +225,17 @@ function Detail({ icon, label, value }: { icon: React.ReactNode; label: string; 
   );
 }
 
+// ── Helper: Get sort timestamp based on status ──────────────────────────────
+function getSortTimestamp(booking: any): number {
+  if (booking.completed_at) return new Date(booking.completed_at).getTime();
+  if (booking.cancelled_at) return new Date(booking.cancelled_at).getTime();
+  if (booking.disputed_at) return new Date(booking.disputed_at).getTime();
+  if (booking.confirmed_at) return new Date(booking.confirmed_at).getTime();
+  if (booking.created_at) return new Date(booking.created_at).getTime();
+  if (booking.lesson_date) return new Date(booking.lesson_date).getTime();
+  return 0;
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export function PaymentsPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -267,8 +278,8 @@ export function PaymentsPage() {
         return { ...booking, payment, otherProfile: profileMap[otherId] || { id: otherId, name: `User #${otherId}` } };
       }));
 
-      // Sort newest first by lesson date
-      enriched.sort((a, b) => new Date(b.lesson_date).getTime() - new Date(a.lesson_date).getTime());
+      // Sort newest first by most relevant status timestamp
+      enriched.sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a));
       setAllRecords(enriched);
     } catch (err) {
       console.error(err);

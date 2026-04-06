@@ -88,37 +88,31 @@ export function ProfileDetailDialog({
             </div>
           </div>
 
-          {/* Location */}
-          <div className="flex items-center gap-2 text-[#2F3B3D]">
-            <MapPin className="w-5 h-5 text-[#7C8D8C]" />
-            <span>{profile.location}</span>
-          </div>
-
-          {/* Qualification (for tutors) */}
-          {profile.qualification && (
+          {/* Location, qualification, contact — evenly spaced */}
+          <div className="space-y-3">
             <div className="flex items-center gap-2 text-[#2F3B3D]">
-              <GraduationCap className="w-5 h-5 text-[#7C8D8C]" />
-              <span>{profile.qualification}</span>
+              <MapPin className="w-5 h-5 text-[#7C8D8C] shrink-0" />
+              <span>{profile.location}</span>
             </div>
-          )}
-
-          {/* Contact details — only shown on matched page */}
-          {showContact && (
-            <div className="space-y-2">
-              {profile.email && (
-                <div className="flex items-center gap-2 text-[#2F3B3D]">
-                  <Mail className="w-5 h-5 text-[#7C8D8C]" />
-                  <span>{profile.email}</span>
-                </div>
-              )}
-              {profile.contactNumber && (
-                <div className="flex items-center gap-2 text-[#2F3B3D]">
-                  <Phone className="w-5 h-5 text-[#7C8D8C]" />
-                  <span>{profile.contactNumber}</span>
-                </div>
-              )}
-            </div>
-          )}
+            {profile.qualification && (
+              <div className="flex items-center gap-2 text-[#2F3B3D]">
+                <GraduationCap className="w-5 h-5 text-[#7C8D8C] shrink-0" />
+                <span>{profile.qualification}</span>
+              </div>
+            )}
+            {showContact && profile.email && (
+              <div className="flex items-center gap-2 text-[#2F3B3D]">
+                <Mail className="w-5 h-5 text-[#7C8D8C] shrink-0" />
+                <span>{profile.email}</span>
+              </div>
+            )}
+            {showContact && profile.contactNumber && (
+              <div className="flex items-center gap-2 text-[#2F3B3D]">
+                <Phone className="w-5 h-5 text-[#7C8D8C] shrink-0" />
+                <span>{profile.contactNumber}</span>
+              </div>
+            )}
+          </div>
 
           {/* Subjects */}
           <div>

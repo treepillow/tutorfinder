@@ -85,6 +85,10 @@ with app.app_context():
 def token_required(f):
     @functools.wraps(f)
     def decorated(*args, **kwargs):
+        # Allow CORS preflight requests to pass through
+        if request.method == 'OPTIONS':
+            return '', 204
+        
         auth_header = request.headers.get('Authorization', '')
         if not auth_header.startswith('Bearer '):
             return jsonify({'error': 'Authorization header missing or malformed'}), 401
@@ -258,6 +262,19 @@ def search_profiles():
         results.append(profile_data)
 
     return jsonify({'profiles': results, 'count': len(results)}), 200
+
+
+@app.route('/profile/all', methods=['GET'])
+@token_required
+def get_all_profiles():
+    if request.current_role != 'Admin':
+        return jsonify({'error': 'Forbidden'}), 403
+    role_filter = request.args.get('role')
+    query = Profile.query
+    if role_filter:
+        query = query.filter_by(role=role_filter)
+    profiles = query.order_by(Profile.created_at.desc()).all()
+    return jsonify({'profiles': [p.to_full_dict() for p in profiles], 'count': len(profiles)}), 200
 
 
 @app.route('/profile/verify-token', methods=['POST'])

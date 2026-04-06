@@ -109,6 +109,13 @@ export const profileApi = {
     });
   },
 
+  getAllProfiles(role?: string) {
+    const url = role
+      ? `${PROFILE_SERVICE}/profile/all?role=${role}`
+      : `${PROFILE_SERVICE}/profile/all`;
+    return apiFetch(url);
+  },
+
   search(data: {
     subject?: string;
     min_price?: number;

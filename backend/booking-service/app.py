@@ -50,6 +50,9 @@ class Booking(db.Model):
         default='AwaitingConfirmation', nullable=False)
     created_at      = db.Column(db.DateTime, default=datetime.utcnow)
     confirmed_at    = db.Column(db.DateTime, nullable=True)
+    completed_at    = db.Column(db.DateTime, nullable=True)
+    cancelled_at    = db.Column(db.DateTime, nullable=True)
+    disputed_at     = db.Column(db.DateTime, nullable=True)
     disputed_by     = db.Column(db.String(50), nullable=True)
     dispute_reason  = db.Column(db.String(500), nullable=True)
 
@@ -67,6 +70,9 @@ class Booking(db.Model):
             'status':          self.status,
             'created_at':      self.created_at.isoformat() if self.created_at else None,
             'confirmed_at':    self.confirmed_at.isoformat() if self.confirmed_at else None,
+            'completed_at':    self.completed_at.isoformat() if self.completed_at else None,
+            'cancelled_at':    self.cancelled_at.isoformat() if self.cancelled_at else None,
+            'disputed_at':     self.disputed_at.isoformat() if self.disputed_at else None,
             'disputed_by':     self.disputed_by,
             'dispute_reason':  self.dispute_reason,
         }
@@ -78,6 +84,59 @@ with app.app_context():
         conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {DB_SCHEMA}'))
         conn.commit()
     db.create_all()
+    
+    # Add missing columns if they don't exist
+    with db.engine.connect() as conn:
+        try:
+            conn.execute(text(f'ALTER TABLE {DB_SCHEMA}.bookings ADD COLUMN completed_at TIMESTAMP NULL'))
+            conn.commit()
+        except:
+            pass
+        try:
+            conn.execute(text(f'ALTER TABLE {DB_SCHEMA}.bookings ADD COLUMN cancelled_at TIMESTAMP NULL'))
+            conn.commit()
+        except:
+            pass
+        try:
+            conn.execute(text(f'ALTER TABLE {DB_SCHEMA}.bookings ADD COLUMN disputed_at TIMESTAMP NULL'))
+            conn.commit()
+        except:
+            pass
+    
+    # Backfill timestamps for existing bookings
+    with db.engine.connect() as conn:
+        try:
+            # Backfill cancelled_at for existing cancelled bookings
+            conn.execute(text(f'''
+                UPDATE {DB_SCHEMA}.bookings 
+                SET cancelled_at = created_at 
+                WHERE status = 'Cancelled' AND cancelled_at IS NULL
+            '''))
+            conn.commit()
+        except Exception as e:
+            print(f"Backfill cancelled_at error: {e}")
+        
+        try:
+            # Backfill completed_at for existing completed bookings
+            conn.execute(text(f'''
+                UPDATE {DB_SCHEMA}.bookings 
+                SET completed_at = created_at 
+                WHERE status = 'Completed' AND completed_at IS NULL
+            '''))
+            conn.commit()
+        except Exception as e:
+            print(f"Backfill completed_at error: {e}")
+        
+        try:
+            # Backfill disputed_at for existing disputed bookings
+            conn.execute(text(f'''
+                UPDATE {DB_SCHEMA}.bookings 
+                SET disputed_at = created_at 
+                WHERE status = 'Disputed' AND disputed_at IS NULL
+            '''))
+            conn.commit()
+        except Exception as e:
+            print(f"Backfill disputed_at error: {e}")
 
 
 def get_email(user_id):
@@ -211,6 +270,7 @@ def reject_booking(booking_id):
     if booking.status != 'AwaitingConfirmation':
         return jsonify({'error': f'Cannot reject booking with status: {booking.status}'}), 400
     booking.status = 'Cancelled'
+    booking.cancelled_at = datetime.utcnow()
     db.session.commit()
     publish_event('booking.rejected', {
         'booking_id':  booking.booking_id,
@@ -229,6 +289,7 @@ def cancel_booking(booking_id):
     if booking.status in ['Cancelled', 'Completed']:
         return jsonify({'error': f'Cannot cancel booking with status: {booking.status}'}), 400
     booking.status = 'Cancelled'
+    booking.cancelled_at = datetime.utcnow()
     db.session.commit()
     publish_event('booking.cancelled', {
         'booking_id':   booking.booking_id,
@@ -249,6 +310,7 @@ def complete_booking(booking_id):
     if booking.status != 'Confirmed':
         return jsonify({'error': f'Cannot complete booking with status: {booking.status}'}), 400
     booking.status = 'Completed'
+    booking.completed_at = datetime.utcnow()
     db.session.commit()
     socketio.emit('booking_status_changed', booking.to_dict())
     return jsonify(booking.to_dict()), 200
@@ -263,6 +325,7 @@ def dispute_booking(booking_id):
         return jsonify({'error': f'Cannot dispute booking with status: {booking.status}'}), 400
     data = request.get_json(force=True) or {}
     booking.status = 'Disputed'
+    booking.disputed_at = datetime.utcnow()
     booking.disputed_by = data.get('reported_by') or data.get('ReportedBy')
     booking.dispute_reason = data.get('reason') or data.get('Reason')
     db.session.commit()
@@ -278,7 +341,18 @@ def update_status(booking_id):
     new_status = data.get('status')
     if new_status not in VALID_STATUSES:
         return jsonify({'error': f'Invalid status. Must be one of: {VALID_STATUSES}'}), 400
+    
+    # Update status and set appropriate timestamp
     booking.status = new_status
+    if new_status == 'Completed':
+        booking.completed_at = datetime.utcnow()
+    elif new_status == 'Cancelled':
+        booking.cancelled_at = datetime.utcnow()
+    elif new_status == 'Disputed':
+        booking.disputed_at = datetime.utcnow()
+    elif new_status == 'Confirmed' and not booking.confirmed_at:
+        booking.confirmed_at = datetime.utcnow()
+    
     db.session.commit()
     socketio.emit('booking_status_changed', booking.to_dict())
     return jsonify(booking.to_dict()), 200

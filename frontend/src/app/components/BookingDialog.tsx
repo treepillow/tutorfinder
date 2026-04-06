@@ -217,8 +217,8 @@ export function BookingDialog({ profile, currentUser, onClose }: BookingDialogPr
                   }
                   return sortedDates.map((date) => {
                     const dateObj = new Date(date + "T00:00:00");
-                    const dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-                    const dayName = dateObj.toLocaleDateString("en-US", { weekday: "long" });
+                    const dateStr = dateObj.toLocaleDateString("en-SG", { month: "short", day: "numeric", timeZone: "Asia/Singapore" });
+                    const dayName = dateObj.toLocaleDateString("en-SG", { weekday: "long", timeZone: "Asia/Singapore" });
                     return (
                       <div key={date}>
                         <div className="text-sm font-medium text-[#2F3B3D] mb-2">

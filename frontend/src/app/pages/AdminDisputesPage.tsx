@@ -7,7 +7,7 @@ import { CircleGuyAvatar } from "../components/CircleGuyAvatar";
 
 function fmtDate(s: string) {
   if (!s) return "—";
-  return new Date(s).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(s).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Singapore" });
 }
 function fmtTime(s: string) {
   return s ? s.slice(0, 5) : "—";
@@ -181,6 +181,13 @@ export function AdminDisputesPage() {
         })
       );
 
+      // Sort by disputed_at timestamp (most recent first)
+      enriched.sort((a, b) => {
+        const timeA = a.disputed_at ? new Date(a.disputed_at).getTime() : new Date(a.created_at).getTime();
+        const timeB = b.disputed_at ? new Date(b.disputed_at).getTime() : new Date(b.created_at).getTime();
+        return timeB - timeA;
+      });
+
       setDisputes(enriched);
     } catch {
       toast.error("Failed to load disputes");
@@ -192,7 +199,33 @@ export function AdminDisputesPage() {
   const handleResolve = async (bookingId: number, resolution: "refund" | "release") => {
     setActionLoading(bookingId);
     try {
-      await bookingProcessApi.resolveDispute(bookingId, resolution);
+      // Try to call resolveDispute if booking process service is available
+      try {
+        await bookingProcessApi.resolveDispute(bookingId, resolution);
+      } catch {
+        // Fall back if booking process service isn't running locally
+        console.warn("Booking process service unavailable, updating status directly");
+      }
+      
+      // Update booking status: refund → Cancelled, release → Completed
+      const newStatus = resolution === "refund" ? "Cancelled" : "Completed";
+      await bookingApi.updateStatus(bookingId, newStatus);
+      
+      // Update payment status
+      try {
+        const paymentData = await paymentApi.getByBooking(bookingId);
+        if (paymentData && paymentData.payments && paymentData.payments.length > 0) {
+          const payment = paymentData.payments[0];
+          if (resolution === "refund") {
+            await paymentApi.refund(payment.payment_id);
+          } else {
+            await paymentApi.release(payment.payment_id);
+          }
+        }
+      } catch {
+        console.warn("Could not update payment status");
+      }
+      
       toast.success(
         resolution === "refund"
           ? "Dispute resolved: refund issued to student"

@@ -107,6 +107,28 @@ function IconPayments({ active }: { active: boolean }) {
   );
 }
 
+function IconDashboard({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="3" width="8" height="8" rx="2" fill={active ? "#7C8D8C" : "none"} stroke={active ? "#4A6163" : "white"} strokeWidth="2"/>
+      <rect x="13" y="3" width="8" height="8" rx="2" fill={active ? "#7C8D8C" : "none"} stroke={active ? "#4A6163" : "white"} strokeWidth="2"/>
+      <rect x="3" y="13" width="8" height="8" rx="2" fill={active ? "#7C8D8C" : "none"} stroke={active ? "#4A6163" : "white"} strokeWidth="2"/>
+      <rect x="13" y="13" width="8" height="8" rx="2" fill={active ? "#7C8D8C" : "none"} stroke={active ? "#4A6163" : "white"} strokeWidth="2"/>
+    </svg>
+  );
+}
+
+function IconUsers({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <circle cx="9" cy="7" r="4" fill={active ? "#FFCC80" : "none"} stroke={active ? "#E65100" : "white"} strokeWidth="2"/>
+      <path d="M2 21 C2 17 5.13 14 9 14 C12.87 14 16 17 16 21" fill={active ? "#FFCC80" : "none"} stroke={active ? "#E65100" : "white"} strokeWidth="2" strokeLinecap="round"/>
+      <path d="M19 8 C20.1 8 21 8.9 21 10 C21 11.1 20.1 12 19 12" stroke={active ? "#E65100" : "white"} strokeWidth="2" strokeLinecap="round"/>
+      <path d="M22 21 C22 18.5 20.5 16.4 18.5 15.6" stroke={active ? "#E65100" : "white"} strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
 function IconDisputes({ active }: { active: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -192,6 +214,34 @@ export function Sidebar() {
 
   const navItems = isAdmin
     ? [
+        {
+          path: "/app/admin/dashboard",
+          Icon: IconDashboard,
+          label: "Dashboard",
+          badge: 0,
+          subBadges: null,
+        },
+        {
+          path: "/app/admin/users",
+          Icon: IconUsers,
+          label: "Users",
+          badge: 0,
+          subBadges: null,
+        },
+        {
+          path: "/app/admin/bookings",
+          Icon: IconSchedule,
+          label: "Bookings",
+          badge: 0,
+          subBadges: null,
+        },
+        {
+          path: "/app/admin/payments",
+          Icon: IconPayments,
+          label: "Payments",
+          badge: 0,
+          subBadges: null,
+        },
         {
           path: "/app/admin/disputes",
           Icon: IconDisputes,
@@ -324,7 +374,7 @@ export function Sidebar() {
       <div className="px-3 pb-6 relative" ref={userMenuRef}>
         {/* Dropdown menu (appears above) */}
         {showUserMenu && (
-          <div className="absolute bottom-full mb-2 left-3 right-3 bg-white rounded-xl shadow-lg overflow-hidden z-50">
+          <div className={`absolute bottom-full mb-2 bg-white rounded-xl shadow-lg overflow-hidden z-50 ${isCollapsed ? "left-0 w-48" : "left-3 right-3"}`}>
             <button
               onClick={() => { navigate("/app/profile"); setShowUserMenu(false); }}
               className="flex items-center gap-3 px-4 py-3 w-full text-[#2F3B3D] hover:bg-[#EDE9DF] transition-colors"

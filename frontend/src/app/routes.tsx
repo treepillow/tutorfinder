@@ -11,6 +11,10 @@ import { RequestsPage } from "./pages/RequestsPage";
 import { SchedulePage } from "./pages/SchedulePage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { AdminDisputesPage } from "./pages/AdminDisputesPage";
+import { AdminDashboardPage } from "./pages/AdminDashboardPage";
+import { AdminUsersPage } from "./pages/AdminUsersPage";
+import { AdminBookingsPage } from "./pages/AdminBookingsPage";
+import { AdminPaymentsPage } from "./pages/AdminPaymentsPage";
 import { PaymentsPage } from "./pages/PaymentsPage";
 
 export const router = createBrowserRouter([
@@ -43,6 +47,10 @@ export const router = createBrowserRouter([
         element: <Navigate to="/app/discover" replace />,
       },
       {
+        path: "admin",
+        element: <Navigate to="/app/admin/dashboard" replace />,
+      },
+      {
         path: "discover",
         element: <DiscoveryPage />,
       },
@@ -69,6 +77,22 @@ export const router = createBrowserRouter([
       {
         path: "admin/disputes",
         element: <AdminDisputesPage />,
+      },
+      {
+        path: "admin/dashboard",
+        element: <AdminDashboardPage />,
+      },
+      {
+        path: "admin/users",
+        element: <AdminUsersPage />,
+      },
+      {
+        path: "admin/bookings",
+        element: <AdminBookingsPage />,
+      },
+      {
+        path: "admin/payments",
+        element: <AdminPaymentsPage />,
       },
     ],
   },
