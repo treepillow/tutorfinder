@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { ProfileCard } from "../components/ProfileCard";
 import { BookingDialog } from "../components/BookingDialog";
 import { ProfileDetailDialog } from "../components/ProfileDetailDialog";
-import { getCurrentUser, matchApi, profileApi, enrichProfile } from "../utils/api";
+import { getCurrentUser, matchApi, profileApi, enrichProfile, reviewApi } from "../utils/api";
 import { toast } from "sonner";
 import { io } from "socket.io-client";
 import { CircleGuyLonely } from "../components/EmptyState";
@@ -49,7 +49,24 @@ export function MatchedPage() {
       });
 
       const profiles = (await Promise.all(profilePromises)).filter(Boolean);
-      setMatches(profiles);
+
+      // Fetch average rating for each tutor
+      const withRatings = await Promise.all(
+        profiles.map(async (profile: any) => {
+          if (profile.userType !== "tutor") return profile;
+          try {
+            const reviews = await reviewApi.getByTutor(profile.id);
+            const list = Array.isArray(reviews) ? reviews : [];
+            const avg = list.length > 0
+              ? list.reduce((sum: number, r: any) => sum + (r.Rating || r.rating || 0), 0) / list.length
+              : null;
+            return { ...profile, avgRating: avg, reviewCount: list.length };
+          } catch {
+            return profile;
+          }
+        })
+      );
+      setMatches(withRatings);
     } catch (err: any) {
       console.error("Failed to load matches:", err);
       toast.error("Failed to load matches");
