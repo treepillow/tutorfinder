@@ -141,6 +141,14 @@ def handle_message(ch, method, properties, body):
                             'Booking Cancelled',
                             "A booking has been cancelled please check your account again.", rk)
 
+        elif rk == 'booking.completed':
+            save_and_notify(data.get('tutee_id'), 'Booking', data.get('tutee_email'),
+                            'Lesson Completed',
+                            "Your lesson has been completed. Thank you for using TutorFinder!", rk)
+            save_and_notify(data.get('tutor_id'), 'Booking', data.get('tutor_email'),
+                            'Lesson Completed',
+                            "A lesson has been completed. Your deposit will be released shortly.", rk)
+
         elif rk == 'payment.success':
             save_and_notify(data.get('tutee_id'), 'Payment', data.get('tutee_email'),
                             'Payment Received',
